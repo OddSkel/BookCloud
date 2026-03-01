@@ -98,9 +98,9 @@ Compare book popularity with perceived quality, and analysing long-term publishi
 # 4. Contribution Plan
 
 Each group member will be responsible for implementing one service:
-- Service 1: XXXX
-- Service 2: XXXX
-- Service 3: XXXX
-- Service 4: XXXX
+- Service 1: Manuel Leitão
+- Service 2: Frederico Dias
+- Service 3: Leonardo Gonçalves
+- Service 4: Gustavo Machado
 
 ---
