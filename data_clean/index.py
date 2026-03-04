@@ -85,7 +85,7 @@ def dedup_csv_globally_by_id(
 ) -> None:
     """
     Remove duplicados GLOBALMENTE (considerando o ficheiro inteiro),
-    com base em `id_column`.
+    com base no id
     """
     if keep not in {"first", "last"}:
         raise ValueError("keep must be 'first' or 'last'")
@@ -141,15 +141,14 @@ def inspect_merged_csv(
 
 
 if __name__ == "__main__":
-    # 1) Faz o merge bruto (sem remover duplicados)
+    # 1) Faz o merge 
     merge_csvs_to_single_csv()
 
-    # 2) Remove duplicados GLOBALMENTE pelo id
+    # 2) Remove duplicados pelo id
     dedup_csv_globally_by_id(
         csv_path=OUT_CSV,
         id_column=ID_COLUMN,
-        keep="first",  # troque para "last" se quiser manter o último id no ficheiro
+        keep="first",
     )
 
-    # 3) Inspeciona o resultado
     _ = inspect_merged_csv(OUT_CSV)
