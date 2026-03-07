@@ -1,0 +1,696 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Smart Campus API",
+    "description": "Example REST API to later extend with gRPC for internal occupancy checks.",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rooms": {
+      "post": {
+        "summary": "Create Room",
+        "operationId": "create_room_rooms_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoomCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Room"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List Rooms",
+        "operationId": "list_rooms_rooms_get",
+        "parameters": [
+          {
+            "name": "min_capacity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Min Capacity"
+            }
+          },
+          {
+            "name": "feature",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter rooms that contain this feature",
+              "title": "Feature"
+            },
+            "description": "Filter rooms that contain this feature"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Room"
+                  },
+                  "title": "Response List Rooms Rooms Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rooms/{room_id}": {
+      "get": {
+        "summary": "Get Room",
+        "operationId": "get_room_rooms__room_id__get",
+        "parameters": [
+          {
+            "name": "room_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Room Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Room"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete Room",
+        "operationId": "delete_room_rooms__room_id__delete",
+        "parameters": [
+          {
+            "name": "room_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Room Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/bookings": {
+      "post": {
+        "summary": "Create Booking",
+        "operationId": "create_booking_bookings_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BookingCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Booking"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List Bookings",
+        "operationId": "list_bookings_bookings_get",
+        "parameters": [
+          {
+            "name": "room_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Room Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "confirmed or cancelled",
+              "title": "Status"
+            },
+            "description": "confirmed or cancelled"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Booking"
+                  },
+                  "title": "Response List Bookings Bookings Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/bookings/{booking_id}": {
+      "get": {
+        "summary": "Get Booking",
+        "operationId": "get_booking_bookings__booking_id__get",
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Booking Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Booking"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/bookings/{booking_id}/cancel": {
+      "post": {
+        "summary": "Cancel Booking",
+        "operationId": "cancel_booking_bookings__booking_id__cancel_post",
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Booking Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Booking"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rooms/{room_id}/availability": {
+      "get": {
+        "summary": "Check Availability",
+        "operationId": "check_availability_rooms__room_id__availability_get",
+        "parameters": [
+          {
+            "name": "room_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Room Id"
+            }
+          },
+          {
+            "name": "start",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "title": "Start"
+            }
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "title": "End"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AvailabilityResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AvailabilityResponse": {
+        "properties": {
+          "room_id": {
+            "type": "string",
+            "title": "Room Id"
+          },
+          "start": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Start"
+          },
+          "end": {
+            "type": "string",
+            "format": "date-time",
+            "title": "End"
+          },
+          "available": {
+            "type": "boolean",
+            "title": "Available"
+          },
+          "conflicts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Conflicts",
+            "description": "List of conflicting booking IDs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "room_id",
+          "start",
+          "end",
+          "available"
+        ],
+        "title": "AvailabilityResponse"
+      },
+      "Booking": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "room_id": {
+            "type": "string",
+            "title": "Room Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "start": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Start"
+          },
+          "end": {
+            "type": "string",
+            "format": "date-time",
+            "title": "End"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "examples": [
+              "confirmed",
+              "cancelled"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "room_id",
+          "title",
+          "start",
+          "end",
+          "status",
+          "created_at"
+        ],
+        "title": "Booking"
+      },
+      "BookingCreate": {
+        "properties": {
+          "room_id": {
+            "type": "string",
+            "title": "Room Id",
+            "examples": [
+              "\u003Croom-id\u003E"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "examples": [
+              "ML Study Group"
+            ]
+          },
+          "start": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Start",
+            "description": "ISO datetime (timezone-aware recommended)"
+          },
+          "end": {
+            "type": "string",
+            "format": "date-time",
+            "title": "End",
+            "description": "ISO datetime (timezone-aware recommended)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "room_id",
+          "title",
+          "start",
+          "end"
+        ],
+        "title": "BookingCreate"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Room": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "examples": [
+              "B-201"
+            ]
+          },
+          "capacity": {
+            "type": "integer",
+            "minimum": 1,
+            "title": "Capacity",
+            "examples": [30]
+          },
+          "features": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Features",
+            "examples": [
+              [
+                "projector",
+                "whiteboard"
+              ]
+            ]
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "capacity",
+          "id"
+        ],
+        "title": "Room"
+      },
+      "RoomCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "examples": [
+              "B-201"
+            ]
+          },
+          "capacity": {
+            "type": "integer",
+            "minimum": 1,
+            "title": "Capacity",
+            "examples": [30]
+          },
+          "features": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Features",
+            "examples": [
+              [
+                "projector",
+                "whiteboard"
+              ]
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "capacity"
+        ],
+        "title": "RoomCreate"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}
