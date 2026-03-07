@@ -1,696 +1,911 @@
 {
-  "openapi": "3.1.0",
-  "info": {
-    "title": "Smart Campus API",
-    "description": "Example REST API to later extend with gRPC for internal occupancy checks.",
-    "version": "1.0.0"
-  },
-  "paths": {
-    "/health": {
-      "get": {
-        "summary": "Health",
-        "operationId": "health_health_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
+    "openapi": "3.1.0",
+    "info": {
+        "title": "Smart Campus API",
+        "description": "Example REST API to later extend with gRPC for internal occupancy checks.",
+        "version": "1.0.0"
+    },
+    "paths": {
+        "/books": {
+            "get": {
+                "summary": "Get Books",
+                "operationId": "books_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Book"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/book": {
+        "post": {
+            "summary": "Add book",
+            "operationId": "book_add_post",
+            "requestBody": {
+                "required": true,
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/BookAdd"
+                        }
+                    }
+                }
+            },
+            "responses": {
+                "201": {
+                    "description": "Successful Response",
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Book"
+                            }
+                        }
+                    }
+                },
+                "422": {
+                    "description": "Validation Error",
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/HTTPValidationError"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "put": {
+            "summary": "Edit Books",
+            "operationId": "list_books_books_put",
+            "parameters": [{
+                "name": "ISBN",
+                "in": "header",
+                "required": false,
                 "schema": {
+                    "anyOf": [
+                        {
+                        "type": "string"
+                        },
+                        {
+                        "type": "null"
+                        }
+                    ],
+                    "title": "ISBN"
+                }
+            },
+            {
+                "name": "feature",
+                "in": "query",
+                "required": false,
+                "schema": {
+                "anyOf": [
+                    {
+                    "type": "string"
+                    },
+                    {
+                    "type": "null"
+                    }
+                ],
+                "description": "Filter rooms that contain this feature",
+                "title": "Feature"
+                },
+                "description": "Filter rooms that contain this feature"
+            }
+            ],
+            "responses": {
+            "200": {
+                "description": "Successful Response",
+                "content": {
+                "application/json": {
+                    "schema": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/components/schemas/Book"
+                    },
+                    "title": "Response List Rooms Rooms Get"
+                    }
+                }
+                }
+            },
+            "422": {
+                "description": "Validation Error",
+                "content": {
+                "application/json": {
+                    "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                    }
+                }
+                }
+            }
+            }
+        }
+        },
+        "/book/{book_id}": {
+        "get": {
+            "summary": "Get Book",
+            "operationId": "get_book_books__book_id__get",
+            "parameters": [
+            {
+                "name": "book_id",
+                "in": "path",
+                "required": true,
+                "schema": {
+                "type": "string",
+                "title": "Book Id"
+                }
+            }
+            ],
+            "responses": {
+            "200": {
+                "description": "Successful Response",
+                "content": {
+                "application/json": {
+                    "schema": {
+                    "$ref": "#/components/schemas/Book"
+                    }
+                }
+                }
+            },
+            "422": {
+                "description": "Validation Error",
+                "content": {
+                "application/json": {
+                    "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                    }
+                }
+                }
+            }
+            }
+        },
+        "delete": {
+            "summary": "Delete Book",
+            "operationId": "delete_book_books__book_id__delete",
+            "parameters": [
+            {
+                "name": "book_id",
+                "in": "path",
+                "required": true,
+                "schema": {
+                "type": "string",
+                "title": "Book Id"
+                }
+            }
+            ],
+            "responses": {
+            "204": {
+                "description": "Successful Response"
+            },
+            "422": {
+                "description": "Validation Error",
+                "content": {
+                "application/json": {
+                    "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                    }
+                }
+                }
+            }
+            }
+        }
+        },
+        "/authors": {
+        "get": {
+            "summary": "Authors",
+            "operationId": "authors_authors_get",
+            "responses": {
+            "200": {
+                "description": "Successful Response",
+                "content": {
+                "application/json": {
+                    "schema": {
+                    }
+                }
+                }
+            }
+            }
+        }
+        },
+        "/author": {
+        "post": {
+            "summary": "Add author",
+            "operationId": "author_add_post",
+            "requestBody": {
+            "required": true,
+            "content": {
+                "application/json": {
+                "schema": {
+                    "$ref": "#/components/schemas/AuthorAdd"
+                }
+                }
+            }
+            },
+            "responses": {
+            "201": {
+                "description": "Successful Response",
+                "content": {
+                "application/json": {
+                    "schema": {
+                    "$ref": "#/components/schemas/Author"
+                    }
+                }
+                }
+            },
+            "422": {
+                "description": "Validation Error",
+                "content": {
+                "application/json": {
+                    "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                    }
+                }
+                }
+            }
+            }
+        },
+        "put": {
+            "summary": "Edit Author",
+            "operationId": "authors_put",
+            "parameters": [
+            {
+                "name": "min_capacity",
+                "in": "query",
+                "required": false,
+                "schema": {
+                "anyOf": [
+                    {
+                    "type": "integer",
+                    "minimum": 1
+                    },
+                    {
+                    "type": "null"
+                    }
+                ],
+                "title": "Min Capacity"
+                }
+            },
+            {
+                "name": "feature",
+                "in": "query",
+                "required": false,
+                "schema": {
+                "anyOf": [
+                    {
+                    "type": "string"
+                    },
+                    {
+                    "type": "null"
+                    }
+                ],
+                "description": "Filter rooms that contain this feature",
+                "title": "Feature"
+                },
+                "description": "Filter rooms that contain this feature"
+            }
+            ],
+            "responses": {
+            "200": {
+                "description": "Successful Response",
+                "content": {
+                "application/json": {
+                    "schema": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/components/schemas/Author"
+                    },
+                    "title": "Response Author Put"
+                    }
+                }
+                }
+            },
+            "422": {
+                "description": "Validation Error",
+                "content": {
+                "application/json": {
+                    "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                    }
+                }
+                }
+            }
+            }
+        }
+        },
+        "/author/{author_id}": {
+        "get": {
+            "summary": "Get author",
+            "operationId": "get_author_authors__author_id__get",
+            "parameters": [
+            {
+                "name": "author_id",
+                "in": "path",
+                "required": true,
+                "schema": {
+                "type": "string",
+                "title": "Author Id"
+                }
+            }
+            ],
+            "responses": {
+            "200": {
+                "description": "Successful Response",
+                "content": {
+                "application/json": {
+                    "schema": {
+                    "$ref": "#/components/schemas/Author"
+                    }
+                }
+                }
+            },
+            "422": {
+                "description": "Validation Error",
+                "content": {
+                "application/json": {
+                    "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                    }
+                }
+                }
+            }
+            }
+        },
+        "delete": {
+            "summary": "Delete Author",
+            "operationId": "delete_author_authors__author_id__delete",
+            "parameters": [
+            {
+                "name": "author_id",
+                "in": "path",
+                "required": true,
+                "schema": {
+                "type": "string",
+                "title": "Author Id"
+                }
+            }
+            ],
+            "responses": {
+            "204": {
+                "description": "Successful Response"
+            },
+            "422": {
+                "description": "Validation Error",
+                "content": {
+                "application/json": {
+                    "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                    }
+                }
+                }
+            }
+            }
+        }
+        },
+        "/ratings/{book_id}": {
+            "get": {
+                "summary": "Get Ratings of a book",
+                "operationId": "rating_rating_get",
+                "parameters": [{
+                                "name": "book_id",
+                                "in": "path",
+                                "required": true,
+                                "schema": {
+                                    "type": "string",
+                                    "title": "Book Id"
+                                }
+                            }],
+            "responses": {
+            "200": {
+                "description": "Successful Response",
+                "content": {
+                "application/json": {
+                    "schema": {
 
+                    }
                 }
-              }
+                }
             }
-          }
+            }
         }
-      }
-    },
-    "/rooms": {
-      "post": {
-        "summary": "Create Room",
-        "operationId": "create_room_rooms_post",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RoomCreate"
-              }
-            }
-          }
         },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
+        "/rating/{book_id}": {
+        "post": {
+            "summary": "Add rating to book",
+            "operationId": "rating_add_post",
+            "requestBody": {
+            "required": true,
             "content": {
-              "application/json": {
+                "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Room"
+                    "$ref": "#/components/schemas/RatingAdd"
                 }
-              }
+                }
             }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "get": {
-        "summary": "List Rooms",
-        "operationId": "list_rooms_rooms_get",
-        "parameters": [
-          {
-            "name": "min_capacity",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "integer",
-                  "minimum": 1
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Min Capacity"
-            }
-          },
-          {
-            "name": "feature",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Filter rooms that contain this feature",
-              "title": "Feature"
             },
-            "description": "Filter rooms that contain this feature"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Room"
-                  },
-                  "title": "Response List Rooms Rooms Get"
+            "responses": {
+            "201": {
+                "description": "Successful Response",
+                "content": {
+                "application/json": {
+                    "schema": {
+                    "$ref": "#/components/schemas/Rating"
+                    }
                 }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/rooms/{room_id}": {
-      "get": {
-        "summary": "Get Room",
-        "operationId": "get_room_rooms__room_id__get",
-        "parameters": [
-          {
-            "name": "room_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Room Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Room"
+            },
+            "422": {
+                "description": "Validation Error",
+                "content": {
+                "application/json": {
+                    "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                    }
                 }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
-              }
             }
-          }
-        }
-      },
-      "delete": {
-        "summary": "Delete Room",
-        "operationId": "delete_room_rooms__room_id__delete",
-        "parameters": [
-          {
-            "name": "room_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Room Id"
             }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/bookings": {
-      "post": {
-        "summary": "Create Booking",
-        "operationId": "create_booking_bookings_post",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/BookingCreate"
-              }
-            }
-          }
         },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
+        "put": {
+            "summary": "Edit Rating",
+            "operationId": "Rating_put",
+            "parameters": [
+            {
+                "name": "min_capacity",
+                "in": "query",
+                "required": false,
                 "schema": {
-                  "$ref": "#/components/schemas/Booking"
+                "anyOf": [
+                    {
+                    "type": "integer",
+                    "minimum": 1
+                    },
+                    {
+                    "type": "null"
+                    }
+                ],
+                "title": "Min Capacity"
                 }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "get": {
-        "summary": "List Bookings",
-        "operationId": "list_bookings_bookings_get",
-        "parameters": [
-          {
-            "name": "room_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Room Id"
-            }
-          },
-          {
-            "name": "status",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "confirmed or cancelled",
-              "title": "Status"
             },
-            "description": "confirmed or cancelled"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
+            {
+                "name": "feature",
+                "in": "query",
+                "required": false,
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Booking"
-                  },
-                  "title": "Response List Bookings Bookings Get"
-                }
-              }
+                "anyOf": [
+                    {
+                    "type": "string"
+                    },
+                    {
+                    "type": "null"
+                    }
+                ],
+                "description": "Filter rooms that contain this feature",
+                "title": "Feature"
+                },
+                "description": "Filter rooms that contain this feature"
             }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+            ],
+            "responses": {
+            "200": {
+                "description": "Successful Response",
+                "content": {
+                "application/json": {
+                    "schema": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/components/schemas/Rating"
+                    },
+                    "title": "Response Rating Put"
+                    }
                 }
-              }
+                }
+            },
+            "422": {
+                "description": "Validation Error",
+                "content": {
+                "application/json": {
+                    "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                    }
+                }
+                }
             }
-          }
+            }
         }
-      }
+        },
+        "/rating/{rating_id}": {
+        "get": {
+            "summary": "Get rating",
+            "operationId": "get_rating__rating_id",
+            "parameters": [
+            {
+                "name": "rating_id",
+                "in": "path",
+                "required": true,
+                "schema": {
+                "type": "string",
+                "title": "Rating Id"
+                }
+            }
+            ],
+            "responses": {
+            "200": {
+                "description": "Successful Response",
+                "content": {
+                "application/json": {
+                    "schema": {
+                    "$ref": "#/components/schemas/Rating"
+                    }
+                }
+                }
+            },
+            "422": {
+                "description": "Validation Error",
+                "content": {
+                "application/json": {
+                    "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                    }
+                }
+                }
+            }
+            }
+        },
+        "delete": {
+            "summary": "Delete Rating",
+            "operationId": "delete_rating__rating_id",
+            "parameters": [
+            {
+                "name": "rating_id",
+                "in": "path",
+                "required": true,
+                "schema": {
+                "type": "string",
+                "title": "Rating Id"
+                }
+            }
+            ],
+            "responses": {
+            "204": {
+                "description": "Successful Response"
+            },
+            "422": {
+                "description": "Validation Error",
+                "content": {
+                "application/json": {
+                    "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                    }
+                }
+                }
+            }
+            }
+        }
+        }
     },
-    "/bookings/{booking_id}": {
-      "get": {
-        "summary": "Get Booking",
-        "operationId": "get_booking_bookings__booking_id__get",
-        "parameters": [
-          {
-            "name": "booking_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Booking Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Booking"
+    "components": {
+        "schemas": {
+            "AvailabilityResponse": {
+                "properties": {
+                "room_id": {
+                    "type": "string",
+                    "title": "Room Id"
+                },
+                "start": {
+                    "type": "string",
+                    "format": "date-time",
+                    "title": "Start"
+                },
+                "end": {
+                    "type": "string",
+                    "format": "date-time",
+                    "title": "End"
+                },
+                "available": {
+                    "type": "boolean",
+                    "title": "Available"
+                },
+                "conflicts": {
+                    "items": {
+                    "type": "string"
+                    },
+                    "type": "array",
+                    "title": "Conflicts",
+                    "description": "List of conflicting booking IDs"
                 }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                },
+                "type": "object",
+                "required": [
+                "room_id",
+                "start",
+                "end",
+                "available"
+                ],
+                "title": "AvailabilityResponse"
+            },
+            "HTTPValidationError": {
+                "properties": {
+                "detail": {
+                    "items": {
+                    "$ref": "#/components/schemas/ValidationError"
+                    },
+                    "type": "array",
+                    "title": "Detail"
                 }
-              }
+                },
+                "type": "object",
+                "title": "HTTPValidationError"
+            },
+            "Book": {
+                "properties": {
+                "name": {
+                    "type": "string",
+                    "title": "Name",
+                    "examples": [
+                    "B-201"
+                    ]
+                },
+                "isbn": {
+                    "type": "string",
+                    "title": "ISBN",
+                    "examples": ["ISBN-999-111-222-876-4"]
+                },
+                "features": {
+                    "items": {
+                    "type": "string"
+                    },
+                    "type": "array",
+                    "title": "Features",
+                    "examples": [
+                    [
+                        "projector",
+                        "whiteboard"
+                    ]
+                    ]
+                },
+                "id": {
+                    "type": "string",
+                    "title": "Id"
+                }
+                },
+                "type": "object",
+                "required": [
+                "name",
+                "capacity",
+                "id"
+                ],
+                "title": "Book"
+            },
+            "Author": {
+                "properties": {
+                "name": {
+                    "type": "string",
+                    "title": "Name",
+                    "examples": [
+                    "B-201"
+                    ]
+                },
+                "isbn": {
+                    "type": "string",
+                    "title": "ISBN",
+                    "examples": ["ISBN-999-111-222-876-4"]
+                },
+                "features": {
+                    "items": {
+                    "type": "string"
+                    },
+                    "type": "array",
+                    "title": "Features",
+                    "examples": [
+                    [
+                        "projector",
+                        "whiteboard"
+                    ]
+                    ]
+                },
+                "id": {
+                    "type": "string",
+                    "title": "Id"
+                }
+                },
+                "type": "object",
+                "required": [
+                "name",
+                "capacity",
+                "id"
+                ],
+                "title": "Author"
+            },
+            "Rating": {
+                "properties": {
+                "name": {
+                    "type": "string",
+                    "title": "Name",
+                    "examples": [
+                    "B-201"
+                    ]
+                },
+                "isbn": {
+                    "type": "string",
+                    "title": "ISBN",
+                    "examples": ["ISBN-999-111-222-876-4"]
+                },
+                "features": {
+                    "items": {
+                    "type": "string"
+                    },
+                    "type": "array",
+                    "title": "Features",
+                    "examples": [
+                    [
+                        "projector",
+                        "whiteboard"
+                    ]
+                    ]
+                },
+                "id": {
+                    "type": "string",
+                    "title": "Id"
+                }
+                },
+                "type": "object",
+                "required": [
+                "name",
+                "capacity",
+                "id"
+                ],
+                "title": "Rating"
+            },
+            "BookAdd": {
+                "properties": {
+                "name": {
+                    "type": "string",
+                    "title": "Name",
+                    "examples": [
+                    "B-201"
+                    ]
+                },
+                "capacity": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "title": "Capacity",
+                    "examples": [30]
+                },
+                "features": {
+                    "items": {
+                    "type": "string"
+                    },
+                    "type": "array",
+                    "title": "Features",
+                    "examples": [
+                    [
+                        "projector",
+                        "whiteboard"
+                    ]
+                    ]
+                }
+                },
+                "type": "object",
+                "required": [
+                "name",
+                "capacity"
+                ],
+                "title": "BookAdd"
+            },
+            "AuthorAdd": {
+                "properties": {
+                "name": {
+                    "type": "string",
+                    "title": "Name",
+                    "examples": [
+                    "B-201"
+                    ]
+                },
+                "capacity": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "title": "Capacity",
+                    "examples": [30]
+                },
+                "features": {
+                    "items": {
+                    "type": "string"
+                    },
+                    "type": "array",
+                    "title": "Features",
+                    "examples": [
+                    [
+                        "projector",
+                        "whiteboard"
+                    ]
+                    ]
+                }
+                },
+                "type": "object",
+                "required": [
+                "name",
+                "capacity"
+                ],
+                "title": "AuthorAdd"
+            },
+            "RatingAdd": {
+                "properties": {
+                "name": {
+                    "type": "string",
+                    "title": "Name",
+                    "examples": [
+                    "B-201"
+                    ]
+                },
+                "capacity": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "title": "Capacity",
+                    "examples": [30]
+                },
+                "features": {
+                    "items": {
+                    "type": "string"
+                    },
+                    "type": "array",
+                    "title": "Features",
+                    "examples": [
+                    [
+                        "projector",
+                        "whiteboard"
+                    ]
+                    ]
+                }
+                },
+                "type": "object",
+                "required": [
+                "name",
+                "capacity"
+                ],
+                "title": "RatingAdd"
+            },
+            "ValidationError": {
+                "properties": {
+                "loc": {
+                    "items": {
+                    "anyOf": [
+                        {
+                        "type": "string"
+                        },
+                        {
+                        "type": "integer"
+                        }
+                    ]
+                    },
+                    "type": "array",
+                    "title": "Location"
+                },
+                "msg": {
+                    "type": "string",
+                    "title": "Message"
+                },
+                "type": {
+                    "type": "string",
+                    "title": "Error Type"
+                }
+                },
+                "type": "object",
+                "required": [
+                "loc",
+                "msg",
+                "type"
+                ],
+                "title": "ValidationError"
             }
-          }
         }
-      }
-    },
-    "/bookings/{booking_id}/cancel": {
-      "post": {
-        "summary": "Cancel Booking",
-        "operationId": "cancel_booking_bookings__booking_id__cancel_post",
-        "parameters": [
-          {
-            "name": "booking_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Booking Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Booking"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/rooms/{room_id}/availability": {
-      "get": {
-        "summary": "Check Availability",
-        "operationId": "check_availability_rooms__room_id__availability_get",
-        "parameters": [
-          {
-            "name": "room_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Room Id"
-            }
-          },
-          {
-            "name": "start",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "date-time",
-              "title": "Start"
-            }
-          },
-          {
-            "name": "end",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "date-time",
-              "title": "End"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AvailabilityResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
     }
-  },
-  "components": {
-    "schemas": {
-      "AvailabilityResponse": {
-        "properties": {
-          "room_id": {
-            "type": "string",
-            "title": "Room Id"
-          },
-          "start": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Start"
-          },
-          "end": {
-            "type": "string",
-            "format": "date-time",
-            "title": "End"
-          },
-          "available": {
-            "type": "boolean",
-            "title": "Available"
-          },
-          "conflicts": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Conflicts",
-            "description": "List of conflicting booking IDs"
-          }
-        },
-        "type": "object",
-        "required": [
-          "room_id",
-          "start",
-          "end",
-          "available"
-        ],
-        "title": "AvailabilityResponse"
-      },
-      "Booking": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "room_id": {
-            "type": "string",
-            "title": "Room Id"
-          },
-          "title": {
-            "type": "string",
-            "title": "Title"
-          },
-          "start": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Start"
-          },
-          "end": {
-            "type": "string",
-            "format": "date-time",
-            "title": "End"
-          },
-          "status": {
-            "type": "string",
-            "title": "Status",
-            "examples": [
-              "confirmed",
-              "cancelled"
-            ]
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "room_id",
-          "title",
-          "start",
-          "end",
-          "status",
-          "created_at"
-        ],
-        "title": "Booking"
-      },
-      "BookingCreate": {
-        "properties": {
-          "room_id": {
-            "type": "string",
-            "title": "Room Id",
-            "examples": [
-              "\u003Croom-id\u003E"
-            ]
-          },
-          "title": {
-            "type": "string",
-            "title": "Title",
-            "examples": [
-              "ML Study Group"
-            ]
-          },
-          "start": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Start",
-            "description": "ISO datetime (timezone-aware recommended)"
-          },
-          "end": {
-            "type": "string",
-            "format": "date-time",
-            "title": "End",
-            "description": "ISO datetime (timezone-aware recommended)"
-          }
-        },
-        "type": "object",
-        "required": [
-          "room_id",
-          "title",
-          "start",
-          "end"
-        ],
-        "title": "BookingCreate"
-      },
-      "HTTPValidationError": {
-        "properties": {
-          "detail": {
-            "items": {
-              "$ref": "#/components/schemas/ValidationError"
-            },
-            "type": "array",
-            "title": "Detail"
-          }
-        },
-        "type": "object",
-        "title": "HTTPValidationError"
-      },
-      "Room": {
-        "properties": {
-          "name": {
-            "type": "string",
-            "title": "Name",
-            "examples": [
-              "B-201"
-            ]
-          },
-          "capacity": {
-            "type": "integer",
-            "minimum": 1,
-            "title": "Capacity",
-            "examples": [30]
-          },
-          "features": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Features",
-            "examples": [
-              [
-                "projector",
-                "whiteboard"
-              ]
-            ]
-          },
-          "id": {
-            "type": "string",
-            "title": "Id"
-          }
-        },
-        "type": "object",
-        "required": [
-          "name",
-          "capacity",
-          "id"
-        ],
-        "title": "Room"
-      },
-      "RoomCreate": {
-        "properties": {
-          "name": {
-            "type": "string",
-            "title": "Name",
-            "examples": [
-              "B-201"
-            ]
-          },
-          "capacity": {
-            "type": "integer",
-            "minimum": 1,
-            "title": "Capacity",
-            "examples": [30]
-          },
-          "features": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Features",
-            "examples": [
-              [
-                "projector",
-                "whiteboard"
-              ]
-            ]
-          }
-        },
-        "type": "object",
-        "required": [
-          "name",
-          "capacity"
-        ],
-        "title": "RoomCreate"
-      },
-      "ValidationError": {
-        "properties": {
-          "loc": {
-            "items": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "integer"
-                }
-              ]
-            },
-            "type": "array",
-            "title": "Location"
-          },
-          "msg": {
-            "type": "string",
-            "title": "Message"
-          },
-          "type": {
-            "type": "string",
-            "title": "Error Type"
-          }
-        },
-        "type": "object",
-        "required": [
-          "loc",
-          "msg",
-          "type"
-        ],
-        "title": "ValidationError"
-      }
-    }
-  }
 }
