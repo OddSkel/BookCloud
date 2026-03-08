@@ -80,11 +80,13 @@
                         "type": "null"
                         }
                     ],
+                    "description": "Edit Book by ISBN",
                     "title": "ISBN"
-                }
+                },
+                "description": "Edit Book by ISBN"
             },
             {
-                "name": "feature",
+                "name": "Editor",
                 "in": "query",
                 "required": false,
                 "schema": {
@@ -96,10 +98,28 @@
                     "type": "null"
                     }
                 ],
-                "description": "Filter rooms that contain this feature",
+                "description": "Edit Book by name of editor",
                 "title": "Feature"
                 },
-                "description": "Filter rooms that contain this feature"
+                "description": "Edit Book by name of editor"
+            },
+            {
+                "name": "Year edited",
+                "in": "query",
+                "required": false,
+                "schema": {
+                "anyOf": [
+                    {
+                    "type": "integer"
+                    },
+                    {
+                    "type": "null"
+                    }
+                ],
+                "description": "Edit Book by year edited",
+                "title": "Year edition"
+                },
+                "description": "Edit Book by year edited"
             }
             ],
             "responses": {
@@ -258,24 +278,7 @@
             "operationId": "authors_put",
             "parameters": [
             {
-                "name": "min_capacity",
-                "in": "query",
-                "required": false,
-                "schema": {
-                "anyOf": [
-                    {
-                    "type": "integer",
-                    "minimum": 1
-                    },
-                    {
-                    "type": "null"
-                    }
-                ],
-                "title": "Min Capacity"
-                }
-            },
-            {
-                "name": "feature",
+                "name": "Name",
                 "in": "query",
                 "required": false,
                 "schema": {
@@ -287,10 +290,10 @@
                     "type": "null"
                     }
                 ],
-                "description": "Filter rooms that contain this feature",
-                "title": "Feature"
+                "description": "Edit Author by name",
+                "title": "Edit Author by name"
                 },
-                "description": "Filter rooms that contain this feature"
+                "description": "Edit Author by name"
             }
             ],
             "responses": {
@@ -459,24 +462,26 @@
             "operationId": "Rating_put",
             "parameters": [
             {
-                "name": "min_capacity",
+                "name": "rating",
                 "in": "query",
                 "required": false,
                 "schema": {
                 "anyOf": [
                     {
                     "type": "integer",
-                    "minimum": 1
+                    "minimum": 1,
+                    "maximum": 5
                     },
                     {
                     "type": "null"
                     }
                 ],
-                "title": "Min Capacity"
-                }
+                "title": "rating"
+                },
+                "description": "Edit rating by its evaluation"
             },
             {
-                "name": "feature",
+                "name": "comment",
                 "in": "query",
                 "required": false,
                 "schema": {
@@ -488,10 +493,10 @@
                     "type": "null"
                     }
                 ],
-                "description": "Filter rooms that contain this feature",
-                "title": "Feature"
+                "description": "Edit Rating by its comment",
+                "title": "Comment"
                 },
-                "description": "Filter rooms that contain this feature"
+                "description": "Edit Rating by its comment"
             }
             ],
             "responses": {
@@ -594,44 +599,6 @@
     },
     "components": {
         "schemas": {
-            "AvailabilityResponse": {
-                "properties": {
-                "room_id": {
-                    "type": "string",
-                    "title": "Room Id"
-                },
-                "start": {
-                    "type": "string",
-                    "format": "date-time",
-                    "title": "Start"
-                },
-                "end": {
-                    "type": "string",
-                    "format": "date-time",
-                    "title": "End"
-                },
-                "available": {
-                    "type": "boolean",
-                    "title": "Available"
-                },
-                "conflicts": {
-                    "items": {
-                    "type": "string"
-                    },
-                    "type": "array",
-                    "title": "Conflicts",
-                    "description": "List of conflicting booking IDs"
-                }
-                },
-                "type": "object",
-                "required": [
-                "room_id",
-                "start",
-                "end",
-                "available"
-                ],
-                "title": "AvailabilityResponse"
-            },
             "HTTPValidationError": {
                 "properties": {
                 "detail": {
@@ -647,230 +614,230 @@
             },
             "Book": {
                 "properties": {
-                "name": {
-                    "type": "string",
-                    "title": "Name",
-                    "examples": [
-                    "B-201"
-                    ]
-                },
-                "isbn": {
-                    "type": "string",
-                    "title": "ISBN",
-                    "examples": ["ISBN-999-111-222-876-4"]
-                },
-                "features": {
-                    "items": {
-                    "type": "string"
+                    "name": {
+                        "type": "string",
+                        "title": "Name",
+                        "examples": [
+                        "1984"
+                        ]
                     },
-                    "type": "array",
-                    "title": "Features",
-                    "examples": [
-                    [
-                        "projector",
-                        "whiteboard"
-                    ]
-                    ]
-                },
-                "id": {
-                    "type": "string",
-                    "title": "Id"
-                }
+                    "isbn": {
+                        "type": "string",
+                        "title": "ISBN",
+                        "examples": ["ISBN-999-111-222-876-4"]
+                    },
+                    "author": {
+                        "type": "string",
+                        "title": "Author",
+                        "examples": [
+                        "George Orwell"
+                        ]
+                    },
+                    "year_published": {
+                        "type": "integer",
+                        "title": "Year Published",
+                        "examples": ["1949"]
+                    },
+                    "editor": {
+                        "type": "string",
+                        "title": "Editor of Book",
+                        "examples": ["Secker & Warburg"]
+                    },
+                    "edition_number": {
+                        "type": "integer",
+                        "title": "Edition number",
+                        "examples": ["1"]
+                    },
+                    "id": {
+                        "type": "string",
+                        "title": "Id"
+                    },
+                    "summary": {
+                        "type": "string",
+                        "title": "Summary of the book"
+                    }
                 },
                 "type": "object",
-                "required": [
-                "name",
-                "capacity",
-                "id"
-                ],
+                "required": ["name","author","isbn","year_published","editor","edition_number","id"],
                 "title": "Book"
             },
             "Author": {
                 "properties": {
-                "name": {
-                    "type": "string",
-                    "title": "Name",
-                    "examples": [
-                    "B-201"
-                    ]
-                },
-                "isbn": {
-                    "type": "string",
-                    "title": "ISBN",
-                    "examples": ["ISBN-999-111-222-876-4"]
-                },
-                "features": {
-                    "items": {
-                    "type": "string"
+                    "name": {
+                        "type": "string",
+                        "title": "Name",
+                        "examples": [
+                        "George Orwell"
+                        ]
                     },
-                    "type": "array",
-                    "title": "Features",
-                    "examples": [
-                    [
-                        "projector",
-                        "whiteboard"
-                    ]
-                    ]
-                },
-                "id": {
-                    "type": "string",
-                    "title": "Id"
-                }
+                    "gender": {
+                        "type": "string",
+                        "enum": ["M", "F"],
+                        "title": "Gender"
+                    },
+                    "year_born": {
+                        "type": "integer",
+                        "title": "Year_born",
+                        "examples": ["1903"]
+                    },
+                    "year_death": {
+                        "type": "integer",
+                        "title": "Year_death",
+                        "examples": ["1950"]
+                    },
+                    "books_published": {
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "title": "books_published",
+                        "examples": ["1984","Animal Farm"]
+                    },
+                    "id": {
+                        "type": "string",
+                        "title": "Id"
+                    }
                 },
                 "type": "object",
                 "required": [
                 "name",
-                "capacity",
+                "gender",
+                "year_born",
+                "books_published",
                 "id"
                 ],
                 "title": "Author"
             },
             "Rating": {
                 "properties": {
-                "name": {
-                    "type": "string",
-                    "title": "Name",
-                    "examples": [
-                    "B-201"
-                    ]
-                },
-                "isbn": {
-                    "type": "string",
-                    "title": "ISBN",
-                    "examples": ["ISBN-999-111-222-876-4"]
-                },
-                "features": {
-                    "items": {
-                    "type": "string"
+                    "evaluation": {
+                        "type": "integer",
+                        "title": "evaluation",
+                        "examples": ["5"]
                     },
-                    "type": "array",
-                    "title": "Features",
-                    "examples": [
-                    [
-                        "projector",
-                        "whiteboard"
-                    ]
-                    ]
-                },
-                "id": {
-                    "type": "string",
-                    "title": "Id"
-                }
+                    "critic": {
+                        "type": "string",
+                        "title": "critic"
+                    },
+                    "id": {
+                        "type": "string",
+                        "title": "Id"
+                    }
                 },
                 "type": "object",
-                "required": [
-                "name",
-                "capacity",
-                "id"
-                ],
+                "required": ["evaluation","critic","id"],
                 "title": "Rating"
             },
             "BookAdd": {
                 "properties": {
-                "name": {
-                    "type": "string",
-                    "title": "Name",
-                    "examples": [
-                    "B-201"
-                    ]
-                },
-                "capacity": {
-                    "type": "integer",
-                    "minimum": 1,
-                    "title": "Capacity",
-                    "examples": [30]
-                },
-                "features": {
-                    "items": {
-                    "type": "string"
+                    "name": {
+                            "type": "string",
+                            "title": "Name",
+                            "examples": ["1984"]
                     },
-                    "type": "array",
-                    "title": "Features",
-                    "examples": [
-                    [
-                        "projector",
-                        "whiteboard"
-                    ]
-                    ]
-                }
+                    "isbn": {
+                        "type": "string",
+                        "title": "ISBN",
+                        "examples": ["ISBN-999-111-222-876-4"]
+                    },
+                    "author": {
+                        "type": "string",
+                        "title": "Author",
+                        "examples": ["George Orwell"]
+                    },
+                    "year_published": {
+                        "type": "integer",
+                        "title": "Year Published",
+                        "examples": ["1949"]
+                    },
+                    "editor": {
+                        "type": "string",
+                        "title": "Editor of Book",
+                        "examples": ["Secker & Warburg"]
+                    },
+                    "edition_number": {
+                        "type": "integer",
+                        "title": "Edition number",
+                        "examples": ["1"]
+                    },
+                    "id": {
+                        "type": "string",
+                        "title": "Id"
+                    },
+                    "summary": {
+                        "type": "string",
+                        "title": "Summary of the book"
+                    }
                 },
                 "type": "object",
-                "required": [
-                "name",
-                "capacity"
-                ],
+                "required": ["name","author","isbn","year_published","editor","edition_number"],
                 "title": "BookAdd"
             },
             "AuthorAdd": {
                 "properties": {
-                "name": {
-                    "type": "string",
-                    "title": "Name",
-                    "examples": [
-                    "B-201"
-                    ]
-                },
-                "capacity": {
-                    "type": "integer",
-                    "minimum": 1,
-                    "title": "Capacity",
-                    "examples": [30]
-                },
-                "features": {
-                    "items": {
-                    "type": "string"
+                    "name": {
+                        "type": "string",
+                        "title": "Name",
+                        "examples": [
+                        "George Orwell"
+                        ]
                     },
-                    "type": "array",
-                    "title": "Features",
-                    "examples": [
-                    [
-                        "projector",
-                        "whiteboard"
-                    ]
-                    ]
-                }
+                    "gender": {
+                        "type": "string",
+                        "enum": ["M", "F"],
+                        "title": "Gender",
+                        "examples": ["M"]
+                    },
+                    "year_born": {
+                        "type": "integer",
+                        "title": "Year_born",
+                        "examples": ["1903"]
+                    },
+                    "year_death": {
+                        "type": "integer",
+                        "title": "Year_death",
+                        "examples": ["1950"]
+                    },
+                    "books_published": {
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "title": "books_published",
+                        "examples": ["1984","Animal Farm"]
+                    },
+                    "id": {
+                        "type": "string",
+                        "title": "Id"
+                    }
                 },
                 "type": "object",
                 "required": [
                 "name",
-                "capacity"
+                "gender",
+                "year_born",
+                "books_published"
                 ],
                 "title": "AuthorAdd"
             },
             "RatingAdd": {
                 "properties": {
-                "name": {
-                    "type": "string",
-                    "title": "Name",
-                    "examples": [
-                    "B-201"
-                    ]
-                },
-                "capacity": {
-                    "type": "integer",
-                    "minimum": 1,
-                    "title": "Capacity",
-                    "examples": [30]
-                },
-                "features": {
-                    "items": {
-                    "type": "string"
+                    "evaluation": {
+                        "type": "integer",
+                        "title": "evaluation",
+                        "examples": ["5"]
                     },
-                    "type": "array",
-                    "title": "Features",
-                    "examples": [
-                    [
-                        "projector",
-                        "whiteboard"
-                    ]
-                    ]
-                }
+                    "critic": {
+                        "type": "string",
+                        "title": "critic"
+                    },
+                    "id": {
+                        "type": "string",
+                        "title": "Id"
+                    }
                 },
                 "type": "object",
-                "required": [
-                "name",
-                "capacity"
-                ],
+                "required": ["evaluation","critic"],
                 "title": "RatingAdd"
             },
             "ValidationError": {
