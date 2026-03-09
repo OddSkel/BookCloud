@@ -648,7 +648,11 @@
             ],
             "summary": "Get Genres",
             "description": "Returns a list of all genres in the system, including their IDs and names.",
-            "parameters": [],
+            "parameters": [
+              {
+                "$ref": "#/components/parameters/RankSortParam"
+              }
+            ],
             "responses": {
               "200": {
                 "description": "Successful Response",
@@ -867,7 +871,9 @@
                 "schema": {
                   "type": "integer"
                 }
-              }
+              },
+              { "$ref": "#/components/parameters/YearFromParam" },
+              { "$ref": "#/components/parameters/YearToParam" }
             ],
             "responses": {
               "200": {
@@ -899,7 +905,9 @@
                 "schema": {
                   "type": "integer"
                 }
-              }
+              },
+              { "$ref": "#/components/parameters/YearFromParam" },
+              { "$ref": "#/components/parameters/YearToParam" }
             ],
             "responses": {
               "200": {
@@ -1625,6 +1633,46 @@
             }
         },
         "parameters": {
+            "RankSortParam": {
+              "name": "rank_sort",
+              "in": "query",
+              "required": false,
+              "description": "Sort order for ranking results. Use rate_asc and rate_desc for sorting by rating in ascending or descending order. Use pop_asc and pop_desc for sorting by popularity in ascending or descending order.",
+              "schema": {
+                "type": "string",
+                "default": "rate_desc",
+                "enum": [
+                  "rate_asc",
+                  "rate_desc",
+                  "pop_asc",
+                  "pop_desc"
+                ]
+              }
+            },
+            "YearFromParam": {
+              "name": "year_from",
+              "in": "query",
+              "required": false,
+              "description": "Start year of the interval.",
+              "schema": {
+                "type": "integer",
+                "minimum": 0,
+                "default": 2000,
+                "example": 2000
+              }
+            },
+            "YearToParam": {
+              "name": "year_to",
+              "in": "query",
+              "required": false,
+              "description": "End year of the interval.",
+              "schema": {
+                "type": "integer",
+                "minimum": 0,
+                "default": 2025,
+                "example": 2010
+              }
+            },
             "AuthorNameParam": {
                 "name": "author_name",
                 "in": "query",
