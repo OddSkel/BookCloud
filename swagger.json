@@ -1,0 +1,1394 @@
+{
+    "openapi": "3.1.0",
+    "info": {
+        "title": "Book Cloud API",
+        "description": "Cloud API for books recommendation and statistics",
+        "version": "1.0.0"
+    },
+    "paths": {
+        "/books": {
+            "get": {
+                "tags": [
+                    "Books"
+                ],
+                "summary": "Get Books",
+                "operationId": "books_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Book"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/book": {
+            "post": {
+                "tags": [
+                    "Books"
+                ],
+                "summary": "Add book",
+                "operationId": "book_add_post",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BookAdd"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Book"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Books"
+                ],
+                "summary": "Edit Books",
+                "operationId": "list_books_books_put",
+                "parameters": [
+                    {
+                        "name": "ISBN",
+                        "in": "header",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "Edit Book by ISBN",
+                            "title": "ISBN"
+                        },
+                        "description": "Edit Book by ISBN"
+                    },
+                    {
+                        "name": "Editor",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "Edit Book by name of editor",
+                            "title": "Feature"
+                        },
+                        "description": "Edit Book by name of editor"
+                    },
+                    {
+                        "name": "Year edited",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "integer"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "Edit Book by year edited",
+                            "title": "Year edition"
+                        },
+                        "description": "Edit Book by year edited"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Book"
+                                    },
+                                    "title": "Response List Rooms Rooms Get"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/book/{book_id}": {
+            "get": {
+                "tags": [
+                    "Books"
+                ],
+                "summary": "Get Book",
+                "operationId": "get_book_books__book_id__get",
+                "parameters": [
+                    {
+                        "name": "book_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Book Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Book"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Books"
+                ],
+                "summary": "Delete Book",
+                "operationId": "delete_book_books__book_id__delete",
+                "parameters": [
+                    {
+                        "name": "book_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Book Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Successful Response"
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/authors": {
+            "get": {
+                "tags": [
+                    "Authors"
+                ],
+                "summary": "Authors",
+                "operationId": "authors_authors_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/author": {
+            "post": {
+                "tags": [
+                    "Authors"
+                ],
+                "summary": "Add author",
+                "operationId": "author_add_post",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AuthorAdd"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Author"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Authors"
+                ],
+                "summary": "Edit Author",
+                "operationId": "authors_put",
+                "parameters": [
+                    {
+                        "name": "Name",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "Edit Author by name",
+                            "title": "Edit Author by name"
+                        },
+                        "description": "Edit Author by name"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Author"
+                                    },
+                                    "title": "Response Author Put"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/author/{author_id}": {
+            "get": {
+                "tags": [
+                    "Authors"
+                ],
+                "summary": "Get author",
+                "operationId": "get_author_authors__author_id__get",
+                "parameters": [
+                    {
+                        "name": "author_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Author Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Author"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Authors"
+                ],
+                "summary": "Delete Author",
+                "operationId": "delete_author_authors__author_id__delete",
+                "parameters": [
+                    {
+                        "name": "author_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Author Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Successful Response"
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/ratings/{book_id}": {
+            "get": {
+                "tags": [
+                    "Ratings"
+                ],
+                "summary": "Get Ratings of a book",
+                "operationId": "rating_rating_get",
+                "parameters": [
+                    {
+                        "name": "book_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Book Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/rating/{book_id}": {
+            "post": {
+                "tags": [
+                    "Ratings"
+                ],
+                "summary": "Add rating to book",
+                "operationId": "rating_add_post",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RatingAdd"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Rating"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Ratings"
+                ],
+                "summary": "Edit Rating",
+                "operationId": "Rating_put",
+                "parameters": [
+                    {
+                        "name": "rating",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 5
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "title": "rating"
+                        },
+                        "description": "Edit rating by its evaluation"
+                    },
+                    {
+                        "name": "comment",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "Edit Rating by its comment",
+                            "title": "Comment"
+                        },
+                        "description": "Edit Rating by its comment"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Rating"
+                                    },
+                                    "title": "Response Rating Put"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/rating/{rating_id}": {
+            "get": {
+                "tags": [
+                    "Ratings"
+                ],
+                "summary": "Get rating",
+                "operationId": "get_rating__rating_id",
+                "parameters": [
+                    {
+                        "name": "rating_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Rating Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Rating"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Ratings"
+                ],
+                "summary": "Delete Rating",
+                "operationId": "delete_rating__rating_id",
+                "parameters": [
+                    {
+                        "name": "rating_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Rating Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Successful Response"
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/popular-low-rated": {
+            "get": {
+                "tags": [
+                    "PopularityVsQuality"
+                ],
+                "summary": "UC1 - Very Popular but Low Rated Books",
+                "description": "Returns books with the highest discrepancy between popularity and quality. Popularity is normalized using log(num_ratings), while quality is derived from a Bayesian-adjusted star rating to reduce the influence of books with very few reviews. The discrepancy score is defined as: discrepancy_score = popularity_norm - quality_norm. Higher values indicate books that are significantly more popular than their rating would suggest. Query parameters only filter the candidate set before ranking.",
+                "parameters": [
+                    {
+                        "name": "author_name",
+                        "in": "query",
+                        "required": false,
+                        "description": "Partial match on author name.",
+                        "schema": {
+                            "type": "string",
+                            "nullable": true,
+                            "example": "J.K. Rowling"
+                        }
+                    },
+                    {
+                        "name": "author_id",
+                        "in": "query",
+                        "required": false,
+                        "description": "Exact author ID.",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "nullable": true,
+                            "example": 12
+                        }
+                    },
+                    {
+                        "name": "genre_name",
+                        "in": "query",
+                        "required": false,
+                        "description": "Filter by one or more genre names. A book must contain all selected genres.",
+                        "schema": {
+                            "type": "array",
+                            "nullable": true,
+                            "items": {
+                                "type": "string",
+                                "example": "Fantasy"
+                            }
+                        },
+                        "style": "form",
+                        "explode": true
+                    },
+                    {
+                        "name": "genre_id",
+                        "in": "query",
+                        "required": false,
+                        "description": "Filter by one or more genre IDs. A book must contain all selected genre IDs.",
+                        "schema": {
+                            "type": "array",
+                            "nullable": true,
+                            "items": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "example": 4
+                            }
+                        },
+                        "style": "form",
+                        "explode": true
+                    },
+                    {
+                        "name": "book_name",
+                        "in": "query",
+                        "required": false,
+                        "description": "Partial match on book name.",
+                        "schema": {
+                            "type": "string",
+                            "nullable": true,
+                            "example": "Harry Potter"
+                        }
+                    },
+                    {
+                        "name": "book_isbn",
+                        "in": "query",
+                        "required": false,
+                        "description": "Exact book ISBN.",
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64",
+                            "minimum": 1,
+                            "nullable": true,
+                            "example": 9780439554930
+                        }
+                    },
+                    {
+                        "name": "pub_year_from",
+                        "in": "query",
+                        "required": false,
+                        "description": "Filter books published after or equal to this year.",
+                        "schema": {
+                            "type": "integer",
+                            "nullable": true,
+                            "example": 1950
+                        }
+                    },
+                    {
+                        "name": "pub_year_to",
+                        "in": "query",
+                        "required": false,
+                        "description": "Filter books published before or equal to this year.",
+                        "schema": {
+                            "type": "integer",
+                            "nullable": true,
+                            "example": 2025
+                        }
+                    },
+                    {
+                        "name": "pub_year",
+                        "in": "query",
+                        "required": false,
+                        "description": "Exact publication year.",
+                        "schema": {
+                            "type": "integer",
+                            "nullable": true,
+                            "example": 1997
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "description": "Page number.",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "page_size",
+                        "in": "query",
+                        "required": false,
+                        "description": "Number of results per page.",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 500,
+                            "default": 50
+                        }
+                    },
+                    {
+                        "name": "min_num_ratings",
+                        "in": "query",
+                        "required": false,
+                        "description": "Minimum number of ratings required.",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "default": 0
+                        }
+                    },
+                    {
+                        "name": "max_num_ratings",
+                        "in": "query",
+                        "required": false,
+                        "description": "Maximum number of ratings allowed.",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "nullable": true
+                        }
+                    },
+                    {
+                        "name": "min_star_rating",
+                        "in": "query",
+                        "required": false,
+                        "description": "Minimum average star rating.",
+                        "schema": {
+                            "type": "number",
+                            "format": "double",
+                            "minimum": 0,
+                            "maximum": 5,
+                            "nullable": true
+                        }
+                    },
+                    {
+                        "name": "max_star_rating",
+                        "in": "query",
+                        "required": false,
+                        "description": "Maximum average star rating.",
+                        "schema": {
+                            "type": "number",
+                            "format": "double",
+                            "minimum": 0,
+                            "maximum": 5,
+                            "default": 5
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated list of books with highest popularity-quality discrepancy.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedBookPQResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/hidden-gems": {
+            "get": {
+                "tags": [
+                    "PopularityVsQuality"
+                ],
+                "summary": "UC2 - High Rated but Low Popularity (Hidden Gems)",
+                "description": "Returns books with the lowest discrepancy between popularity and quality. Hidden gems correspond to books where the discrepancy_score is most negative.",
+                "parameters": [
+                    {
+                        "name": "author_name",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "nullable": true
+                        }
+                    },
+                    {
+                        "name": "author_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "nullable": true
+                        }
+                    },
+                    {
+                        "name": "genre_name",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "array",
+                            "nullable": true,
+                            "items": {
+                                "type": "string"
+                            }
+                        },
+                        "style": "form",
+                        "explode": true
+                    },
+                    {
+                        "name": "genre_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "array",
+                            "nullable": true,
+                            "items": {
+                                "type": "integer",
+                                "minimum": 1
+                            }
+                        },
+                        "style": "form",
+                        "explode": true
+                    },
+                    {
+                        "name": "book_name",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "nullable": true
+                        }
+                    },
+                    {
+                        "name": "book_isbn",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64",
+                            "minimum": 1,
+                            "nullable": true
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "page_size",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 500,
+                            "default": 50
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated list of hidden gem books.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedBookPQResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "HTTPValidationError": {
+                "properties": {
+                    "detail": {
+                        "items": {
+                            "$ref": "#/components/schemas/ValidationError"
+                        },
+                        "type": "array",
+                        "title": "Detail"
+                    }
+                },
+                "type": "object",
+                "title": "HTTPValidationError"
+            },
+            "Book": {
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "title": "Name",
+                        "examples": [
+                            "1984"
+                        ]
+                    },
+                    "isbn": {
+                        "type": "string",
+                        "title": "ISBN",
+                        "examples": [
+                            "ISBN-999-111-222-876-4"
+                        ]
+                    },
+                    "author": {
+                        "type": "string",
+                        "title": "Author",
+                        "examples": [
+                            "George Orwell"
+                        ]
+                    },
+                    "year_published": {
+                        "type": "integer",
+                        "title": "Year Published",
+                        "examples": [
+                            "1949"
+                        ]
+                    },
+                    "editor": {
+                        "type": "string",
+                        "title": "Editor of Book",
+                        "examples": [
+                            "Secker & Warburg"
+                        ]
+                    },
+                    "edition_number": {
+                        "type": "integer",
+                        "title": "Edition number",
+                        "examples": [
+                            "1"
+                        ]
+                    },
+                    "id": {
+                        "type": "string",
+                        "title": "Id"
+                    },
+                    "summary": {
+                        "type": "string",
+                        "title": "Summary of the book"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "name",
+                    "author",
+                    "isbn",
+                    "year_published",
+                    "editor",
+                    "edition_number",
+                    "id"
+                ],
+                "title": "Book"
+            },
+            "Author": {
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "title": "Name",
+                        "examples": [
+                            "George Orwell"
+                        ]
+                    },
+                    "gender": {
+                        "type": "string",
+                        "enum": [
+                            "M",
+                            "F"
+                        ],
+                        "title": "Gender"
+                    },
+                    "year_born": {
+                        "type": "integer",
+                        "title": "Year_born",
+                        "examples": [
+                            "1903"
+                        ]
+                    },
+                    "year_death": {
+                        "type": "integer",
+                        "title": "Year_death",
+                        "examples": [
+                            "1950"
+                        ]
+                    },
+                    "books_published": {
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "title": "books_published",
+                        "examples": [
+                            "1984",
+                            "Animal Farm"
+                        ]
+                    },
+                    "id": {
+                        "type": "string",
+                        "title": "Id"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "name",
+                    "gender",
+                    "year_born",
+                    "books_published",
+                    "id"
+                ],
+                "title": "Author"
+            },
+            "Rating": {
+                "properties": {
+                    "evaluation": {
+                        "type": "integer",
+                        "title": "evaluation",
+                        "examples": [
+                            "5"
+                        ]
+                    },
+                    "critic": {
+                        "type": "string",
+                        "title": "critic"
+                    },
+                    "id": {
+                        "type": "string",
+                        "title": "Id"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "evaluation",
+                    "critic",
+                    "id"
+                ],
+                "title": "Rating"
+            },
+            "BookAdd": {
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "title": "Name",
+                        "examples": [
+                            "1984"
+                        ]
+                    },
+                    "isbn": {
+                        "type": "string",
+                        "title": "ISBN",
+                        "examples": [
+                            "ISBN-999-111-222-876-4"
+                        ]
+                    },
+                    "author": {
+                        "type": "string",
+                        "title": "Author",
+                        "examples": [
+                            "George Orwell"
+                        ]
+                    },
+                    "year_published": {
+                        "type": "integer",
+                        "title": "Year Published",
+                        "examples": [
+                            "1949"
+                        ]
+                    },
+                    "editor": {
+                        "type": "string",
+                        "title": "Editor of Book",
+                        "examples": [
+                            "Secker & Warburg"
+                        ]
+                    },
+                    "edition_number": {
+                        "type": "integer",
+                        "title": "Edition number",
+                        "examples": [
+                            "1"
+                        ]
+                    },
+                    "id": {
+                        "type": "string",
+                        "title": "Id"
+                    },
+                    "summary": {
+                        "type": "string",
+                        "title": "Summary of the book"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "name",
+                    "author",
+                    "isbn",
+                    "year_published",
+                    "editor",
+                    "edition_number"
+                ],
+                "title": "BookAdd"
+            },
+            "AuthorAdd": {
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "title": "Name",
+                        "examples": [
+                            "George Orwell"
+                        ]
+                    },
+                    "gender": {
+                        "type": "string",
+                        "enum": [
+                            "M",
+                            "F"
+                        ],
+                        "title": "Gender",
+                        "examples": [
+                            "M"
+                        ]
+                    },
+                    "year_born": {
+                        "type": "integer",
+                        "title": "Year_born",
+                        "examples": [
+                            "1903"
+                        ]
+                    },
+                    "year_death": {
+                        "type": "integer",
+                        "title": "Year_death",
+                        "examples": [
+                            "1950"
+                        ]
+                    },
+                    "books_published": {
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "title": "books_published",
+                        "examples": [
+                            "1984",
+                            "Animal Farm"
+                        ]
+                    },
+                    "id": {
+                        "type": "string",
+                        "title": "Id"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "name",
+                    "gender",
+                    "year_born",
+                    "books_published"
+                ],
+                "title": "AuthorAdd"
+            },
+            "RatingAdd": {
+                "properties": {
+                    "evaluation": {
+                        "type": "integer",
+                        "title": "evaluation",
+                        "examples": [
+                            "5"
+                        ]
+                    },
+                    "critic": {
+                        "type": "string",
+                        "title": "critic"
+                    },
+                    "id": {
+                        "type": "string",
+                        "title": "Id"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "evaluation",
+                    "critic"
+                ],
+                "title": "RatingAdd"
+            },
+            "ValidationError": {
+                "properties": {
+                    "loc": {
+                        "items": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "integer"
+                                }
+                            ]
+                        },
+                        "type": "array",
+                        "title": "Location"
+                    },
+                    "msg": {
+                        "type": "string",
+                        "title": "Message"
+                    },
+                    "type": {
+                        "type": "string",
+                        "title": "Error Type"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "loc",
+                    "msg",
+                    "type"
+                ],
+                "title": "ValidationError"
+            },
+            "BookPQItem": {
+                "type": "object",
+                "description": "Book item for Popularity vs Quality analytics listings.",
+                "properties": {
+                    "isbn": {
+                        "type": "integer",
+                        "format": "int64",
+                        "example": 9780439554930
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Harry Potter and the Sorcerer's Stone"
+                    },
+                    "pub_year": {
+                        "type": "integer",
+                        "nullable": true,
+                        "example": 1997
+                    },
+                    "star_rating": {
+                        "type": "number",
+                        "format": "double",
+                        "nullable": true,
+                        "example": 4.47
+                    },
+                    "num_ratings": {
+                        "type": "integer",
+                        "format": "int64",
+                        "nullable": true,
+                        "example": 9234567
+                    },
+                    "discrepancy_score": {
+                        "type": "number",
+                        "format": "double",
+                        "nullable": true,
+                        "example": 0.42
+                    },
+                    "genres": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "example": [
+                            "Fantasy",
+                            "Young Adult"
+                        ]
+                    },
+                    "authors": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "example": [
+                            "J.K. Rowling"
+                        ]
+                    }
+                }
+            },
+            "PaginatedBookPQResponse": {
+                "type": "object",
+                "properties": {
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/BookPQItem"
+                        }
+                    },
+                    "total": {
+                        "type": "integer",
+                        "example": 245
+                    },
+                    "page": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "page_size": {
+                        "type": "integer",
+                        "example": 50
+                    },
+                    "total_pages": {
+                        "type": "integer",
+                        "example": 5
+                    }
+                }
+            }
+        }
+    }
+}
