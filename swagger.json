@@ -830,6 +830,240 @@
                     }
                 }
             }
+        },
+        "/searchBook":{
+            "get": {
+                "tags": [
+                    "Service 2: Search and Recommendation"
+                ],
+                "summary": "Search Books",
+                "description": "UC1 - Search books by title, author and/or keywords from summaries",
+                "operationId": "books_search",
+                "parameters": [
+                    {
+                        "name": "Title",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "Search Book by title",
+                            "title": "Search Book by title"
+                        },
+                        "description": "Search Book by title"
+                    },
+                    {
+                        "name": "Author",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "Search Book by author",
+                            "title": "Search Book by author"
+                        },
+                        "description": "Search Book by author"
+                    },
+                    {
+                        "name": "Keywords",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "Search Book by keywords from summary",
+                            "title": "Search Book by keywords from summary"
+                        },
+                        "description": "Search Book by keywords from summary"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Book"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/reccomendation":{
+            "get": {
+                "tags": [
+                    "Service 2: Search and Recommendation"
+                ],
+                "summary": "Recommend Books",
+                "description": "UC2 - Recommend books by genre overlap, Rating similarity and/or Popularity profile",
+                "operationId": "books_recommendation",
+                "parameters": [
+                    {
+                        "name": "Genre",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "Recommend books by genre overlap",
+                            "title": "Recommend books by genre overlap"
+                        },
+                        "description": "Recommend books by genre overlap"
+                    },
+                    {
+                        "name": "Rating",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "Recommend books by rating similarity",
+                            "title": "Recommend books by rating similarity"
+                        },
+                        "description": "Recommend books by rating similarity"
+                    },
+                    {
+                        "name": "Popularity",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "integer"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "Recommend books by Popularity profile",
+                            "title": "Recommend books by Popularity profile"
+                        },
+                        "description": "Recommend books by Popularity profile"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Book"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/rank-genre":{
+            "get": {
+                "tags": [
+                    "Service 1: Rank genres"
+                ],
+                "summary": "Rank genres",
+                "description": "UC1 - Rank genres by average rating and total number of ratings",
+                "operationId": "genre_rank",
+                "parameters": [
+                    {
+                        "name": "Average Rating",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "number"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "Rank genres by average rating",
+                            "title": "Rank genres by average rating"
+                        },
+                        "description": "Rank genres by average rating"
+                    },
+                    {
+                        "name": "Total number ratings",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "integer"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "Rank genres by total number of ratings",
+                            "title": "Rank genres by total number of ratings"
+                        },
+                        "description": "Rank genres by total number of ratings"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/RankGenreResponse"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/rank-author":{
+
+        },
+        "/author-performance-time":{
+
+        },
+        "/authors-growth":{
+
         }
     },
     "components": {
@@ -898,6 +1132,11 @@
                     "summary": {
                         "type": "string",
                         "title": "Summary of the book"
+                    },
+                    "genre": {
+                        "type": "string",
+                        "title": "Genre of the book",
+                        "examples": ["novel"]
                     }
                 },
                 "type": "object",
@@ -908,6 +1147,7 @@
                     "year_published",
                     "editor",
                     "edition_number",
+                    "genre",
                     "id"
                 ],
                 "title": "Book"
@@ -1046,6 +1286,11 @@
                     "summary": {
                         "type": "string",
                         "title": "Summary of the book"
+                    },
+                    "genre": {
+                        "type": "string",
+                        "title": "Genre of the book",
+                        "examples": ["novel"]
                     }
                 },
                 "type": "object",
@@ -1055,6 +1300,7 @@
                     "isbn",
                     "year_published",
                     "editor",
+                    "genre",
                     "edition_number"
                 ],
                 "title": "BookAdd"
@@ -1347,6 +1593,34 @@
                     "method",
                     "correlation",
                     "sample_size"
+                ]
+            },
+            "RankGenreResponse": {
+                "type": "object",
+                "description": "Genre ranking based on average rating and number of ratings.",
+                "properties": {
+                    "average rating": {
+                        "type": ["number", "null"],
+                        "format": "double",
+                        "example": 4.86,
+                        "description": "Average method ranking used."
+                    },
+                    "total number rating": {
+                        "type": ["number", "null"],
+                        "format": "integer",
+                        "example": 100,
+                        "description": "Total number of ratings method ranking used."
+                    }
+                },
+                "oneOf": [
+                    {
+                        "required": ["average rating"],
+                        "not": { "required": ["total number rating"] }
+                    },
+                    {
+                        "required": ["total number rating"],
+                        "not": { "required": ["average rating"] }
+                    }
                 ]
             }
         },
