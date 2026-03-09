@@ -641,6 +641,280 @@
                 }
             }
         },
+        "/genres": {
+          "get": {
+            "tags": [
+              "Genres"
+            ],
+            "summary": "Get Genres",
+            "description": "Returns a list of all genres in the system, including their IDs and names.",
+            "parameters": [],
+            "responses": {
+              "200": {
+                "description": "Successful Response",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Genre"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "post": {
+            "tags": [
+              "Genres"
+            ],
+            "summary": "Add Genre",
+            "description": "Adds a new genre to the system. The genre name is provided in the request body, and a unique ID is generated for the new genre.",
+            "parameters": [],
+            "requestBody": {
+              "required": true,
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/GenreAdd"
+                  }
+                }
+              }
+            },
+            "responses": {
+              "200": {
+                "description": "Successful Response",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/Genre"
+                    }
+                  }
+                }
+              },
+              "422": {
+                "description": "Validation Error",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+
+        "/genres/{genre_id}": {
+          "get": {
+            "tags": [
+              "Genres"
+            ],
+            "summary": "Get Genre",
+            "description": "Returns details of a specific genre by its ID.",
+            "parameters": [
+              {
+                "name": "genre_id",
+                "in": "path",
+                "required": true,
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "Successful Response",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/Genre"
+                    }
+                  }
+                }
+              },
+              "404": {
+                "description": "Genre not found",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    }
+                  }
+                }
+              }
+            }
+          },
+
+          "put": {
+            "tags": [
+              "Genres"
+            ],
+            "summary": "Edit Genre",
+            "description": "Edits the name of an existing genre. The genre to be edited is identified by its ID, and the new name is provided in the request body.",
+            "parameters": [
+              {
+                "name": "genre_id",
+                "in": "path",
+                "required": true,
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            ],
+            "requestBody": {
+              "required": true,
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/GenreEdit"
+                  }
+                }
+              }
+            },
+            "responses": {
+              "200": {
+                "description": "Successful Response",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/Genre"
+                    }
+                  }
+                }
+              },
+              "404": {
+                "description": "Genre not found",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    }
+                  }
+                }
+              },
+              "422": {
+                "description": "Validation Error",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    }
+                  }
+                }
+              }
+            }
+          },
+
+          "delete": {
+            "tags": [
+              "Genres"
+            ],
+            "summary": "Delete Genre",
+            "description": "Deletes an existing genre from the system. The genre to be deleted is identified by its ID.",
+            "parameters": [
+              {
+                "name": "genre_id",
+                "in": "path",
+                "required": true,
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            ],
+            "responses": {
+              "204": {
+                "description": "Successful Response"
+              },
+              "404": {
+                "description": "Genre not found",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    }
+                  }
+                }
+              },
+              "422": {
+                "description": "Validation Error",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+
+        "/genres/{genre_id}/growth": {
+          "get": {
+            "tags": [
+              "Genres"
+            ],
+            "summary": "Get Genre Growth",
+            "description": "Retrieves growth data for a specific genre.",
+            "parameters": [
+              {
+                "name": "genre_id",
+                "in": "path",
+                "required": true,
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "Successful Response",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/GenreGrowthResponse"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+
+        "/genres/{genre_id}/popularity": {
+          "get": {
+            "tags": [
+              "Genres"
+            ],
+            "summary": "Get Genre Popularity",
+            "description": "Retrieves popularity data for a specific genre.",
+            "parameters": [
+              {
+                "name": "genre_id",
+                "in": "path",
+                "required": true,
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "Successful Response",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/GenrePopularityResponse"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
         "/popular-low-rated": {
             "get": {
                 "tags": [
