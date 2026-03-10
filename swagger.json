@@ -831,7 +831,96 @@
                 }
             }
         },
-<<<<<<< HEAD
+        "/publishing-growth": {
+            "get": {
+                "tags": [
+                    "Popularity Service"
+                ],
+                "summary": "UC4 - Publishing Growth Over Time",
+                "description": "Returns yearly aggregated publishing metrics, including the number of books published, average star rating, and total number of ratings. Optional filters by genre and publication year range can be applied.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/GenreNameParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/GenreIdParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/PubYearFromParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/PubYearToParam"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Yearly publishing growth metrics successfully computed.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PublishingGrowthResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/eras": {
+            "get": {
+                "tags": [
+                    "Popularity Service"
+                ],
+                "summary": "UC5 - Classic vs Modern Comparison",
+                "description": "Compares classic and modern books based on publication year thresholds. The endpoint returns aggregated metrics for each era, including number of books, average star rating, average number of ratings, and total number of ratings.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/GenreNameParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/GenreIdParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/ClassicThresholdParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/ModernThresholdParam"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Classic vs modern comparison successfully computed.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ClassicModernComparisonResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/searchBook":{
             "get": {
                 "tags": [
@@ -894,65 +983,10 @@
                             "title": "Search Book by keywords from summary"
                         },
                         "description": "Search Book by keywords from summary"
-=======
-        "/publishing-growth": {
-            "get": {
-                "tags": [
-                    "Popularity Service"
-                ],
-                "summary": "UC4 - Publishing Growth Over Time",
-                "description": "Returns yearly aggregated publishing metrics, including the number of books published, average star rating, and total number of ratings. Optional filters by genre and publication year range can be applied.",
-                "parameters": [
-                    {
-                        "$ref": "#/components/parameters/GenreNameParam"
-                    },
-                    {
-                        "$ref": "#/components/parameters/GenreIdParam"
-                    },
-                    {
-                        "$ref": "#/components/parameters/PubYearFromParam"
-                    },
-                    {
-                        "$ref": "#/components/parameters/PubYearToParam"
->>>>>>> gustavo
                     }
-                ],
-                "responses": {
-                    "200": {
-<<<<<<< HEAD
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "array",
-                                    "items": {
-                                        "$ref": "#/components/schemas/Book"
-                                    }
-=======
-                        "description": "Yearly publishing growth metrics successfully computed.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/PublishingGrowthResponse"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
->>>>>>> gustavo
-                                }
-                            }
-                        }
-                    }
-                }
+                ]
             }
         },
-<<<<<<< HEAD
         "/reccomendation":{
             "get": {
                 "tags": [
@@ -1015,64 +1049,9 @@
                             "title": "Recommend books by Popularity profile"
                         },
                         "description": "Recommend books by Popularity profile"
-=======
-        "/eras": {
-            "get": {
-                "tags": [
-                    "Popularity Service"
-                ],
-                "summary": "UC5 - Classic vs Modern Comparison",
-                "description": "Compares classic and modern books based on publication year thresholds. The endpoint returns aggregated metrics for each era, including number of books, average star rating, average number of ratings, and total number of ratings.",
-                "parameters": [
-                    {
-                        "$ref": "#/components/parameters/GenreNameParam"
-                    },
-                    {
-                        "$ref": "#/components/parameters/GenreIdParam"
-                    },
-                    {
-                        "$ref": "#/components/parameters/ClassicThresholdParam"
-                    },
-                    {
-                        "$ref": "#/components/parameters/ModernThresholdParam"
->>>>>>> gustavo
                     }
-                ],
-                "responses": {
-                    "200": {
-<<<<<<< HEAD
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "array",
-                                    "items": {
-                                        "$ref": "#/components/schemas/Book"
-                                    }
-=======
-                        "description": "Classic vs modern comparison successfully computed.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ClassicModernComparisonResponse"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
->>>>>>> gustavo
-                                }
-                            }
-                        }
-                    }
-                }
+                ]
             }
-<<<<<<< HEAD
         },
         "/rank-genre":{
             "get": {
@@ -1136,17 +1115,6 @@
                     }
                 }
             }
-        },
-        "/rank-author":{
-
-        },
-        "/author-performance-time":{
-
-        },
-        "/authors-growth":{
-
-=======
->>>>>>> gustavo
         }
     },
     "components": {
@@ -1684,7 +1652,6 @@
                     "sample_size"
                 ]
             },
-<<<<<<< HEAD
             "RankGenreResponse": {
                 "type": "object",
                 "description": "Genre ranking based on average rating and number of ratings.",
@@ -1711,7 +1678,8 @@
                         "required": ["total number rating"],
                         "not": { "required": ["average rating"] }
                     }
-=======
+                ]
+            },
             "PublishingGrowthItem": {
                 "type": "object",
                 "description": "Yearly aggregated publishing metrics.",
@@ -1853,7 +1821,6 @@
                     "classic_threshold",
                     "modern_threshold",
                     "items"
->>>>>>> gustavo
                 ]
             }
         },
