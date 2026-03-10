@@ -1,17 +1,55 @@
-from pathlib import Path
-from typing import Optional, Tuple
+from __future__ import annotations
+
+import os
 import re
+import time
+from pathlib import Path
+from typing import Optional, List, Tuple
 
 import pandas as pd
-
-FILE = "../dataset/csvs/action.csv"
-CSV_DIR = Path("../dataset/csvs")
-OUT_DIR = Path("./normalized_out")
+import psycopg2
+from psycopg2.extras import execute_values
 
 
-# ----------------------------
-# Helpers de normalização
-# ----------------------------
+CSV_DIR = Path(os.getenv("CSV_DIR", "../dataset/csvs"))
+CHUNKSIZE = int(os.getenv("CHUNKSIZE", "200000"))
+
+PGHOST = os.getenv("PGHOST", "localhost")
+PGPORT = int(os.getenv("PGPORT", "5432"))
+PGUSER = os.getenv("PGUSER", "bookcloud")
+PGPASSWORD = os.getenv("PGPASSWORD", "bookcloud")
+PGDATABASE = os.getenv("PGDATABASE", "bookcloud_db")
+
+SCHEMA = os.getenv("PGSCHEMA", "bookcloud")
+
+BOOK_KEEP = os.getenv("BOOK_KEEP", "first").lower()
+
+CSV_LIMIT = int(os.getenv("CSV_LIMIT", "0"))
+CSV_ONLY = os.getenv("CSV_ONLY", "").strip()
+CSV_SKIP = os.getenv("CSV_SKIP", "").strip()
+MAX_CHUNKS_PER_FILE = int(os.getenv("MAX_CHUNKS_PER_FILE", "0"))
+
+
+def _py(v):
+    """Convert pandas/numpy scalars to native Python types."""
+    if v is None:
+        return None
+
+    try:
+        if pd.isna(v):
+            return None
+    except Exception:
+        pass
+
+    if hasattr(v, "item"):
+        try:
+            return v.item()
+        except Exception:
+            pass
+
+    return v
+
+
 def _clean_text(s: str) -> str:
     s = str(s) if s is not None else ""
     s = s.strip()
@@ -80,9 +118,6 @@ def _parse_list_string(value: str) -> list[str]:
 
 
 def _normalize_isbn(isbn) -> Optional[str]:
-    """
-    Retorna string com apenas dígitos e X (ISBN-10 pode ter X).
-    """
     if isbn is None or (isinstance(isbn, float) and pd.isna(isbn)):
         return None
     s = re.sub(r"[^0-9Xx]", "", str(isbn)).upper().strip()
@@ -90,10 +125,6 @@ def _normalize_isbn(isbn) -> Optional[str]:
 
 
 def _isbn_to_int(isbn_clean) -> Optional[int]:
-    """
-    Converte para int. Se tiver NaN/None/float, trata.
-    Se tiver 'X' (ISBN-10), retorna None para manter BIGINT consistente.
-    """
     if isbn_clean is None or (isinstance(isbn_clean, float) and pd.isna(isbn_clean)):
         return None
 
@@ -102,7 +133,6 @@ def _isbn_to_int(isbn_clean) -> Optional[int]:
         return None
     if "X" in s:
         return None
-
     if not s.isdigit():
         return None
 
@@ -112,153 +142,8 @@ def _isbn_to_int(isbn_clean) -> Optional[int]:
         return None
 
 
-# ----------------------------
-# Pipeline principal
-# ----------------------------
-def load_df(csv_path: Path, sep: str = ",", encoding: Optional[str] = None) -> pd.DataFrame:
-    if not csv_path.exists():
-        raise FileNotFoundError(f"CSV not found: {csv_path.resolve()}")
-    return pd.read_csv(csv_path, sep=sep, encoding=encoding, low_memory=False)
-
-
-# 🔥 BOOK (ISBN BIGINT, sem id)
-def build_book(df: pd.DataFrame) -> pd.DataFrame:
-    cols = ["name", "url", "summary_clean", "pub_year", "isbn_clean"]
-    missing = [c for c in cols if c not in df.columns]
-    if missing:
-        raise ValueError(f"Missing columns for book: {missing}")
-
-    book = df[cols].copy()
-
-    # normaliza e converte ISBN para inteiro (pode virar None)
-    book["isbn_clean"] = book["isbn_clean"].map(_normalize_isbn).map(_isbn_to_int)
-    book["isbn_clean"] = pd.to_numeric(book["isbn_clean"], errors="coerce").astype("Int64")
-
-    # remove linhas sem ISBN (PK)
-    book = book.dropna(subset=["isbn_clean"]).copy()
-
-    book["name"] = book["name"].map(_clean_text)
-    book["url"] = book["url"].map(_clean_text)
-    book["summary_clean"] = book["summary_clean"].astype(str).map(_clean_text)
-    book["pub_year"] = pd.to_numeric(book["pub_year"], errors="coerce").astype("Int64")
-
-    print(f"\n📚 BEFORE drop_duplicates (book): {len(book):,} rows")
-
-    # dedup por ISBN
-    book = book.drop_duplicates(subset=["isbn_clean"])
-
-    print(f"📚 AFTER drop_duplicates (book): {len(book):,} rows")
-
-    # ISBN primeiro + rename para isbn
-    book = book[["isbn_clean", "name", "url", "summary_clean", "pub_year"]].rename(
-        columns={"isbn_clean": "isbn"}
-    )
-
-    return book
-
-
-def build_rating(df: pd.DataFrame, book_df: pd.DataFrame) -> pd.DataFrame:
-    needed = ["isbn_clean", "star_rating", "num_ratings"]
-    missing = [c for c in needed if c not in df.columns]
-    if missing:
-        raise ValueError(f"Missing columns for rating: {missing}")
-
-    rating = df[needed].copy()
-
-    rating["isbn_clean"] = rating["isbn_clean"].map(_normalize_isbn).map(_isbn_to_int)
-    rating["isbn_clean"] = pd.to_numeric(rating["isbn_clean"], errors="coerce").astype("Int64")
-    rating = rating.dropna(subset=["isbn_clean"]).copy()
-
-    rating["star_rating"] = pd.to_numeric(rating["star_rating"], errors="coerce")
-    rating["num_ratings"] = pd.to_numeric(rating["num_ratings"], errors="coerce").astype("Int64")
-
-    # agora book_df tem coluna "isbn"
-    rating = rating[rating["isbn_clean"].isin(book_df["isbn"])].copy()
-
-    rating = (
-        rating.sort_values(["isbn_clean"])
-        .groupby("isbn_clean", as_index=False)
-        .agg(
-            star_rating=("star_rating", "first"),
-            num_ratings=("num_ratings", "first"),
-        )
-    )
-
-    rating = rating.rename(columns={"isbn_clean": "book_isbn"})
-    return rating
-
-
-def build_author_and_link(df: pd.DataFrame, book_df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    if "author" not in df.columns:
-        raise ValueError("Missing column: author")
-    if "isbn_clean" not in df.columns:
-        raise ValueError("Missing column: isbn_clean")
-
-    tmp = df[["isbn_clean", "author"]].copy()
-    tmp["isbn_clean"] = tmp["isbn_clean"].map(_normalize_isbn).map(_isbn_to_int)
-    tmp["isbn_clean"] = pd.to_numeric(tmp["isbn_clean"], errors="coerce").astype("Int64")
-    tmp = tmp.dropna(subset=["isbn_clean"]).copy()
-
-    tmp["author_list"] = tmp["author"].apply(_parse_list_string)
-    tmp = tmp.explode("author_list")
-
-    tmp["author_list"] = tmp["author_list"].map(_clean_text)
-    tmp = tmp[tmp["author_list"].notna() & (tmp["author_list"] != "")].copy()
-
-    author = (
-        tmp[["author_list"]]
-        .drop_duplicates()
-        .rename(columns={"author_list": "name"})
-        .sort_values("name")
-        .reset_index(drop=True)
-    )
-    author["author_id"] = range(1, len(author) + 1)
-
-    book_author = tmp.merge(author, left_on="author_list", right_on="name", how="inner")
-    book_author = book_author[["isbn_clean", "author_id"]].rename(columns={"isbn_clean": "book_isbn"}).drop_duplicates()
-
-    # book_df agora tem isbn
-    book_author = book_author[book_author["book_isbn"].isin(book_df["isbn"])].copy()
-
-    return author[["author_id", "name"]], book_author
-
-
-def build_genre_and_link(df: pd.DataFrame, book_df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    if "genres" not in df.columns:
-        raise ValueError("Missing column: genres")
-    if "isbn_clean" not in df.columns:
-        raise ValueError("Missing column: isbn_clean")
-
-    tmp = df[["isbn_clean", "genres"]].copy()
-    tmp["isbn_clean"] = tmp["isbn_clean"].map(_normalize_isbn).map(_isbn_to_int)
-    tmp["isbn_clean"] = pd.to_numeric(tmp["isbn_clean"], errors="coerce").astype("Int64")
-    tmp = tmp.dropna(subset=["isbn_clean"]).copy()
-
-    tmp["genre_list"] = tmp["genres"].apply(_parse_list_string)
-    tmp = tmp.explode("genre_list")
-
-    tmp["genre_list"] = tmp["genre_list"].map(_clean_text)
-    tmp = tmp[tmp["genre_list"].notna() & (tmp["genre_list"] != "")].copy()
-
-    genre = (
-        tmp[["genre_list"]]
-        .drop_duplicates()
-        .rename(columns={"genre_list": "name"})
-        .sort_values("name")
-        .reset_index(drop=True)
-    )
-    genre["genre_id"] = range(1, len(genre) + 1)
-
-    book_genre = tmp.merge(genre, left_on="genre_list", right_on="name", how="inner")
-    book_genre = book_genre[["isbn_clean", "genre_id"]].rename(columns={"isbn_clean": "book_isbn"}).drop_duplicates()
-
-    # book_df agora tem isbn
-    book_genre = book_genre[book_genre["book_isbn"].isin(book_df["isbn"])].copy()
-
-    return genre[["genre_id", "name"]], book_genre
-
-
-def generate_postgres_ddl(schema: str = "bookcloud") -> str:
+def ddl_sql(schema: str) -> str:
+    """Create schema and tables."""
     return f"""
 CREATE SCHEMA IF NOT EXISTS {schema};
 
@@ -297,63 +182,401 @@ CREATE TABLE IF NOT EXISTS {schema}.book_genre (
   genre_id  BIGINT NOT NULL REFERENCES {schema}.genre(genre_id) ON DELETE CASCADE,
   PRIMARY KEY (book_isbn, genre_id)
 );
+
+CREATE TABLE IF NOT EXISTS {schema}.staging_author_name (
+  name TEXT PRIMARY KEY
+);
+
+CREATE TABLE IF NOT EXISTS {schema}.staging_genre_name (
+  name TEXT PRIMARY KEY
+);
+
+CREATE TABLE IF NOT EXISTS {schema}.staging_book_author_name (
+  book_isbn BIGINT NOT NULL,
+  author_name TEXT NOT NULL,
+  PRIMARY KEY (book_isbn, author_name)
+);
+
+CREATE TABLE IF NOT EXISTS {schema}.staging_book_genre_name (
+  book_isbn BIGINT NOT NULL,
+  genre_name TEXT NOT NULL,
+  PRIMARY KEY (book_isbn, genre_name)
+);
 """.strip()
 
 
-def load_multiple_csvs(folder: Path, limit: int = 15) -> pd.DataFrame:
-    if not folder.exists():
-        raise FileNotFoundError(f"Folder not found: {folder.resolve()}")
+def finalize_sql(schema: str) -> str:
+    """Load dimension and relation tables from staging."""
+    return f"""
+INSERT INTO {schema}.author(name)
+SELECT s.name
+FROM {schema}.staging_author_name s
+ON CONFLICT (name) DO NOTHING;
 
-    csv_files = sorted(folder.glob("*.csv"))[:limit]
+INSERT INTO {schema}.genre(name)
+SELECT s.name
+FROM {schema}.staging_genre_name s
+ON CONFLICT (name) DO NOTHING;
 
-    if not csv_files:
-        raise ValueError("No CSV files found in folder.")
+INSERT INTO {schema}.book_author(book_isbn, author_id)
+SELECT s.book_isbn, a.author_id
+FROM {schema}.staging_book_author_name s
+JOIN {schema}.author a ON a.name = s.author_name
+ON CONFLICT DO NOTHING;
 
-    print(f"\n📂 Found {len(csv_files)} CSV files:")
-    for f in csv_files:
-        print(" -", f.name)
+INSERT INTO {schema}.book_genre(book_isbn, genre_id)
+SELECT s.book_isbn, g.genre_id
+FROM {schema}.staging_book_genre_name s
+JOIN {schema}.genre g ON g.name = s.genre_name
+ON CONFLICT DO NOTHING;
+""".strip()
 
-    dfs = []
-    for file in csv_files:
-        df = pd.read_csv(file, low_memory=False)
-        dfs.append(df)
 
-    combined_df = pd.concat(dfs, ignore_index=True)
+def truncate_staging_sql(schema: str) -> str:
+    """Clear staging tables."""
+    return f"""
+TRUNCATE TABLE
+  {schema}.staging_author_name,
+  {schema}.staging_genre_name,
+  {schema}.staging_book_author_name,
+  {schema}.staging_book_genre_name;
+""".strip()
 
-    print(f"\n📊 Combined shape: {combined_df.shape[0]:,} rows | {combined_df.shape[1]} columns")
 
-    return combined_df
+def deduplicate_books_sql(schema: str) -> str:
+    """Remove logical duplicates and keep the preferred ISBN."""
+    return f"""
+WITH author_sets AS (
+    SELECT
+        ba.book_isbn,
+        STRING_AGG(a.name, '|' ORDER BY a.name) AS authors_key
+    FROM {schema}.book_author ba
+    JOIN {schema}.author a ON a.author_id = ba.author_id
+    GROUP BY ba.book_isbn
+),
+book_fingerprint AS (
+    SELECT
+        b.isbn,
+        b.name,
+        b.pub_year,
+        ROUND(r.star_rating::numeric, 4) AS star_rating_norm,
+        r.num_ratings,
+        COALESCE(au.authors_key, '') AS authors_key,
+        CASE
+            WHEN LENGTH(b.isbn::text) = 13 THEN 0
+            ELSE 1
+        END AS isbn_priority
+    FROM {schema}.book b
+    JOIN {schema}.rating r ON r.book_isbn = b.isbn
+    LEFT JOIN author_sets au ON au.book_isbn = b.isbn
+),
+ranked AS (
+    SELECT
+        isbn,
+        ROW_NUMBER() OVER (
+            PARTITION BY name, pub_year, star_rating_norm, num_ratings, authors_key
+            ORDER BY isbn_priority ASC, isbn ASC
+        ) AS rn
+    FROM book_fingerprint
+),
+dupes AS (
+    SELECT isbn
+    FROM ranked
+    WHERE rn > 1
+)
+DELETE FROM {schema}.book b
+USING dupes d
+WHERE b.isbn = d.isbn;
+""".strip()
 
-def main():
-    df = load_multiple_csvs(CSV_DIR, limit=1)
 
-    book = build_book(df)
-    rating = build_rating(df, book)
-    author, book_author = build_author_and_link(df, book)
-    genre, book_genre = build_genre_and_link(df, book)
+def _connect():
+    return psycopg2.connect(
+        host=PGHOST,
+        port=PGPORT,
+        user=PGUSER,
+        password=PGPASSWORD,
+        dbname=PGDATABASE,
+    )
 
-    print("\n✅ DataFrames criados:")
-    print("book:", book.shape)
-    print("rating:", rating.shape)
-    print("author:", author.shape)
-    print("genre:", genre.shape)
-    print("book_author:", book_author.shape)
-    print("book_genre:", book_genre.shape)
 
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
+def _execute_ddl(conn, schema: str) -> None:
+    with conn.cursor() as cur:
+        cur.execute(ddl_sql(schema))
+    conn.commit()
 
-    book.to_csv(OUT_DIR / "book.csv", index=False)
-    rating.to_csv(OUT_DIR / "rating.csv", index=False)
-    author.to_csv(OUT_DIR / "author.csv", index=False)
-    genre.to_csv(OUT_DIR / "genre.csv", index=False)
-    book_author.to_csv(OUT_DIR / "book_author.csv", index=False)
-    book_genre.to_csv(OUT_DIR / "book_genre.csv", index=False)
 
-    ddl = generate_postgres_ddl()
-    (OUT_DIR / "schema.sql").write_text(ddl, encoding="utf-8")
+def _bulk_insert_book(conn, schema: str, rows: List[Tuple]) -> int:
+    if not rows:
+        return 0
 
-    print("\n📦 CSVs e schema gerados com sucesso.")
+    if BOOK_KEEP == "last":
+        sql = f"""
+        INSERT INTO {schema}.book(isbn, name, url, summary_clean, pub_year)
+        VALUES %s
+        ON CONFLICT (isbn) DO UPDATE SET
+          name = EXCLUDED.name,
+          url = EXCLUDED.url,
+          summary_clean = EXCLUDED.summary_clean,
+          pub_year = EXCLUDED.pub_year;
+        """
+    else:
+        sql = f"""
+        INSERT INTO {schema}.book(isbn, name, url, summary_clean, pub_year)
+        VALUES %s
+        ON CONFLICT (isbn) DO NOTHING;
+        """
+
+    with conn.cursor() as cur:
+        execute_values(cur, sql, rows, page_size=10000)
+
+    return len(rows)
+
+
+def _bulk_upsert_rating(conn, schema: str, rows: List[Tuple]) -> int:
+    if not rows:
+        return 0
+
+    sql = f"""
+    INSERT INTO {schema}.rating(book_isbn, star_rating, num_ratings)
+    VALUES %s
+    ON CONFLICT (book_isbn) DO UPDATE SET
+      star_rating = COALESCE(EXCLUDED.star_rating, {schema}.rating.star_rating),
+      num_ratings = COALESCE(EXCLUDED.num_ratings, {schema}.rating.num_ratings);
+    """
+
+    with conn.cursor() as cur:
+        execute_values(cur, sql, rows, page_size=10000)
+
+    return len(rows)
+
+
+def _bulk_insert_staging_single_col(conn, schema: str, table: str, names: List[str]) -> int:
+    if not names:
+        return 0
+
+    sql = f"INSERT INTO {schema}.{table}(name) VALUES %s ON CONFLICT (name) DO NOTHING;"
+    rows = [(n,) for n in names]
+
+    with conn.cursor() as cur:
+        execute_values(cur, sql, rows, page_size=20000)
+
+    return len(rows)
+
+
+def _bulk_insert_staging_pairs(conn, schema: str, table: str, rows: List[Tuple[int, str]]) -> int:
+    if not rows:
+        return 0
+
+    if table == "staging_book_author_name":
+        sql = f"""
+        INSERT INTO {schema}.{table}(book_isbn, author_name)
+        VALUES %s
+        ON CONFLICT (book_isbn, author_name) DO NOTHING;
+        """
+    else:
+        sql = f"""
+        INSERT INTO {schema}.{table}(book_isbn, genre_name)
+        VALUES %s
+        ON CONFLICT (book_isbn, genre_name) DO NOTHING;
+        """
+
+    with conn.cursor() as cur:
+        execute_values(cur, sql, rows, page_size=20000)
+
+    return len(rows)
+
+
+def _iter_csv_files(folder: Path) -> List[Path]:
+    files = sorted(folder.glob("*.csv"))
+    if not files:
+        raise FileNotFoundError(f"No CSV files found in {folder.resolve()}")
+
+    if CSV_ONLY:
+        only_set = {x.strip() for x in CSV_ONLY.split(",") if x.strip()}
+        files = [f for f in files if f.name in only_set]
+
+    if CSV_SKIP:
+        skip_set = {x.strip() for x in CSV_SKIP.split(",") if x.strip()}
+        files = [f for f in files if f.name not in skip_set]
+
+    if CSV_LIMIT and CSV_LIMIT > 0:
+        files = files[:CSV_LIMIT]
+
+    if not files:
+        raise FileNotFoundError("No CSV files left after filtering.")
+
+    return files
+
+
+def _require_cols(df: pd.DataFrame, cols: List[str], filename: str) -> None:
+    missing = [c for c in cols if c not in df.columns]
+    if missing:
+        raise ValueError(f"[{filename}] missing columns: {missing}")
+
+
+def import_csvs_to_postgres(schema: str = SCHEMA) -> None:
+    start_time = time.perf_counter()
+
+    print(f"Connecting to PostgreSQL at {PGHOST}:{PGPORT}, database={PGDATABASE}")
+    conn = _connect()
+    conn.autocommit = False
+
+    try:
+        print(f"Ensuring schema and tables for '{schema}'")
+        _execute_ddl(conn, schema)
+
+        csv_files = _iter_csv_files(CSV_DIR)
+        print(f"CSV directory: {CSV_DIR.resolve()}")
+        print(f"Files to import: {len(csv_files)}")
+        print(f"Chunk size: {CHUNKSIZE}")
+
+        total_files = len(csv_files)
+
+        for file_index, fp in enumerate(csv_files, start=1):
+            file_start = time.perf_counter()
+            print(f"[{file_index}/{total_files}] Importing file: {fp.name}")
+
+            chunk_iter = pd.read_csv(fp, low_memory=False, chunksize=CHUNKSIZE)
+
+            for chunk_index, chunk in enumerate(chunk_iter, start=1):
+                if MAX_CHUNKS_PER_FILE and chunk_index > MAX_CHUNKS_PER_FILE:
+                    print(
+                        f"  Reached MAX_CHUNKS_PER_FILE={MAX_CHUNKS_PER_FILE} for {fp.name}. "
+                        "Skipping remaining chunks."
+                    )
+                    break
+
+                print(f"  Processing chunk {chunk_index} from {fp.name}")
+
+                _require_cols(
+                    chunk,
+                    [
+                        "name", "url", "summary_clean", "pub_year",
+                        "isbn_clean", "star_rating", "num_ratings",
+                        "author", "genres",
+                    ],
+                    fp.name
+                )
+
+                original_rows = len(chunk)
+
+                isbn = chunk["isbn_clean"].map(_normalize_isbn).map(_isbn_to_int)
+                chunk = chunk.assign(isbn=isbn).dropna(subset=["isbn"])
+
+                valid_rows = len(chunk)
+                dropped_rows = original_rows - valid_rows
+
+                if chunk.empty:
+                    print(f"  Chunk {chunk_index} skipped: no valid ISBN rows")
+                    continue
+
+                chunk["isbn"] = pd.to_numeric(chunk["isbn"], errors="coerce").astype("int64")
+
+                book_df = pd.DataFrame({
+                    "isbn": chunk["isbn"],
+                    "name": chunk["name"].map(_clean_text).replace("", pd.NA),
+                    "url": chunk["url"].map(_clean_text),
+                    "summary_clean": chunk["summary_clean"].astype(str).map(_clean_text),
+                    "pub_year": pd.to_numeric(chunk["pub_year"], errors="coerce").astype("Int64"),
+                }).dropna(subset=["name"])
+
+                book_rows = [
+                    (_py(isbn), _py(name), _py(url), _py(summary), _py(pub_year))
+                    for isbn, name, url, summary, pub_year in book_df.itertuples(index=False, name=None)
+                ]
+
+                inserted_books = _bulk_insert_book(conn, schema, book_rows)
+
+                rating_df = pd.DataFrame({
+                    "book_isbn": chunk["isbn"],
+                    "star_rating": pd.to_numeric(chunk["star_rating"], errors="coerce"),
+                    "num_ratings": pd.to_numeric(chunk["num_ratings"], errors="coerce").astype("Int64"),
+                })
+
+                rating_df = (
+                    rating_df.sort_values("book_isbn")
+                    .groupby("book_isbn", as_index=False)
+                    .agg(
+                        star_rating=("star_rating", "first"),
+                        num_ratings=("num_ratings", "first"),
+                    )
+                )
+
+                rating_rows = [
+                    (_py(book_isbn), _py(star_rating), _py(num_ratings))
+                    for book_isbn, star_rating, num_ratings in rating_df.itertuples(index=False, name=None)
+                ]
+
+                upserted_ratings = _bulk_upsert_rating(conn, schema, rating_rows)
+
+                tmp_a = chunk[["isbn", "author"]].copy()
+                tmp_a["author_list"] = tmp_a["author"].apply(_parse_list_string)
+                tmp_a = tmp_a.explode("author_list")
+                tmp_a["author_list"] = tmp_a["author_list"].map(_clean_text)
+                tmp_a = tmp_a[tmp_a["author_list"].notna() & (tmp_a["author_list"] != "")]
+
+                author_names = tmp_a["author_list"].drop_duplicates().tolist()
+                inserted_author_names = _bulk_insert_staging_single_col(
+                    conn, schema, "staging_author_name", author_names
+                )
+
+                ba_pairs = list({(int(_py(r.isbn)), str(_py(r.author_list))) for r in tmp_a.itertuples(index=False)})
+                inserted_ba_pairs = _bulk_insert_staging_pairs(
+                    conn, schema, "staging_book_author_name", ba_pairs
+                )
+
+                tmp_g = chunk[["isbn", "genres"]].copy()
+                tmp_g["genre_list"] = tmp_g["genres"].apply(_parse_list_string)
+                tmp_g = tmp_g.explode("genre_list")
+                tmp_g["genre_list"] = tmp_g["genre_list"].map(_clean_text)
+                tmp_g = tmp_g[tmp_g["genre_list"].notna() & (tmp_g["genre_list"] != "")]
+
+                genre_names = tmp_g["genre_list"].drop_duplicates().tolist()
+                inserted_genre_names = _bulk_insert_staging_single_col(
+                    conn, schema, "staging_genre_name", genre_names
+                )
+
+                bg_pairs = list({(int(_py(r.isbn)), str(_py(r.genre_list))) for r in tmp_g.itertuples(index=False)})
+                inserted_bg_pairs = _bulk_insert_staging_pairs(
+                    conn, schema, "staging_book_genre_name", bg_pairs
+                )
+
+                conn.commit()
+
+                print(
+                    f"  Chunk {chunk_index} committed | "
+                    f"input_rows={original_rows} | valid_isbn_rows={valid_rows} | dropped_invalid_isbn={dropped_rows} | "
+                    f"book_rows={inserted_books} | rating_rows={upserted_ratings} | "
+                    f"author_names={inserted_author_names} | genre_names={inserted_genre_names} | "
+                    f"book_author_pairs={inserted_ba_pairs} | book_genre_pairs={inserted_bg_pairs}"
+                )
+
+            elapsed_file = time.perf_counter() - file_start
+            print(f"Finished file: {fp.name} in {elapsed_file:.2f}s")
+
+        print("Finalizing dimensions and relations")
+        with conn.cursor() as cur:
+            cur.execute(finalize_sql(schema))
+        conn.commit()
+
+        print("Removing logical duplicate books")
+        with conn.cursor() as cur:
+            cur.execute(deduplicate_books_sql(schema))
+        conn.commit()
+
+        print("Cleaning staging tables")
+        with conn.cursor() as cur:
+            cur.execute(truncate_staging_sql(schema))
+        conn.commit()
+
+        elapsed = time.perf_counter() - start_time
+        print(f"Import finished in {elapsed:.2f}s")
+
+    finally:
+        conn.close()
+        print("PostgreSQL connection closed")
 
 
 if __name__ == "__main__":
-    main()
+    import_csvs_to_postgres()

@@ -644,7 +644,7 @@
         "/popular-low-rated": {
             "get": {
                 "tags": [
-                    "PopularityVsQuality"
+                    "Popularity Service"
                 ],
                 "summary": "UC1 - Very Popular but Low Rated Books",
                 "description": "Returns books with the highest discrepancy between popularity and quality. Higher values indicate books that are significantly more popular than their rating would suggest. Query parameters are used to filter the candidate set before ranking.",
@@ -712,7 +712,7 @@
         "/hidden-gems": {
             "get": {
                 "tags": [
-                    "PopularityVsQuality"
+                    "Popularity Service"
                 ],
                 "summary": "UC2 - High Rated but Low Popularity (Hidden Gems)",
                 "description": "Returns books with the lowest discrepancy between popularity and quality. Hidden gems correspond to books where the discrepancy_score are the smallest.",
@@ -780,7 +780,7 @@
         "/correlation": {
             "get": {
                 "tags": [
-                    "PopularityVsQuality"
+                    "Popularity Service"
                 ],
                 "summary": "UC3 - Rating vs Popularity Correlation",
                 "description": "Computes the statistical correlation between book quality (`star_rating`) and popularity (`num_ratings`) across the selected set of books. Optional filters by genre and publication year can be applied before the correlation is calculated.",
@@ -831,6 +831,7 @@
                 }
             }
         },
+<<<<<<< HEAD
         "/searchBook":{
             "get": {
                 "tags": [
@@ -893,10 +894,32 @@
                             "title": "Search Book by keywords from summary"
                         },
                         "description": "Search Book by keywords from summary"
+=======
+        "/publishing-growth": {
+            "get": {
+                "tags": [
+                    "Popularity Service"
+                ],
+                "summary": "UC4 - Publishing Growth Over Time",
+                "description": "Returns yearly aggregated publishing metrics, including the number of books published, average star rating, and total number of ratings. Optional filters by genre and publication year range can be applied.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/GenreNameParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/GenreIdParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/PubYearFromParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/PubYearToParam"
+>>>>>>> gustavo
                     }
                 ],
                 "responses": {
                     "200": {
+<<<<<<< HEAD
                         "description": "Successful Response",
                         "content": {
                             "application/json": {
@@ -905,6 +928,23 @@
                                     "items": {
                                         "$ref": "#/components/schemas/Book"
                                     }
+=======
+                        "description": "Yearly publishing growth metrics successfully computed.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PublishingGrowthResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+>>>>>>> gustavo
                                 }
                             }
                         }
@@ -912,6 +952,7 @@
                 }
             }
         },
+<<<<<<< HEAD
         "/reccomendation":{
             "get": {
                 "tags": [
@@ -974,10 +1015,32 @@
                             "title": "Recommend books by Popularity profile"
                         },
                         "description": "Recommend books by Popularity profile"
+=======
+        "/eras": {
+            "get": {
+                "tags": [
+                    "Popularity Service"
+                ],
+                "summary": "UC5 - Classic vs Modern Comparison",
+                "description": "Compares classic and modern books based on publication year thresholds. The endpoint returns aggregated metrics for each era, including number of books, average star rating, average number of ratings, and total number of ratings.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/GenreNameParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/GenreIdParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/ClassicThresholdParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/ModernThresholdParam"
+>>>>>>> gustavo
                     }
                 ],
                 "responses": {
                     "200": {
+<<<<<<< HEAD
                         "description": "Successful Response",
                         "content": {
                             "application/json": {
@@ -986,12 +1049,30 @@
                                     "items": {
                                         "$ref": "#/components/schemas/Book"
                                     }
+=======
+                        "description": "Classic vs modern comparison successfully computed.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ClassicModernComparisonResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+>>>>>>> gustavo
                                 }
                             }
                         }
                     }
                 }
             }
+<<<<<<< HEAD
         },
         "/rank-genre":{
             "get": {
@@ -1064,6 +1145,8 @@
         },
         "/authors-growth":{
 
+=======
+>>>>>>> gustavo
         }
     },
     "components": {
@@ -1583,6 +1666,11 @@
                         "example": 0.34,
                         "description": "Correlation coefficient between star_rating and num_ratings."
                     },
+                    "interpretation": {
+                        "type": "string",
+                        "example": "Weak positive correlation",
+                        "description": "Interpretation of the correlation coefficient."
+                    },
                     "sample_size": {
                         "type": "integer",
                         "example": 182340,
@@ -1592,9 +1680,11 @@
                 "required": [
                     "method",
                     "correlation",
+                    "interpretation",
                     "sample_size"
                 ]
             },
+<<<<<<< HEAD
             "RankGenreResponse": {
                 "type": "object",
                 "description": "Genre ranking based on average rating and number of ratings.",
@@ -1621,6 +1711,149 @@
                         "required": ["total number rating"],
                         "not": { "required": ["average rating"] }
                     }
+=======
+            "PublishingGrowthItem": {
+                "type": "object",
+                "description": "Yearly aggregated publishing metrics.",
+                "properties": {
+                    "pub_year": {
+                        "type": "integer",
+                        "example": 2001,
+                        "description": "Publication year."
+                    },
+                    "books_published": {
+                        "type": "integer",
+                        "example": 1310,
+                        "description": "Number of books published in the year."
+                    },
+                    "avg_star_rating": {
+                        "type": "number",
+                        "format": "double",
+                        "nullable": true,
+                        "example": 4.03,
+                        "description": "Average star rating of books published in the year."
+                    },
+                    "sum_num_ratings": {
+                        "type": "integer",
+                        "format": "int64",
+                        "nullable": true,
+                        "example": 610542,
+                        "description": "Total number of ratings accumulated by books published in the year."
+                    }
+                },
+                "required": [
+                    "pub_year",
+                    "books_published",
+                    "avg_star_rating",
+                    "sum_num_ratings"
+                ]
+            },
+            "PublishingGrowthResponse": {
+                "type": "object",
+                "description": "Time series of yearly publishing growth metrics.",
+                "properties": {
+                    "summary": {
+                        "type": "object",
+                        "properties": {
+                            "num_years": {
+                                "type": "integer",
+                                "example": 21
+                            },
+                            "total_books": {
+                                "type": "integer",
+                                "example": 245000
+                            },
+                            "avg_books_years": {
+                                "type": "number",
+                                "format": "double",
+                                "example": 11666.67
+                            }
+                        }
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublishingGrowthItem"
+                        }
+                    }
+                },
+                "required": [
+                    "items"
+                ]
+            },
+            "ClassicModernItem": {
+                "type": "object",
+                "description": "Aggregated metrics for one publishing era.",
+                "properties": {
+                    "era": {
+                        "type": "string",
+                        "enum": [
+                            "classic",
+                            "modern"
+                        ],
+                        "example": "classic"
+                    },
+                    "n_books": {
+                        "type": "integer",
+                        "example": 45210,
+                        "description": "Number of books in the era."
+                    },
+                    "avg_star_rating": {
+                        "type": "number",
+                        "format": "double",
+                        "nullable": true,
+                        "example": 4.12,
+                        "description": "Average star rating of books in the era."
+                    },
+                    "avg_num_ratings": {
+                        "type": "number",
+                        "format": "double",
+                        "nullable": true,
+                        "example": 18540.3,
+                        "description": "Average number of ratings per book in the era."
+                    },
+                    "sum_num_ratings": {
+                        "type": "integer",
+                        "format": "int64",
+                        "nullable": true,
+                        "example": 838000000,
+                        "description": "Total number of ratings accumulated by books in the era."
+                    }
+                },
+                "required": [
+                    "era",
+                    "n_books",
+                    "avg_star_rating",
+                    "avg_num_ratings",
+                    "sum_num_ratings"
+                ]
+            },
+            "ClassicModernComparisonResponse": {
+                "type": "object",
+                "description": "Comparison of aggregated metrics between classic and modern books.",
+                "properties": {
+                    "classic_threshold": {
+                        "type": "integer",
+                        "example": 1950,
+                        "description": "Maximum publication year considered classic."
+                    },
+                    "modern_threshold": {
+                        "type": "integer",
+                        "example": 2000,
+                        "description": "Minimum publication year considered modern."
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ClassicModernItem"
+                        }
+                    }
+                },
+                "required": [
+                    "classic_threshold",
+                    "modern_threshold",
+                    "items"
+>>>>>>> gustavo
                 ]
             }
         },
@@ -1822,6 +2055,28 @@
                     ],
                     "default": "pearson",
                     "example": "pearson"
+                }
+            },
+            "ClassicThresholdParam": {
+                "name": "classic_threshold",
+                "in": "query",
+                "required": false,
+                "description": "Maximum publication year considered part of the classic era.",
+                "schema": {
+                    "type": "integer",
+                    "default": 1950,
+                    "example": 1950
+                }
+            },
+            "ModernThresholdParam": {
+                "name": "modern_threshold",
+                "in": "query",
+                "required": false,
+                "description": "Minimum publication year considered part of the modern era.",
+                "schema": {
+                    "type": "integer",
+                    "default": 2000,
+                    "example": 2000
                 }
             }
         }
