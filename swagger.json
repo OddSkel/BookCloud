@@ -1769,26 +1769,22 @@
                         "example": "Harry Potter and the Sorcerer's Stone"
                     },
                     "pub_year": {
-                        "type": "integer",
-                        "nullable": true,
+                        "type": ["integer", "null"],
                         "example": 1997
                     },
                     "star_rating": {
-                        "type": "number",
+                        "type": ["number", "null"],
                         "format": "double",
-                        "nullable": true,
                         "example": 4.47
                     },
                     "num_ratings": {
-                        "type": "integer",
+                        "type": ["integer", "null"],
                         "format": "int64",
-                        "nullable": true,
                         "example": 9234567
                     },
                     "discrepancy_score": {
-                        "type": "number",
+                        "type": ["number", "null"],
                         "format": "double",
-                        "nullable": true,
                         "example": 0.42
                     },
                     "genres": {
@@ -1826,26 +1822,22 @@
                         "example": "Harry Potter and the Sorcerer's Stone"
                     },
                     "pub_year": {
-                        "type": "integer",
-                        "nullable": true,
+                        "type": ["integer", "null"],
                         "example": 1997
                     },
                     "star_rating": {
-                        "type": "number",
+                        "type": ["number", "null"],
                         "format": "double",
-                        "nullable": true,
                         "example": 4.47
                     },
                     "num_ratings": {
-                        "type": "integer",
+                        "type": ["integer", "null"],
                         "format": "int64",
-                        "nullable": true,
                         "example": 9234567
                     },
                     "correlation_score": {
-                        "type": "number",
+                        "type": ["number", "null"],
                         "format": "double",
-                        "nullable": true,
                         "example": 0.42
                     },
                     "genres": {
@@ -1910,9 +1902,8 @@
                         "description": "Correlation method used."
                     },
                     "correlation": {
-                        "type": "number",
+                        "type": ["number", "null"],
                         "format": "double",
-                        "nullable": true,
                         "example": 0.34,
                         "description": "Correlation coefficient between star_rating and num_ratings."
                     },
@@ -1977,16 +1968,14 @@
                         "description": "Number of books published in the year."
                     },
                     "avg_star_rating": {
-                        "type": "number",
+                        "type":["number", "null"],
                         "format": "double",
-                        "nullable": true,
                         "example": 4.03,
                         "description": "Average star rating of books published in the year."
                     },
                     "sum_num_ratings": {
-                        "type": "integer",
+                        "type": ["integer", "null"],
                         "format": "int64",
-                        "nullable": true,
                         "example": 610542,
                         "description": "Total number of ratings accumulated by books published in the year."
                     }
@@ -2049,23 +2038,20 @@
                         "description": "Number of books in the era."
                     },
                     "avg_star_rating": {
-                        "type": "number",
+                        "type": ["number", "null"],
                         "format": "double",
-                        "nullable": true,
                         "example": 4.12,
                         "description": "Average star rating of books in the era."
                     },
                     "avg_num_ratings": {
-                        "type": "number",
+                        "type": ["number", "null"],
                         "format": "double",
-                        "nullable": true,
                         "example": 18540.3,
                         "description": "Average number of ratings per book in the era."
                     },
                     "sum_num_ratings": {
-                        "type": "integer",
+                        "type": ["integer", "null"],
                         "format": "int64",
-                        "nullable": true,
                         "example": 838000000,
                         "description": "Total number of ratings accumulated by books in the era."
                     }
@@ -2108,44 +2094,44 @@
         },
         "parameters": {
             "RankSortParam": {
-              "name": "rank_sort",
-              "in": "query",
-              "required": false,
-              "description": "Sort order for ranking results. Use rate_asc and rate_desc for sorting by rating in ascending or descending order. Use pop_asc and pop_desc for sorting by popularity in ascending or descending order.",
-              "schema": {
-                "type": "string",
-                "default": "rate_desc",
-                "enum": [
-                  "rate_asc",
-                  "rate_desc",
-                  "pop_asc",
-                  "pop_desc"
-                ]
-              }
+                "name": "rank_sort",
+                "in": "query",
+                "required": false,
+                "description": "Sort order for ranking results. Use rate_asc and rate_desc for sorting by rating in ascending or descending order. Use pop_asc and pop_desc for sorting by popularity in ascending or descending order.",
+                "schema": {
+                    "type": "string",
+                    "default": "rate_desc",
+                    "enum": [
+                    "rate_asc",
+                    "rate_desc",
+                    "pop_asc",
+                    "pop_desc"
+                    ]
+                }
             },
             "YearFromParam": {
-              "name": "year_from",
-              "in": "query",
-              "required": false,
-              "description": "Start year of the interval.",
-              "schema": {
-                "type": "integer",
-                "minimum": 0,
-                "default": 2000,
-                "example": 2000
-              }
+                "name": "year_from",
+                "in": "query",
+                "required": false,
+                "description": "Start year of the interval.",
+                "schema": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "default": 2000,
+                    "example": 2000
+                }
             },
             "YearToParam": {
-              "name": "year_to",
-              "in": "query",
-              "required": false,
-              "description": "End year of the interval.",
-              "schema": {
-                "type": "integer",
-                "minimum": 0,
-                "default": 2025,
-                "example": 2010
-              }
+                "name": "year_to",
+                "in": "query",
+                "required": false,
+                "description": "End year of the interval.",
+                "schema": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "default": 2025,
+                    "example": 2010
+                }
             },
             "AuthorNameParam": {
                 "name": "author_name",
@@ -2164,9 +2150,8 @@
                 "required": false,
                 "description": "Exact author ID.",
                 "schema": {
-                    "type": "integer",
+                    "type": ["integer", "null"],
                     "minimum": 1,
-                    "nullable": true,
                     "example": 12
                 }
             },
@@ -2176,8 +2161,7 @@
                 "required": false,
                 "description": "Filter by one or more genre names. A book must contain all selected genres.",
                 "schema": {
-                    "type": "array",
-                    "nullable": true,
+                    "type": ["array", "null"],
                     "items": {
                         "type": "string",
                         "example": "Fantasy"
@@ -2192,8 +2176,7 @@
                 "required": false,
                 "description": "Filter by one or more genre IDs. A book must contain all selected genre IDs.",
                 "schema": {
-                    "type": "array",
-                    "nullable": true,
+                    "type": ["array", "null"],
                     "items": {
                         "type": "integer",
                         "minimum": 1,
@@ -2209,8 +2192,7 @@
                 "required": false,
                 "description": "Partial match on book name.",
                 "schema": {
-                    "type": "string",
-                    "nullable": true,
+                    "type": ["string", "null"],
                     "example": "Harry Potter"
                 }
             },
@@ -2220,10 +2202,9 @@
                 "required": false,
                 "description": "Exact book ISBN.",
                 "schema": {
-                    "type": "integer",
+                    "type": ["integer", "null"],
                     "format": "int64",
                     "minimum": 1,
-                    "nullable": true,
                     "example": 9780439554930
                 }
             },
@@ -2233,8 +2214,7 @@
                 "required": false,
                 "description": "Filter books published after or equal to this year.",
                 "schema": {
-                    "type": "integer",
-                    "nullable": true,
+                    "type": ["integer", "null"],
                     "example": 1950
                 }
             },
@@ -2244,8 +2224,7 @@
                 "required": false,
                 "description": "Filter books published before or equal to this year.",
                 "schema": {
-                    "type": "integer",
-                    "nullable": true,
+                    "type": ["integer", "null"],
                     "example": 2025
                 }
             },
@@ -2255,8 +2234,7 @@
                 "required": false,
                 "description": "Exact publication year.",
                 "schema": {
-                    "type": "integer",
-                    "nullable": true,
+                    "type": ["integer", "null"],
                     "example": 1997
                 }
             },
@@ -2300,9 +2278,8 @@
                 "required": false,
                 "description": "Maximum number of ratings allowed.",
                 "schema": {
-                    "type": "integer",
-                    "minimum": 0,
-                    "nullable": true
+                    "type": ["integer", "null"],
+                    "minimum": 0
                 }
             },
             "MinStarRatingParam": {
@@ -2311,11 +2288,10 @@
                 "required": false,
                 "description": "Minimum average star rating.",
                 "schema": {
-                    "type": "number",
+                    "type": ["number", "null"],
                     "format": "double",
                     "minimum": 0,
-                    "maximum": 5,
-                    "nullable": true
+                    "maximum": 5
                 }
             },
             "MaxStarRatingParam": {
