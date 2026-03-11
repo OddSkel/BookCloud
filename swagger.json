@@ -646,7 +646,7 @@
             "tags": [
               "Genres"
             ],
-            "summary": "Get Genres",
+            "summary": "UC1 & UC2 - Get Genres Ranked by Rating or Popularity",
             "description": "Returns a list of all genres in the system, including their IDs and names.",
             "parameters": [
               {
@@ -659,10 +659,20 @@
                 "content": {
                   "application/json": {
                     "schema": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Genre"
-                      }
+                      "oneOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/RankGenresByRating"
+                          }
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/RankGenresByPopularity"
+                          }
+                        }
+                      ]
                     }
                   }
                 }
@@ -692,17 +702,7 @@
                 "content": {
                   "application/json": {
                     "schema": {
-                      "$ref": "#/components/schemas/Genre"
-                    }
-                  }
-                }
-              },
-              "422": {
-                "description": "Validation Error",
-                "content": {
-                  "application/json": {
-                    "schema": {
-                      "$ref": "#/components/schemas/HTTPValidationError"
+                      "$ref": "#/components/schemas/GenreAddResponse"
                     }
                   }
                 }
@@ -734,17 +734,7 @@
                 "content": {
                   "application/json": {
                     "schema": {
-                      "$ref": "#/components/schemas/Genre"
-                    }
-                  }
-                }
-              },
-              "404": {
-                "description": "Genre not found",
-                "content": {
-                  "application/json": {
-                    "schema": {
-                      "$ref": "#/components/schemas/HTTPValidationError"
+                      "$ref": "#/components/schemas/GenreResponse"
                     }
                   }
                 }
@@ -784,34 +774,13 @@
                 "content": {
                   "application/json": {
                     "schema": {
-                      "$ref": "#/components/schemas/Genre"
-                    }
-                  }
-                }
-              },
-              "404": {
-                "description": "Genre not found",
-                "content": {
-                  "application/json": {
-                    "schema": {
-                      "$ref": "#/components/schemas/HTTPValidationError"
-                    }
-                  }
-                }
-              },
-              "422": {
-                "description": "Validation Error",
-                "content": {
-                  "application/json": {
-                    "schema": {
-                      "$ref": "#/components/schemas/HTTPValidationError"
+                      "$ref": "#/components/schemas/GenreEditResponse"
                     }
                   }
                 }
               }
             }
           },
-
           "delete": {
             "tags": [
               "Genres"
@@ -831,37 +800,16 @@
             "responses": {
               "204": {
                 "description": "Successful Response"
-              },
-              "404": {
-                "description": "Genre not found",
-                "content": {
-                  "application/json": {
-                    "schema": {
-                      "$ref": "#/components/schemas/HTTPValidationError"
-                    }
-                  }
-                }
-              },
-              "422": {
-                "description": "Validation Error",
-                "content": {
-                  "application/json": {
-                    "schema": {
-                      "$ref": "#/components/schemas/HTTPValidationError"
-                    }
-                  }
-                }
               }
             }
           }
         },
-
         "/genres/{genre_id}/growth": {
           "get": {
             "tags": [
               "Genres"
             ],
-            "summary": "Get Genre Growth",
+            "summary": "UC3 - Get Genre Growth or Decline Over Time",
             "description": "Retrieves growth data for a specific genre.",
             "parameters": [
               {
@@ -895,7 +843,7 @@
             "tags": [
               "Genres"
             ],
-            "summary": "Get Genre Popularity",
+            "summary": "UC4 - Get Genre Popularity Trends Over Time",
             "description": "Retrieves popularity data for a specific genre.",
             "parameters": [
               {
@@ -1333,69 +1281,6 @@
                         "description": "Recommend books by Popularity profile"
                     }
                 ]
-            }
-        },
-        "/rank-genre":{
-            "get": {
-                "tags": [
-                    "Service 1: Rank genres"
-                ],
-                "summary": "Rank genres",
-                "description": "UC1 - Rank genres by average rating and total number of ratings",
-                "operationId": "genre_rank",
-                "parameters": [
-                    {
-                        "name": "Average Rating",
-                        "in": "query",
-                        "required": false,
-                        "schema": {
-                            "anyOf": [
-                                {
-                                    "type": "number"
-                                },
-                                {
-                                    "type": "null"
-                                }
-                            ],
-                            "description": "Rank genres by average rating",
-                            "title": "Rank genres by average rating"
-                        },
-                        "description": "Rank genres by average rating"
-                    },
-                    {
-                        "name": "Total number ratings",
-                        "in": "query",
-                        "required": false,
-                        "schema": {
-                            "anyOf": [
-                                {
-                                    "type": "integer"
-                                },
-                                {
-                                    "type": "null"
-                                }
-                            ],
-                            "description": "Rank genres by total number of ratings",
-                            "title": "Rank genres by total number of ratings"
-                        },
-                        "description": "Rank genres by total number of ratings"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "array",
-                                    "items": {
-                                        "$ref": "#/components/schemas/RankGenreResponse"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
             }
         }
     },
@@ -1925,33 +1810,267 @@
                     "sample_size"
                 ]
             },
-            "RankGenreResponse": {
-                "type": "object",
-                "description": "Genre ranking based on average rating and number of ratings.",
-                "properties": {
-                    "average rating": {
-                        "type": ["number", "null"],
+            "RankGenresByRating": {
+              "type": "object",
+              "description": "Response containing book genres ranked by their average rating.",
+              "properties": {
+                "genres": {
+                  "type": "array",
+                  "description": "List of genres sorted in descending order by average rating.",
+                  "items": {
+                    "type": "object",
+                    "required": ["rank", "genre", "average_rating"],
+                    "properties": {
+                      "rank": {
+                        "type": "integer",
+                        "description": "Position of the genre in the ranking (1 = highest rated).",
+                        "example": 1
+                      },
+                      "genre": {
+                        "type": "string",
+                        "description": "Name of the book genre.",
+                        "example": "Science Fiction"
+                      },
+                      "average_rating": {
+                        "type": "number",
                         "format": "double",
-                        "example": 4.86,
-                        "description": "Average method ranking used."
-                    },
-                    "total number rating": {
-                        "type": ["number", "null"],
-                        "format": "integer",
-                        "example": 100,
-                        "description": "Total number of ratings method ranking used."
+                        "description": "Average rating across all books within this genre.",
+                        "minimum": 0.0,
+                        "maximum": 5.0,
+                        "example": 4.86
+                      },
+                      "total_ratings": {
+                        "type": "integer",
+                        "description": "Total number of ratings submitted across all books in this genre.",
+                        "example": 100
+                      }
                     }
+                  }
                 },
-                "oneOf": [
-                    {
-                        "required": ["average rating"],
-                        "not": { "required": ["total number rating"] }
-                    },
-                    {
-                        "required": ["total number rating"],
-                        "not": { "required": ["average rating"] }
+                "total_genres": {
+                  "type": "integer",
+                  "description": "Total number of genres returned in the ranking.",
+                  "example": 10
+                }
+              },
+              "required": ["genres", "total_genres"]
+            },
+            "RankGenresByPopularity": {
+              "type": "object",
+              "description": "Response containing book genres ranked by their total number of ratings.",
+              "properties": {
+                "genres": {
+                  "type": "array",
+                  "description": "List of genres sorted in descending order by total number of ratings.",
+                  "items": {
+                    "type": "object",
+                    "required": ["rank", "genre", "total_ratings"],
+                    "properties": {
+                      "rank": {
+                        "type": "integer",
+                        "description": "Position of the genre in the ranking (1 = most rated).",
+                        "example": 1
+                      },
+                      "genre": {
+                        "type": "string",
+                        "description": "Name of the book genre.",
+                        "example": "Science Fiction"
+                      },
+                      "total_ratings": {
+                        "type": "integer",
+                        "description": "Total number of ratings submitted across all books in this genre.",
+                        "example": 10582
+                      },
+                      "average_rating": {
+                        "type": "number",
+                        "format": "double",
+                        "description": "Average rating across all books within this genre.",
+                        "minimum": 0.0,
+                        "maximum": 5.0,
+                        "example": 4.86
+                      }
                     }
-                ]
+                  }
+                },
+                "total_genres": {
+                  "type": "integer",
+                  "description": "Total number of genres returned in the ranking.",
+                  "example": 10
+                }
+              },
+              "required": ["genres", "total_genres"]
+            },
+            "GenreAdd": {
+              "type": "object",
+              "description": "Request body for adding a new genre.",
+              "required": ["name"],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Name of the new genre to be added.",
+                  "example": "Science Fiction"
+                }
+              }
+            },
+            "GenreAddResponse": {
+              "type": "object",
+              "description": "Response returned after successfully adding a new genre.",
+              "required": ["genre_id", "name"],
+              "properties": {
+                "genre_id": {
+                  "type": "integer",
+                  "description": "Unique identifier generated for the new genre.",
+                  "example": 12
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Name of the newly added genre.",
+                  "example": "Science Fiction"
+                }
+              }
+            },
+            "GenreResponse": {
+              "type": "object",
+              "description": "Details of a specific genre.",
+              "required": ["genre_id", "name"],
+              "properties": {
+                "genre_id": {
+                  "type": "integer",
+                  "description": "Unique identifier of the genre.",
+                  "example": 3
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Name of the genre.",
+                  "example": "Science Fiction"
+                }
+              }
+            },
+            "GenreEdit": {
+              "type": "object",
+              "description": "Request body for editing an existing genre.",
+              "required": ["name"],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "The updated name for the genre.",
+                  "example": "Dystopian Fiction"
+                }
+              }
+            },
+            "GenreEditResponse": {
+              "type": "object",
+              "description": "Response returned after successfully editing a genre.",
+              "required": ["genre_id", "name"],
+              "properties": {
+                "genre_id": {
+                  "type": "integer",
+                  "description": "Unique identifier of the edited genre.",
+                  "example": 3
+                },
+                "name": {
+                  "type": "string",
+                  "description": "The updated name of the genre.",
+                  "example": "Dystopian Fiction"
+                }
+              }
+            },
+            "GenreGrowthResponse": {
+              "type": "object",
+              "description": "Response containing growth or decline data for a specific genre over time.",
+              "required": ["genre_id", "genre", "data"],
+              "properties": {
+                "genre_id": {
+                  "type": "integer",
+                  "description": "Unique identifier of the genre.",
+                  "example": 3
+                },
+                "genre": {
+                  "type": "string",
+                  "description": "Name of the book genre.",
+                  "example": "Science Fiction"
+                },
+                "year_from": {
+                  "type": "integer",
+                  "description": "Start year of the growth data range.",
+                  "example": 2018
+                },
+                "year_to": {
+                  "type": "integer",
+                  "description": "End year of the growth data range.",
+                  "example": 2023
+                },
+                "data": {
+                  "type": "array",
+                  "description": "Year-by-year growth data for the genre.",
+                  "items": {
+                    "type": "object",
+                    "required": ["year", "total_books_published", "growth_rate"],
+                    "properties": {
+                      "year": {
+                        "type": "integer",
+                        "description": "The year of the data point.",
+                        "example": 2021
+                      },
+                      "year_average_rating": {
+                        "type": "number",
+                        "format": "double",
+                        "description": "Average rating of books in this genre for the given year.",
+                        "minimum": 0.0,
+                        "maximum": 5.0,
+                        "example": 4.32
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "GenrePopularityResponse": {
+              "type": "object",
+              "description": "Response containing popularity trend data for a specific genre over time.",
+              "required": ["genre_id", "genre", "data"],
+              "properties": {
+                "genre_id": {
+                  "type": "integer",
+                  "description": "Unique identifier of the genre.",
+                  "example": 3
+                },
+                "genre": {
+                  "type": "string",
+                  "description": "Name of the book genre.",
+                  "example": "Science Fiction"
+                },
+                "year_from": {
+                  "type": "integer",
+                  "description": "Start year of the popularity data range.",
+                  "example": 2018
+                },
+                "year_to": {
+                  "type": "integer",
+                  "description": "End year of the popularity data range.",
+                  "example": 2023
+                },
+                "data": {
+                  "type": "array",
+                  "description": "Year-by-year popularity data for the genre.",
+                  "items": {
+                    "type": "object",
+                    "required": ["year", "total_ratings", "average_rating"],
+                    "properties": {
+                      "year": {
+                        "type": "integer",
+                        "description": "The year of the data point.",
+                        "example": 2021
+                      },
+                      "total_ratings": {
+                        "type": "integer",
+                        "description": "Total number of ratings submitted for books in this genre for the given year.",
+                        "example": 10582
+                      }
+                    }
+                  }
+                }
+              }
             },
             "PublishingGrowthItem": {
                 "type": "object",
