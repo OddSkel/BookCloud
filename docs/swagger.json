@@ -1,0 +1,3001 @@
+{
+    "openapi": "3.1.0",
+    "info": {
+        "title": "Book Cloud API",
+        "description": "Cloud API for books recommendation and statistics",
+        "version": "1.0.0"
+    },
+    "paths": {
+        "/books": {
+            "get": {
+                "tags": [
+                    "Books"
+                ],
+                "summary": "Get Books",
+                "operationId": "books_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Book"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/book": {
+            "post": {
+                "tags": [
+                    "Books"
+                ],
+                "summary": "Add book",
+                "operationId": "book_add_post",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BookAdd"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Book"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Books"
+                ],
+                "summary": "Edit Books",
+                "operationId": "list_books_books_put",
+                "parameters": [
+                    {
+                        "name": "ISBN",
+                        "in": "header",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "Edit Book by ISBN",
+                            "title": "ISBN"
+                        },
+                        "description": "Edit Book by ISBN"
+                    },
+                    {
+                        "name": "Editor",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "Edit Book by name of editor",
+                            "title": "Feature"
+                        },
+                        "description": "Edit Book by name of editor"
+                    },
+                    {
+                        "name": "Year edited",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "integer"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "Edit Book by year edited",
+                            "title": "Year edition"
+                        },
+                        "description": "Edit Book by year edited"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Book"
+                                    },
+                                    "title": "Response List Rooms Rooms Get"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/book/{book_id}": {
+            "get": {
+                "tags": [
+                    "Books"
+                ],
+                "summary": "Get Book",
+                "operationId": "get_book_books__book_id__get",
+                "parameters": [
+                    {
+                        "name": "book_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Book Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Book"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Books"
+                ],
+                "summary": "Delete Book",
+                "operationId": "delete_book_books__book_id__delete",
+                "parameters": [
+                    {
+                        "name": "book_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Book Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Successful Response"
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/authors": {
+            "get": {
+                "tags": [
+                    "Authors"
+                ],
+                "summary": "Authors",
+                "operationId": "authors_authors_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/author": {
+            "post": {
+                "tags": [
+                    "Authors"
+                ],
+                "summary": "Add author",
+                "operationId": "author_add_post",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AuthorAdd"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Author"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Authors"
+                ],
+                "summary": "Edit Author",
+                "operationId": "authors_put",
+                "parameters": [
+                    {
+                        "name": "Name",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "Edit Author by name",
+                            "title": "Edit Author by name"
+                        },
+                        "description": "Edit Author by name"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Author"
+                                    },
+                                    "title": "Response Author Put"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/author/{author_id}": {
+            "get": {
+                "tags": [
+                    "Authors"
+                ],
+                "summary": "Get author",
+                "operationId": "get_author_authors__author_id__get",
+                "parameters": [
+                    {
+                        "name": "author_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Author Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Author"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Authors"
+                ],
+                "summary": "Delete Author",
+                "operationId": "delete_author_authors__author_id__delete",
+                "parameters": [
+                    {
+                        "name": "author_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Author Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Successful Response"
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/ratings/{book_id}": {
+            "get": {
+                "tags": [
+                    "Ratings"
+                ],
+                "summary": "Get Ratings of a book",
+                "operationId": "rating_rating_get",
+                "parameters": [
+                    {
+                        "name": "book_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Book Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/rating/{book_id}": {
+            "post": {
+                "tags": [
+                    "Ratings"
+                ],
+                "summary": "Add rating to book",
+                "operationId": "rating_add_post",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RatingAdd"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Rating"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Ratings"
+                ],
+                "summary": "Edit Rating",
+                "operationId": "Rating_put",
+                "parameters": [
+                    {
+                        "name": "rating",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 5
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "title": "rating"
+                        },
+                        "description": "Edit rating by its evaluation"
+                    },
+                    {
+                        "name": "comment",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "Edit Rating by its comment",
+                            "title": "Comment"
+                        },
+                        "description": "Edit Rating by its comment"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Rating"
+                                    },
+                                    "title": "Response Rating Put"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/rating/{rating_id}": {
+            "get": {
+                "tags": [
+                    "Ratings"
+                ],
+                "summary": "Get rating",
+                "operationId": "get_rating__rating_id",
+                "parameters": [
+                    {
+                        "name": "rating_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Rating Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Rating"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Ratings"
+                ],
+                "summary": "Delete Rating",
+                "operationId": "delete_rating__rating_id",
+                "parameters": [
+                    {
+                        "name": "rating_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Rating Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Successful Response"
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/genres": {
+            "get": {
+                "tags": [
+                    "Genres Service"
+                ],
+                "summary": "UC1 & UC2 - Get Genres Ranked by Rating or Popularity",
+                "description": "Returns a list of all genres in the system, including their IDs and names.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/RankSortParam"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "oneOf": [
+                                        {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/RankGenresByRating"
+                                            }
+                                        },
+                                        {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/RankGenresByPopularity"
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Genres Service"
+                ],
+                "summary": "Add Genre",
+                "description": "Adds a new genre to the system. The genre name is provided in the request body, and a unique ID is generated for the new genre.",
+                "parameters": [],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GenreAdd"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GenreAddResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/genres/{genre_id}": {
+            "get": {
+                "tags": [
+                    "Genres Service"
+                ],
+                "summary": "Get Genre",
+                "description": "Returns details of a specific genre by its ID.",
+                "parameters": [
+                    {
+                        "name": "genre_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GenreResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Genres Service"
+                ],
+                "summary": "Edit Genre",
+                "description": "Edits the name of an existing genre. The genre to be edited is identified by its ID, and the new name is provided in the request body.",
+                "parameters": [
+                    {
+                        "name": "genre_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GenreEdit"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GenreEditResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Genres Service"
+                ],
+                "summary": "Delete Genre",
+                "description": "Deletes an existing genre from the system. The genre to be deleted is identified by its ID.",
+                "parameters": [
+                    {
+                        "name": "genre_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Successful Response"
+                    }
+                }
+            }
+        },
+        "/genres/{genre_id}/growth": {
+            "get": {
+                "tags": [
+                    "Genres Service"
+                ],
+                "summary": "UC3 - Get Genre Growth or Decline Over Time",
+                "description": "Retrieves growth data for a specific genre.",
+                "parameters": [
+                    {
+                        "name": "genre_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/YearFromParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/YearToParam"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GenreGrowthResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/genres/{genre_id}/popularity": {
+            "get": {
+                "tags": [
+                    "Genres Service"
+                ],
+                "summary": "UC4 - Get Genre Popularity Trends Over Time",
+                "description": "Retrieves popularity data for a specific genre.",
+                "parameters": [
+                    {
+                        "name": "genre_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/YearFromParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/YearToParam"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GenrePopularityResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/popular-low-rated": {
+            "get": {
+                "tags": [
+                    "Popularity Service"
+                ],
+                "summary": "UC1 - Very Popular but Low Rated Books",
+                "description": "Returns books with the highest discrepancy between popularity and quality. Higher values indicate books that are significantly more popular than their rating would suggest. Query parameters are used to filter the candidate set before ranking.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/AuthorNameParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AuthorIdParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/GenreNameParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/GenreIdParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/BookNameParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/BookIsbnParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/PubYearFromParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/PubYearToParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/PubYearParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/PageParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/PageSizeParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/MinNumRatingsParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/MaxNumRatingsParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/MinStarRatingParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/MaxStarRatingParam"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated list of books with highest popularity-quality discrepancy.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedBookPQResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/hidden-gems": {
+            "get": {
+                "tags": [
+                    "Popularity Service"
+                ],
+                "summary": "UC2 - High Rated but Low Popularity (Hidden Gems)",
+                "description": "Returns books with the lowest discrepancy between popularity and quality. Hidden gems correspond to books where the discrepancy_score are the smallest.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/AuthorNameParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AuthorIdParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/GenreNameParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/GenreIdParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/BookNameParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/BookIsbnParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/PubYearFromParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/PubYearToParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/PubYearParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/MinNumRatingsParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/MaxNumRatingsParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/MinStarRatingParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/MaxStarRatingParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/PageParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/PageSizeParam"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated list of hidden gem books.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedBookPQResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/correlation": {
+            "get": {
+                "tags": [
+                    "Popularity Service"
+                ],
+                "summary": "UC3 - Rating vs Popularity Correlation",
+                "description": "Computes the statistical correlation between book quality (`star_rating`) and popularity (`num_ratings`) across the selected set of books. Optional filters by genre and publication year can be applied before the correlation is calculated.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/CorrelationMethodParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/GenreNameParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/GenreIdParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/PubYearFromParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/PubYearToParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/PubYearParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/MinNumRatingsParam"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Correlation result successfully computed.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CorrelationResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/publishing-growth": {
+            "get": {
+                "tags": [
+                    "Popularity Service"
+                ],
+                "summary": "UC4 - Publishing Growth Over Time",
+                "description": "Returns yearly aggregated publishing metrics, including the number of books published, average star rating, and total number of ratings. Optional filters by genre and publication year range can be applied.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/GenreNameParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/GenreIdParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/PubYearFromParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/PubYearToParam"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Yearly publishing growth metrics successfully computed.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PublishingGrowthResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/eras": {
+            "get": {
+                "tags": [
+                    "Popularity Service"
+                ],
+                "summary": "UC5 - Classic vs Modern Comparison",
+                "description": "Compares classic and modern books based on publication year thresholds. The endpoint returns aggregated metrics for each era, including number of books, average star rating, average number of ratings, and total number of ratings.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/GenreNameParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/GenreIdParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/ClassicThresholdParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/ModernThresholdParam"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Classic vs modern comparison successfully computed.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ClassicModernComparisonResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/searchBook": {
+            "get": {
+                "tags": [
+                    "Search and Recommendation Service"
+                ],
+                "summary": "Search Books",
+                "description": "UC1 - Search books by title, author and/or keywords from summaries",
+                "operationId": "books_search",
+                "parameters": [
+                    {
+                        "name": "Title",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "Search Book by title",
+                            "title": "Search Book by title"
+                        },
+                        "description": "Search Book by title"
+                    },
+                    {
+                        "name": "Author",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "Search Book by author",
+                            "title": "Search Book by author"
+                        },
+                        "description": "Search Book by author"
+                    },
+                    {
+                        "name": "Keywords",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "Search Book by keywords from summary",
+                            "title": "Search Book by keywords from summary"
+                        },
+                        "description": "Search Book by keywords from summary"
+                    }
+                ]
+            }
+        },
+        "/recommendation": {
+            "get": {
+                "tags": [
+                    "Search and Recommendation Service"
+                ],
+                "summary": "Recommend Books",
+                "description": "UC2 - Recommend books by genre overlap, Rating similarity and/or Popularity profile",
+                "operationId": "books_recommendation",
+                "parameters": [
+                    {
+                        "name": "Genre",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "Recommend books by genre overlap",
+                            "title": "Recommend books by genre overlap"
+                        },
+                        "description": "Recommend books by genre overlap"
+                    },
+                    {
+                        "name": "Rating",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "Recommend books by rating similarity",
+                            "title": "Recommend books by rating similarity"
+                        },
+                        "description": "Recommend books by rating similarity"
+                    },
+                    {
+                        "name": "Popularity",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "integer"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "Recommend books by Popularity profile",
+                            "title": "Recommend books by Popularity profile"
+                        },
+                        "description": "Recommend books by Popularity profile"
+                    }
+                ]
+            }
+        },
+        "/rank-author": {
+            "get": {
+                "tags": [
+                    "Author Performance Analytics Service"
+                ],
+                "summary": "Rank authors",
+                "description": "UC1 - Rank authors by average rating and total number of ratings",
+                "operationId": "author_rank",
+                "parameters": [
+                    {
+                        "name": "Average Rating",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "number"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "Rank authors by average rating",
+                            "title": "Rank authors by average rating"
+                        },
+                        "description": "Rank authors by average rating"
+                    },
+                    {
+                        "name": "Total number ratings",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "integer"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "Rank authors by total number of ratings",
+                            "title": "Rank authors by total number of ratings"
+                        },
+                        "description": "Rank authors by total number of ratings"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/RankAuthorResponse"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/author-performance-time": {
+            "get": {
+                "tags": [
+                    "Author Performance Analytics Service"
+                ],
+                "summary": "Authors performance evolution",
+                "description": "UC2 - Computes the statistical between book quality from author and popularity across the selected set of books with the option of filtering by genre and publication year that can be applied before its calculation.",
+                "operationId": "author-evolution",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/AuthorNameParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AuthorIdParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/PubYearFromParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/PubYearToParam"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully computed.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AuthorPerformanceResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/authors-consistency": {
+            "get": {
+                "tags": [
+                    "Author Performance Analytics Service"
+                ],
+                "summary": "Consistent authors",
+                "description": "UC3 - Rank authors based on the consistency of their book ratings",
+                "operationId": "author-consistency",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/AuthorNameParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AuthorIdParam"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/AuthorConsistencyResponse"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/authors-growth": {
+            "get": {
+                "tags": [
+                    "Author Performance Analytics Service"
+                ],
+                "summary": "Growth authors",
+                "description": "UC4 - Rank authors based on their growth in book ratings",
+                "operationId": "author-growth",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/AuthorNameParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AuthorIdParam"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/AuthorGrowthResponse"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "HTTPValidationError": {
+                "properties": {
+                    "detail": {
+                        "items": {
+                            "$ref": "#/components/schemas/ValidationError"
+                        },
+                        "type": "array",
+                        "title": "Detail"
+                    }
+                },
+                "type": "object",
+                "title": "HTTPValidationError"
+            },
+            "Book": {
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "title": "Name",
+                        "examples": [
+                            "1984"
+                        ]
+                    },
+                    "isbn": {
+                        "type": "string",
+                        "title": "ISBN",
+                        "examples": [
+                            "ISBN-999-111-222-876-4"
+                        ]
+                    },
+                    "author": {
+                        "type": "string",
+                        "title": "Author",
+                        "examples": [
+                            "George Orwell"
+                        ]
+                    },
+                    "year_published": {
+                        "type": "integer",
+                        "title": "Year Published",
+                        "examples": [
+                            "1949"
+                        ]
+                    },
+                    "editor": {
+                        "type": "string",
+                        "title": "Editor of Book",
+                        "examples": [
+                            "Secker & Warburg"
+                        ]
+                    },
+                    "edition_number": {
+                        "type": "integer",
+                        "title": "Edition number",
+                        "examples": [
+                            "1"
+                        ]
+                    },
+                    "id": {
+                        "type": "string",
+                        "title": "Id"
+                    },
+                    "summary": {
+                        "type": "string",
+                        "title": "Summary of the book"
+                    },
+                    "genre": {
+                        "type": "string",
+                        "title": "Genre of the book",
+                        "examples": [
+                            "novel"
+                        ]
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "name",
+                    "author",
+                    "isbn",
+                    "year_published",
+                    "editor",
+                    "edition_number",
+                    "genre",
+                    "id"
+                ],
+                "title": "Book"
+            },
+            "Author": {
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "title": "Name",
+                        "examples": [
+                            "George Orwell"
+                        ]
+                    },
+                    "gender": {
+                        "type": "string",
+                        "enum": [
+                            "M",
+                            "F"
+                        ],
+                        "title": "Gender"
+                    },
+                    "year_born": {
+                        "type": "integer",
+                        "title": "Year_born",
+                        "examples": [
+                            "1903"
+                        ]
+                    },
+                    "year_death": {
+                        "type": "integer",
+                        "title": "Year_death",
+                        "examples": [
+                            "1950"
+                        ]
+                    },
+                    "books_published": {
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "title": "books_published",
+                        "examples": [
+                            "1984",
+                            "Animal Farm"
+                        ]
+                    },
+                    "id": {
+                        "type": "string",
+                        "title": "Id"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "name",
+                    "gender",
+                    "year_born",
+                    "books_published",
+                    "id"
+                ],
+                "title": "Author"
+            },
+            "Rating": {
+                "properties": {
+                    "evaluation": {
+                        "type": "integer",
+                        "title": "evaluation",
+                        "examples": [
+                            "5"
+                        ]
+                    },
+                    "critic": {
+                        "type": "string",
+                        "title": "critic"
+                    },
+                    "id": {
+                        "type": "string",
+                        "title": "Id"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "evaluation",
+                    "critic",
+                    "id"
+                ],
+                "title": "Rating"
+            },
+            "BookAdd": {
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "title": "Name",
+                        "examples": [
+                            "1984"
+                        ]
+                    },
+                    "isbn": {
+                        "type": "string",
+                        "title": "ISBN",
+                        "examples": [
+                            "ISBN-999-111-222-876-4"
+                        ]
+                    },
+                    "author": {
+                        "type": "string",
+                        "title": "Author",
+                        "examples": [
+                            "George Orwell"
+                        ]
+                    },
+                    "year_published": {
+                        "type": "integer",
+                        "title": "Year Published",
+                        "examples": [
+                            "1949"
+                        ]
+                    },
+                    "editor": {
+                        "type": "string",
+                        "title": "Editor of Book",
+                        "examples": [
+                            "Secker & Warburg"
+                        ]
+                    },
+                    "edition_number": {
+                        "type": "integer",
+                        "title": "Edition number",
+                        "examples": [
+                            "1"
+                        ]
+                    },
+                    "id": {
+                        "type": "string",
+                        "title": "Id"
+                    },
+                    "summary": {
+                        "type": "string",
+                        "title": "Summary of the book"
+                    },
+                    "genre": {
+                        "type": "string",
+                        "title": "Genre of the book",
+                        "examples": [
+                            "novel"
+                        ]
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "name",
+                    "author",
+                    "isbn",
+                    "year_published",
+                    "editor",
+                    "genre",
+                    "edition_number"
+                ],
+                "title": "BookAdd"
+            },
+            "AuthorAdd": {
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "title": "Name",
+                        "examples": [
+                            "George Orwell"
+                        ]
+                    },
+                    "gender": {
+                        "type": "string",
+                        "enum": [
+                            "M",
+                            "F"
+                        ],
+                        "title": "Gender",
+                        "examples": [
+                            "M"
+                        ]
+                    },
+                    "year_born": {
+                        "type": "integer",
+                        "title": "Year_born",
+                        "examples": [
+                            "1903"
+                        ]
+                    },
+                    "year_death": {
+                        "type": "integer",
+                        "title": "Year_death",
+                        "examples": [
+                            "1950"
+                        ]
+                    },
+                    "books_published": {
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "title": "books_published",
+                        "examples": [
+                            "1984",
+                            "Animal Farm"
+                        ]
+                    },
+                    "id": {
+                        "type": "string",
+                        "title": "Id"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "name",
+                    "gender",
+                    "year_born",
+                    "books_published"
+                ],
+                "title": "AuthorAdd"
+            },
+            "RatingAdd": {
+                "properties": {
+                    "evaluation": {
+                        "type": "integer",
+                        "title": "evaluation",
+                        "examples": [
+                            "5"
+                        ]
+                    },
+                    "critic": {
+                        "type": "string",
+                        "title": "critic"
+                    },
+                    "id": {
+                        "type": "string",
+                        "title": "Id"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "evaluation",
+                    "critic"
+                ],
+                "title": "RatingAdd"
+            },
+            "ValidationError": {
+                "properties": {
+                    "loc": {
+                        "items": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "integer"
+                                }
+                            ]
+                        },
+                        "type": "array",
+                        "title": "Location"
+                    },
+                    "msg": {
+                        "type": "string",
+                        "title": "Message"
+                    },
+                    "type": {
+                        "type": "string",
+                        "title": "Error Type"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "loc",
+                    "msg",
+                    "type"
+                ],
+                "title": "ValidationError"
+            },
+            "BookPQItem": {
+                "type": "object",
+                "description": "Book item for Popularity vs Quality analytics listings.",
+                "properties": {
+                    "isbn": {
+                        "type": "integer",
+                        "format": "int64",
+                        "example": 9780439554930
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Harry Potter and the Sorcerer's Stone"
+                    },
+                    "pub_year": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "example": 1997
+                    },
+                    "star_rating": {
+                        "type": [
+                            "number",
+                            "null"
+                        ],
+                        "format": "double",
+                        "example": 4.47
+                    },
+                    "num_ratings": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "format": "int64",
+                        "example": 9234567
+                    },
+                    "discrepancy_score": {
+                        "type": [
+                            "number",
+                            "null"
+                        ],
+                        "format": "double",
+                        "example": 0.42
+                    },
+                    "genres": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "example": [
+                            "Fantasy",
+                            "Young Adult"
+                        ]
+                    },
+                    "authors": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "example": [
+                            "J.K. Rowling"
+                        ]
+                    }
+                }
+            },
+            "CorrelationItem": {
+                "type": "object",
+                "description": "Book item for Popularity vs Quality analytics listings.",
+                "properties": {
+                    "isbn": {
+                        "type": "integer",
+                        "format": "int64",
+                        "example": 9780439554930
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Harry Potter and the Sorcerer's Stone"
+                    },
+                    "pub_year": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "example": 1997
+                    },
+                    "star_rating": {
+                        "type": [
+                            "number",
+                            "null"
+                        ],
+                        "format": "double",
+                        "example": 4.47
+                    },
+                    "num_ratings": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "format": "int64",
+                        "example": 9234567
+                    },
+                    "correlation_score": {
+                        "type": [
+                            "number",
+                            "null"
+                        ],
+                        "format": "double",
+                        "example": 0.42
+                    },
+                    "genres": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "example": [
+                            "Fantasy",
+                            "Young Adult"
+                        ]
+                    },
+                    "authors": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "example": [
+                            "J.K. Rowling"
+                        ]
+                    }
+                }
+            },
+            "PaginatedBookPQResponse": {
+                "type": "object",
+                "properties": {
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/BookPQItem"
+                        }
+                    },
+                    "total": {
+                        "type": "integer",
+                        "example": 245
+                    },
+                    "page": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "page_size": {
+                        "type": "integer",
+                        "example": 50
+                    },
+                    "total_pages": {
+                        "type": "integer",
+                        "example": 5
+                    }
+                }
+            },
+            "CorrelationResponse": {
+                "type": "object",
+                "description": "Statistical correlation result between book rating and popularity.",
+                "properties": {
+                    "method": {
+                        "type": "string",
+                        "enum": [
+                            "pearson",
+                            "spearman"
+                        ],
+                        "example": "pearson",
+                        "description": "Correlation method used."
+                    },
+                    "correlation": {
+                        "type": [
+                            "number",
+                            "null"
+                        ],
+                        "format": "double",
+                        "example": 0.34,
+                        "description": "Correlation coefficient between star_rating and num_ratings."
+                    },
+                    "interpretation": {
+                        "type": "string",
+                        "example": "Weak positive correlation",
+                        "description": "Interpretation of the correlation coefficient."
+                    },
+                    "sample_size": {
+                        "type": "integer",
+                        "example": 182340,
+                        "description": "Number of books used in the calculation."
+                    }
+                },
+                "required": [
+                    "method",
+                    "correlation",
+                    "interpretation",
+                    "sample_size"
+                ]
+            },
+            "RankGenresByRating": {
+                "type": "object",
+                "description": "Response containing book genres ranked by their average rating.",
+                "properties": {
+                    "genres": {
+                        "type": "array",
+                        "description": "List of genres sorted in descending order by average rating.",
+                        "items": {
+                            "type": "object",
+                            "required": [
+                                "rank",
+                                "genre",
+                                "average_rating"
+                            ],
+                            "properties": {
+                                "rank": {
+                                    "type": "integer",
+                                    "description": "Position of the genre in the ranking (1 = highest rated).",
+                                    "example": 1
+                                },
+                                "genre": {
+                                    "type": "string",
+                                    "description": "Name of the book genre.",
+                                    "example": "Science Fiction"
+                                },
+                                "average_rating": {
+                                    "type": "number",
+                                    "format": "double",
+                                    "description": "Average rating across all books within this genre.",
+                                    "minimum": 0.0,
+                                    "maximum": 5.0,
+                                    "example": 4.86
+                                },
+                                "total_ratings": {
+                                    "type": "integer",
+                                    "description": "Total number of ratings submitted across all books in this genre.",
+                                    "example": 100
+                                }
+                            }
+                        }
+                    },
+                    "total_genres": {
+                        "type": "integer",
+                        "description": "Total number of genres returned in the ranking.",
+                        "example": 10
+                    }
+                },
+                "required": [
+                    "genres",
+                    "total_genres"
+                ]
+            },
+            "RankGenresByPopularity": {
+                "type": "object",
+                "description": "Response containing book genres ranked by their total number of ratings.",
+                "properties": {
+                    "genres": {
+                        "type": "array",
+                        "description": "List of genres sorted in descending order by total number of ratings.",
+                        "items": {
+                            "type": "object",
+                            "required": [
+                                "rank",
+                                "genre",
+                                "total_ratings"
+                            ],
+                            "properties": {
+                                "rank": {
+                                    "type": "integer",
+                                    "description": "Position of the genre in the ranking (1 = most rated).",
+                                    "example": 1
+                                },
+                                "genre": {
+                                    "type": "string",
+                                    "description": "Name of the book genre.",
+                                    "example": "Science Fiction"
+                                },
+                                "total_ratings": {
+                                    "type": "integer",
+                                    "description": "Total number of ratings submitted across all books in this genre.",
+                                    "example": 10582
+                                },
+                                "average_rating": {
+                                    "type": "number",
+                                    "format": "double",
+                                    "description": "Average rating across all books within this genre.",
+                                    "minimum": 0.0,
+                                    "maximum": 5.0,
+                                    "example": 4.86
+                                }
+                            }
+                        }
+                    },
+                    "total_genres": {
+                        "type": "integer",
+                        "description": "Total number of genres returned in the ranking.",
+                        "example": 10
+                    }
+                },
+                "required": [
+                    "genres",
+                    "total_genres"
+                ]
+            },
+            "GenreAdd": {
+                "type": "object",
+                "description": "Request body for adding a new genre.",
+                "required": [
+                    "name"
+                ],
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name of the new genre to be added.",
+                        "example": "Science Fiction"
+                    }
+                }
+            },
+            "GenreAddResponse": {
+                "type": "object",
+                "description": "Response returned after successfully adding a new genre.",
+                "required": [
+                    "genre_id",
+                    "name"
+                ],
+                "properties": {
+                    "genre_id": {
+                        "type": "integer",
+                        "description": "Unique identifier generated for the new genre.",
+                        "example": 12
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": "Name of the newly added genre.",
+                        "example": "Science Fiction"
+                    }
+                }
+            },
+            "GenreResponse": {
+                "type": "object",
+                "description": "Details of a specific genre.",
+                "required": [
+                    "genre_id",
+                    "name"
+                ],
+                "properties": {
+                    "genre_id": {
+                        "type": "integer",
+                        "description": "Unique identifier of the genre.",
+                        "example": 3
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": "Name of the genre.",
+                        "example": "Science Fiction"
+                    }
+                }
+            },
+            "GenreEdit": {
+                "type": "object",
+                "description": "Request body for editing an existing genre.",
+                "required": [
+                    "name"
+                ],
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "The updated name for the genre.",
+                        "example": "Dystopian Fiction"
+                    }
+                }
+            },
+            "GenreEditResponse": {
+                "type": "object",
+                "description": "Response returned after successfully editing a genre.",
+                "required": [
+                    "genre_id",
+                    "name"
+                ],
+                "properties": {
+                    "genre_id": {
+                        "type": "integer",
+                        "description": "Unique identifier of the edited genre.",
+                        "example": 3
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": "The updated name of the genre.",
+                        "example": "Dystopian Fiction"
+                    }
+                }
+            },
+            "GenreGrowthResponse": {
+                "type": "object",
+                "description": "Response containing growth or decline data for a specific genre over time.",
+                "required": [
+                    "genre_id",
+                    "genre",
+                    "data"
+                ],
+                "properties": {
+                    "genre_id": {
+                        "type": "integer",
+                        "description": "Unique identifier of the genre.",
+                        "example": 3
+                    },
+                    "genre": {
+                        "type": "string",
+                        "description": "Name of the book genre.",
+                        "example": "Science Fiction"
+                    },
+                    "year_from": {
+                        "type": "integer",
+                        "description": "Start year of the growth data range.",
+                        "example": 2018
+                    },
+                    "year_to": {
+                        "type": "integer",
+                        "description": "End year of the growth data range.",
+                        "example": 2023
+                    },
+                    "data": {
+                        "type": "array",
+                        "description": "Year-by-year growth data for the genre.",
+                        "items": {
+                            "type": "object",
+                            "required": [
+                                "year",
+                                "total_books_published",
+                                "growth_rate"
+                            ],
+                            "properties": {
+                                "year": {
+                                    "type": "integer",
+                                    "description": "The year of the data point.",
+                                    "example": 2021
+                                },
+                                "year_average_rating": {
+                                    "type": "number",
+                                    "format": "double",
+                                    "description": "Average rating of books in this genre for the given year.",
+                                    "minimum": 0.0,
+                                    "maximum": 5.0,
+                                    "example": 4.32
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "GenrePopularityResponse": {
+                "type": "object",
+                "description": "Response containing popularity trend data for a specific genre over time.",
+                "required": [
+                    "genre_id",
+                    "genre",
+                    "data"
+                ],
+                "properties": {
+                    "genre_id": {
+                        "type": "integer",
+                        "description": "Unique identifier of the genre.",
+                        "example": 3
+                    },
+                    "genre": {
+                        "type": "string",
+                        "description": "Name of the book genre.",
+                        "example": "Science Fiction"
+                    },
+                    "year_from": {
+                        "type": "integer",
+                        "description": "Start year of the popularity data range.",
+                        "example": 2018
+                    },
+                    "year_to": {
+                        "type": "integer",
+                        "description": "End year of the popularity data range.",
+                        "example": 2023
+                    },
+                    "data": {
+                        "type": "array",
+                        "description": "Year-by-year popularity data for the genre.",
+                        "items": {
+                            "type": "object",
+                            "required": [
+                                "year",
+                                "total_ratings",
+                                "average_rating"
+                            ],
+                            "properties": {
+                                "year": {
+                                    "type": "integer",
+                                    "description": "The year of the data point.",
+                                    "example": 2021
+                                },
+                                "total_ratings": {
+                                    "type": "integer",
+                                    "description": "Total number of ratings submitted for books in this genre for the given year.",
+                                    "example": 10582
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "PublishingGrowthItem": {
+                "type": "object",
+                "description": "Yearly aggregated publishing metrics.",
+                "properties": {
+                    "pub_year": {
+                        "type": "integer",
+                        "example": 2001,
+                        "description": "Publication year."
+                    },
+                    "books_published": {
+                        "type": "integer",
+                        "example": 1310,
+                        "description": "Number of books published in the year."
+                    },
+                    "avg_star_rating": {
+                        "type": [
+                            "number",
+                            "null"
+                        ],
+                        "format": "double",
+                        "example": 4.03,
+                        "description": "Average star rating of books published in the year."
+                    },
+                    "sum_num_ratings": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "format": "int64",
+                        "example": 610542,
+                        "description": "Total number of ratings accumulated by books published in the year."
+                    }
+                },
+                "required": [
+                    "pub_year",
+                    "books_published",
+                    "avg_star_rating",
+                    "sum_num_ratings"
+                ]
+            },
+            "PublishingGrowthResponse": {
+                "type": "object",
+                "description": "Time series of yearly publishing growth metrics.",
+                "properties": {
+                    "summary": {
+                        "type": "object",
+                        "properties": {
+                            "num_years": {
+                                "type": "integer",
+                                "example": 21
+                            },
+                            "total_books": {
+                                "type": "integer",
+                                "example": 245000
+                            },
+                            "avg_books_years": {
+                                "type": "number",
+                                "format": "double",
+                                "example": 11666.67
+                            }
+                        }
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublishingGrowthItem"
+                        }
+                    }
+                }
+            },
+            "RankAuthorResponse": {
+                "type": "object",
+                "description": "Author ranking based on average rating and number of ratings.",
+                "properties": {
+                    "average rating": {
+                        "type": [
+                            "number",
+                            "null"
+                        ],
+                        "format": "double",
+                        "example": 4.86,
+                        "description": "Average method ranking used."
+                    },
+                    "total number rating": {
+                        "type": [
+                            "number",
+                            "null"
+                        ],
+                        "format": "integer",
+                        "example": 100,
+                        "description": "Total number of ratings method ranking used."
+                    }
+                },
+                "oneOf": [
+                    {
+                        "required": [
+                            "average rating"
+                        ],
+                        "not": {
+                            "required": [
+                                "total number rating"
+                            ]
+                        }
+                    },
+                    {
+                        "required": [
+                            "total number rating"
+                        ],
+                        "not": {
+                            "required": [
+                                "average rating"
+                            ]
+                        }
+                    }
+                ]
+            },
+            "AuthorPerformanceResponse": {
+                "type": "object",
+                "title": "AuthorPerformanceResponse",
+                "description": "Statistical correlation between book quality and popularity for a given author over time.",
+                "properties": {
+                    "author": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "string",
+                                "example": "A-00421"
+                            },
+                            "name": {
+                                "type": "string",
+                                "example": "Ursula K. Le Guin"
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "name"
+                        ]
+                    },
+                    "filters_applied": {
+                        "type": "object",
+                        "properties": {
+                            "pub_year_from": {
+                                "type": ["integer", "null"],
+                                "example": 1966
+                            },
+                            "pub_year_to": {
+                                "type": ["integer", "null"],
+                                "example": 2001
+                            }
+                        }
+                    },
+                    "statistics": {
+                        "type": "object",
+                        "properties": {
+                            "correlation_coefficient": {
+                                "type": "number",
+                                "format": "double",
+                                "example": 0.74
+                            },
+                            "p_value": {
+                                "type": "number",
+                                "format": "double",
+                                "example": 0.003
+                            },
+                            "sample_size": {
+                                "type": "integer",
+                                "example": 18
+                            },
+                            "interpretation": {
+                                "type": "string",
+                                "example": "Strong positive correlation between quality and popularity."
+                            }
+                        },
+                        "required": [
+                            "correlation_coefficient",
+                            "p_value",
+                            "sample_size"
+                        ]
+                    },
+                    "evolution": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "year": {
+                                    "type": "integer",
+                                    "example": 1974
+                                },
+                                "title": {
+                                    "type": "string",
+                                    "example": "The Dispossessed"
+                                },
+                                "quality_score": {
+                                    "type": "number",
+                                    "format": "double",
+                                    "example": 9.5
+                                },
+                                "popularity_score": {
+                                    "type": "number",
+                                    "format": "double",
+                                    "example": 95.0
+                                },
+                                "genre": {
+                                    "type": "string",
+                                    "example": "Sci-Fi"
+                                }
+                            },
+                            "required": [
+                                "year",
+                                "title",
+                                "quality_score",
+                                "popularity_score"
+                            ]
+                        }
+                    }
+                },
+                "required": [
+                    "items"
+                ]
+            },
+            "ClassicModernItem": {
+                "type": "object",
+                "description": "Aggregated metrics for one publishing era.",
+                "properties": {
+                    "era": {
+                        "type": "string",
+                        "enum": [
+                            "classic",
+                            "modern"
+                        ],
+                        "example": "classic"
+                    },
+                    "n_books": {
+                        "type": "integer",
+                        "example": 45210,
+                        "description": "Number of books in the era."
+                    },
+                    "avg_star_rating": {
+                        "type": [
+                            "number",
+                            "null"
+                        ],
+                        "format": "double",
+                        "example": 4.12,
+                        "description": "Average star rating of books in the era."
+                    },
+                    "avg_num_ratings": {
+                        "type": [
+                            "number",
+                            "null"
+                        ],
+                        "format": "double",
+                        "example": 18540.3,
+                        "description": "Average number of ratings per book in the era."
+                    },
+                    "sum_num_ratings": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "format": "int64",
+                        "example": 838000000,
+                        "description": "Total number of ratings accumulated by books in the era."
+                    }
+                },
+                "required": [
+                    "era",
+                    "n_books",
+                    "avg_star_rating",
+                    "avg_num_ratings",
+                    "sum_num_ratings"
+                ]
+            },
+            "ClassicModernComparisonResponse": {
+                "type": "object",
+                "description": "Comparison of aggregated metrics between classic and modern books.",
+                "properties": {
+                    "classic_threshold": {
+                        "type": "integer",
+                        "example": 1950,
+                        "description": "Maximum publication year considered classic."
+                    },
+                    "modern_threshold": {
+                        "type": "integer",
+                        "example": 2000,
+                        "description": "Minimum publication year considered modern."
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ClassicModernItem"
+                        }
+                    }
+                },
+                "required": [
+                    "classic_threshold",
+                    "modern_threshold",
+                    "items"
+                ]
+            },
+            "AuthorGrowthResponse": {
+                "type": "object",
+                "title": "AuthorGrowthResponse",
+                "description": "Author ranking based on growth in book ratings over time.",
+                "properties": {
+                    "author_id": {
+                        "type": "string",
+                        "example": "A-00421"
+                    },
+                    "author_name": {
+                        "type": "string",
+                        "example": "Ursula K. Le Guin"
+                    },
+                    "growth_score": {
+                        "type": "number",
+                        "format": "double",
+                        "example": 0.85
+                    },
+                    "first_rating": {
+                        "type": "number",
+                        "format": "double",
+                        "example": 3.2
+                    },
+                    "latest_rating": {
+                        "type": "number",
+                        "format": "double",
+                        "example": 4.8
+                    },
+                    "total_books": {
+                        "type": "integer",
+                        "example": 12
+                    },
+                    "rank": {
+                        "type": "integer",
+                        "example": 1
+                    }
+                },
+                "required": [
+                    "author_id",
+                    "author_name",
+                    "growth_score",
+                    "rank"
+                ]
+            },
+            "AuthorConsistencyResponse": {
+                "type": "object",
+                "title": "AuthorConsistencyResponse",
+                "description": "Author ranking based on the consistency of their book ratings.",
+                "properties": {
+                    "author_id": {
+                        "type": "string",
+                        "example": "A-00421"
+                    },
+                    "author_name": {
+                        "type": "string",
+                        "example": "Ursula K. Le Guin"
+                    },
+                    "consistency_score": {
+                        "type": "number",
+                        "format": "double",
+                        "example": 0.92
+                    },
+                    "average_rating": {
+                        "type": "number",
+                        "format": "double",
+                        "example": 4.5
+                    },
+                    "std_deviation": {
+                        "type": "number",
+                        "format": "double",
+                        "example": 0.18
+                    },
+                    "total_books": {
+                        "type": "integer",
+                        "example": 12
+                    },
+                    "rank": {
+                        "type": "integer",
+                        "example": 1
+                    }
+                },
+                "required": [
+                    "author_id",
+                    "author_name",
+                    "consistency_score",
+                    "rank"
+                ]
+            }
+        },
+        "parameters": {
+            "RankSortParam": {
+                "name": "rank_sort",
+                "in": "query",
+                "required": false,
+                "description": "Sort order for ranking results. Use rate_asc and rate_desc for sorting by rating in ascending or descending order. Use pop_asc and pop_desc for sorting by popularity in ascending or descending order.",
+                "schema": {
+                    "type": "string",
+                    "default": "rate_desc",
+                    "enum": [
+                        "rate_asc",
+                        "rate_desc",
+                        "pop_asc",
+                        "pop_desc"
+                    ]
+                }
+            },
+            "YearFromParam": {
+                "name": "year_from",
+                "in": "query",
+                "required": false,
+                "description": "Start year of the interval.",
+                "schema": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "default": 2000,
+                    "example": 2000
+                }
+            },
+            "YearToParam": {
+                "name": "year_to",
+                "in": "query",
+                "required": false,
+                "description": "End year of the interval.",
+                "schema": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "default": 2025,
+                    "example": 2010
+                }
+            },
+            "AuthorNameParam": {
+                "name": "author_name",
+                "in": "query",
+                "required": false,
+                "description": "Partial match on author name.",
+                "schema": {
+                    "type": ["string", "null"],
+                    "example": "J.K. Rowling"
+                }
+            },
+            "AuthorIdParam": {
+                "name": "author_id",
+                "in": "query",
+                "required": false,
+                "description": "Exact author ID.",
+                "schema": {
+                    "type": [
+                        "integer",
+                        "null"
+                    ],
+                    "minimum": 1,
+                    "example": 12
+                }
+            },
+            "GenreNameParam": {
+                "name": "genre_name",
+                "in": "query",
+                "required": false,
+                "description": "Filter by one or more genre names. Repeat the parameter to provide multiple values.",
+                "schema": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "Fantasy",
+                        "Young Adult"
+                    ]
+                },
+                "style": "form",
+                "explode": true
+            },
+            "GenreIdParam": {
+                "name": "genre_id",
+                "in": "query",
+                "required": false,
+                "description": "Filter by one or more genre IDs. Repeat the parameter to provide multiple values.",
+                "schema": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "example": [
+                        1,
+                        4
+                    ]
+                },
+                "style": "form",
+                "explode": true
+            },
+            "BookNameParam": {
+                "name": "book_name",
+                "in": "query",
+                "required": false,
+                "description": "Partial match on book name.",
+                "schema": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "example": "Harry Potter"
+                }
+            },
+            "BookIsbnParam": {
+                "name": "book_isbn",
+                "in": "query",
+                "required": false,
+                "description": "Exact book ISBN.",
+                "schema": {
+                    "type": [
+                        "integer",
+                        "null"
+                    ],
+                    "format": "int64",
+                    "minimum": 1,
+                    "example": 9780439554930
+                }
+            },
+            "PubYearFromParam": {
+                "name": "pub_year_from",
+                "in": "query",
+                "required": false,
+                "description": "Filter books published after or equal to this year.",
+                "schema": {
+                    "type": [
+                        "integer",
+                        "null"
+                    ],
+                    "example": 1950
+                }
+            },
+            "PubYearToParam": {
+                "name": "pub_year_to",
+                "in": "query",
+                "required": false,
+                "description": "Filter books published before or equal to this year.",
+                "schema": {
+                    "type": [
+                        "integer",
+                        "null"
+                    ],
+                    "example": 2025
+                }
+            },
+            "PubYearParam": {
+                "name": "pub_year",
+                "in": "query",
+                "required": false,
+                "description": "Exact publication year.",
+                "schema": {
+                    "type": [
+                        "integer",
+                        "null"
+                    ],
+                    "example": 1997
+                }
+            },
+            "PageParam": {
+                "name": "page",
+                "in": "query",
+                "required": false,
+                "description": "Page number.",
+                "schema": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "default": 1
+                }
+            },
+            "PageSizeParam": {
+                "name": "page_size",
+                "in": "query",
+                "required": false,
+                "description": "Number of results per page.",
+                "schema": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 500,
+                    "default": 50
+                }
+            },
+            "MinNumRatingsParam": {
+                "name": "min_num_ratings",
+                "in": "query",
+                "required": false,
+                "description": "Minimum number of ratings required.",
+                "schema": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "default": 0
+                }
+            },
+            "MaxNumRatingsParam": {
+                "name": "max_num_ratings",
+                "in": "query",
+                "required": false,
+                "description": "Maximum number of ratings allowed.",
+                "schema": {
+                    "type": [
+                        "integer",
+                        "null"
+                    ],
+                    "minimum": 0
+                }
+            },
+            "MinStarRatingParam": {
+                "name": "min_star_rating",
+                "in": "query",
+                "required": false,
+                "description": "Minimum average star rating.",
+                "schema": {
+                    "type": [
+                        "number",
+                        "null"
+                    ],
+                    "format": "double",
+                    "minimum": 0,
+                    "maximum": 5
+                }
+            },
+            "MaxStarRatingParam": {
+                "name": "max_star_rating",
+                "in": "query",
+                "required": false,
+                "description": "Maximum average star rating.",
+                "schema": {
+                    "type": "number",
+                    "format": "double",
+                    "minimum": 0,
+                    "maximum": 5,
+                    "default": 5
+                }
+            },
+            "CorrelationMethodParam": {
+                "name": "method",
+                "in": "query",
+                "required": false,
+                "description": "Correlation method to use.",
+                "schema": {
+                    "type": "string",
+                    "enum": [
+                        "pearson",
+                        "spearman"
+                    ],
+                    "default": "pearson",
+                    "example": "pearson"
+                }
+            },
+            "ClassicThresholdParam": {
+                "name": "classic_threshold",
+                "in": "query",
+                "required": false,
+                "description": "Maximum publication year considered part of the classic era.",
+                "schema": {
+                    "type": "integer",
+                    "default": 1950,
+                    "example": 1950
+                }
+            },
+            "ModernThresholdParam": {
+                "name": "modern_threshold",
+                "in": "query",
+                "required": false,
+                "description": "Minimum publication year considered part of the modern era.",
+                "schema": {
+                    "type": "integer",
+                    "default": 2000,
+                    "example": 2000
+                }
+            }
+        }
+    }
+}
