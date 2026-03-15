@@ -1,0 +1,799 @@
+openapi: 3.0.0
+info:
+  title: BookCloud
+  description: API structure with all endpoints necessary for the platform to function
+  version: 1.0.0
+
+tags:
+  - name: PopularityVsQuality
+    description: Operations for Service 4 - Popularity vs Quality analytics
+
+paths:
+  /popular-low-rated:
+    get:
+      tags:
+        - PopularityVsQuality
+      summary: UC1 - Very Popular but Low Rated Books
+      description: >
+        Returns books with the highest discrepancy between popularity and quality.
+        Popularity is normalized using log(num_ratings), while quality is derived
+        from a Bayesian-adjusted star rating to reduce the influence of books
+        with very few reviews.
+
+        The discrepancy score is defined as:
+
+        discrepancy_score = popularity_norm - quality_norm
+
+        Higher values indicate books that are significantly more popular than
+        their rating would suggest.
+
+        Query parameters only filter the candidate set before ranking.
+      parameters:
+        - name: author_name
+          in: query
+          required: false
+          description: Partial match on author name.
+          schema:
+            type: string
+            nullable: true
+            example: "J.K. Rowling"
+
+        - name: author_id
+          in: query
+          required: false
+          description: Exact author ID.
+          schema:
+            type: integer
+            minimum: 1
+            nullable: true
+            example: 12
+
+        - name: genre_name
+          in: query
+          required: false
+          description: Filter by one or more genre names. A book must contain all selected genres.
+          schema:
+            type: array
+            nullable: true
+            items:
+              type: string
+              example: Fantasy
+          style: form
+          explode: true
+
+        - name: genre_id
+          in: query
+          required: false
+          description: Filter by one or more genre IDs. A book must contain all selected genre IDs.
+          schema:
+            type: array
+            nullable: true
+            items:
+              type: integer
+              minimum: 1
+              example: 4
+          style: form
+          explode: true
+
+        - name: book_name
+          in: query
+          required: false
+          description: Partial match on book name.
+          schema:
+            type: string
+            nullable: true
+            example: Harry Potter
+
+        - name: book_isbn
+          in: query
+          required: false
+          description: Exact book ISBN.
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+            nullable: true
+            example: 9780439554930
+
+        - name: pub_year_from
+          in: query
+          required: false
+          description: Filter books published after or equal to this year.
+          schema:
+            type: integer
+            nullable: true
+            example: 1950
+
+        - name: pub_year_to
+          in: query
+          required: false
+          description: Filter books published before or equal to this year.
+          schema:
+            type: integer
+            nullable: true
+            example: 2025
+
+        - name: pub_year
+          in: query
+          required: false
+          description: Exact publication year.
+          schema:
+            type: integer
+            nullable: true
+            example: 1997
+
+        - name: page
+          in: query
+          required: false
+          description: Page number.
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+
+        - name: page_size
+          in: query
+          required: false
+          description: Number of results per page.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 50
+
+        - name: min_num_ratings
+          in: query
+          required: false
+          description: Minimum number of ratings required.
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+
+        - name: max_num_ratings
+          in: query
+          required: false
+          description: Maximum number of ratings allowed.
+          schema:
+            type: integer
+            minimum: 0
+            nullable: true
+
+        - name: min_star_rating
+          in: query
+          required: false
+          description: Minimum average star rating.
+          schema:
+            type: number
+            format: double
+            minimum: 0
+            maximum: 5
+            nullable: true
+
+        - name: max_star_rating
+          in: query
+          required: false
+          description: Maximum average star rating.
+          schema:
+            type: number
+            format: double
+            minimum: 0
+            maximum: 5
+            default: 5
+
+      responses:
+        "200":
+          description: Paginated list of books with highest popularity-quality discrepancy.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedBookPQResponse"
+
+  /hidden-gems:
+    get:
+      tags:
+        - PopularityVsQuality
+      summary: UC2 - High Rated but Low Popularity (Hidden Gems)
+      description: >
+        Returns books with the lowest discrepancy between popularity and quality.
+
+        The same discrepancy score is used:
+
+        discrepancy_score = popularity_norm - quality_norm
+
+        Hidden gems correspond to books where the score is most negative,
+        meaning they have relatively high quality but low popularity.
+
+        The results are ordered ascending by discrepancy_score.
+
+        Query parameters only filter the candidate set before ranking.
+      parameters:
+        - name: author_name
+          in: query
+          required: false
+          description: Partial match on author name.
+          schema:
+            type: string
+            nullable: true
+            example: "J.K. Rowling"
+
+        - name: author_id
+          in: query
+          required: false
+          description: Exact author ID.
+          schema:
+            type: integer
+            minimum: 1
+            nullable: true
+            example: 12
+
+        - name: genre_name
+          in: query
+          required: false
+          description: Filter by one or more genre names. A book must contain all selected genres.
+          schema:
+            type: array
+            nullable: true
+            items:
+              type: string
+              example: Fantasy
+          style: form
+          explode: true
+
+        - name: genre_id
+          in: query
+          required: false
+          description: Filter by one or more genre IDs. A book must contain all selected genre IDs.
+          schema:
+            type: array
+            nullable: true
+            items:
+              type: integer
+              minimum: 1
+              example: 4
+          style: form
+          explode: true
+
+        - name: book_name
+          in: query
+          required: false
+          description: Partial match on book name.
+          schema:
+            type: string
+            nullable: true
+            example: Harry Potter
+
+        - name: book_isbn
+          in: query
+          required: false
+          description: Exact book ISBN.
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+            nullable: true
+            example: 9780439554930
+
+        - name: pub_year_from
+          in: query
+          required: false
+          description: Filter books published after or equal to this year.
+          schema:
+            type: integer
+            nullable: true
+            example: 1950
+
+        - name: pub_year_to
+          in: query
+          required: false
+          description: Filter books published before or equal to this year.
+          schema:
+            type: integer
+            nullable: true
+            example: 2025
+
+        - name: pub_year
+          in: query
+          required: false
+          description: Exact publication year.
+          schema:
+            type: integer
+            nullable: true
+            example: 1997
+
+        - name: page
+          in: query
+          required: false
+          description: Page number.
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+
+        - name: page_size
+          in: query
+          required: false
+          description: Number of results per page.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 50
+
+        - name: min_num_ratings
+          in: query
+          required: false
+          description: Minimum number of ratings required.
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+
+        - name: max_num_ratings
+          in: query
+          required: false
+          description: Maximum number of ratings allowed.
+          schema:
+            type: integer
+            minimum: 0
+            nullable: true
+
+        - name: min_star_rating
+          in: query
+          required: false
+          description: Minimum average star rating.
+          schema:
+            type: number
+            format: double
+            minimum: 0
+            maximum: 5
+            nullable: true
+
+        - name: max_star_rating
+          in: query
+          required: false
+          description: Maximum average star rating.
+          schema:
+            type: number
+            format: double
+            minimum: 0
+            maximum: 5
+            default: 5
+
+      responses:
+        "200":
+          description: Paginated list of hidden gem books with highest quality relative to popularity.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedBookPQResponse"
+
+  /analytics/popularity-quality/correlation:
+    get:
+      tags:
+        - PopularityVsQuality
+      summary: UC3 - Correlation (Rating vs Popularity)
+      description: |
+        Compute correlation between star_rating and num_ratings.
+        Supports segmentation by genre and publication year interval.
+      parameters:
+        - name: pub_year_from
+          in: query
+          required: false
+          schema:
+            type: integer
+            example: 1950
+
+        - name: pub_year_to
+          in: query
+          required: false
+          schema:
+            type: integer
+            example: 2025
+
+        - name: genre_name
+          in: query
+          required: false
+          description: Filter by one or more genre names.
+          schema:
+            type: array
+            items:
+              type: string
+              example: Romance
+          style: form
+          explode: true
+
+        - name: method
+          in: query
+          required: false
+          description: Correlation method to use.
+          schema:
+            type: string
+            enum: [pearson, spearman]
+            example: pearson
+
+        - name: min_num_ratings
+          in: query
+          required: false
+          description: Ignore books with num_ratings below this threshold.
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+            example: 10
+
+      responses:
+        "200":
+          description: Correlation results for the selected filters/segment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CorrelationResult"
+
+  /analytics/popularity-quality/publishing-growth:
+    get:
+      tags:
+        - PopularityVsQuality
+      summary: UC4 - Publishing Growth Over Time
+      description: |
+        Aggregates publication volume over time (by pub_year),
+        returning yearly metrics for books published and popularity/quality indicators.
+      parameters:
+        - name: pub_year_from
+          in: query
+          required: false
+          schema:
+            type: integer
+            example: 1800
+
+        - name: pub_year_to
+          in: query
+          required: false
+          schema:
+            type: integer
+            example: 2025
+
+        - name: genre_name
+          in: query
+          required: false
+          description: Optional filter by one or more genre names.
+          schema:
+            type: array
+            items:
+              type: string
+              example: Classics
+          style: form
+          explode: true
+
+      responses:
+        "200":
+          description: Yearly publishing and popularity/quality metrics
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PublishingGrowthYear"
+
+  /analytics/popularity-quality/classic-vs-modern:
+    get:
+      tags:
+        - PopularityVsQuality
+      summary: UC5 - Classic vs Modern Comparison
+      description: |
+        Compare classic vs modern literature using pub_year thresholds and return aggregated metrics for each group.
+      parameters:
+        - name: classic_year_max
+          in: query
+          required: false
+          description: Max publication year to include in the classic group (<= classic_year_max).
+          schema:
+            type: integer
+            example: 1950
+
+        - name: modern_year_min
+          in: query
+          required: false
+          description: Min publication year to include in the modern group (>= modern_year_min).
+          schema:
+            type: integer
+            example: 2000
+
+        - name: genre_name
+          in: query
+          required: false
+          description: Optional filter by one or more genre names.
+          schema:
+            type: array
+            items:
+              type: string
+              example: Mystery
+          style: form
+          explode: true
+
+        - name: min_num_ratings
+          in: query
+          required: false
+          description: Optional filter to ignore low-signal books in both groups.
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+            example: 10
+
+      responses:
+        "200":
+          description: Comparison between classic and modern groups
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClassicModernComparison"
+
+components:
+  schemas:
+    Book:
+      type: object
+      properties:
+        isbn:
+          type: integer
+          format: int64
+          example: 9780439554930
+        name:
+          type: string
+          example: "Harry Potter and the Sorcerer's Stone"
+        url:
+          type: string
+          nullable: true
+          example: "https://www.goodreads.com/book/show/3.Harry_Potter_and_the_Sorcerer_s_Stone"
+        summary_clean:
+          type: string
+          nullable: true
+          example: "A young wizard discovers his destiny..."
+        pub_year:
+          type: integer
+          nullable: true
+          example: 1997
+
+    Rating:
+      type: object
+      properties:
+        book_isbn:
+          type: integer
+          format: int64
+          example: 9780439554930
+        star_rating:
+          type: number
+          format: double
+          nullable: true
+          example: 4.47
+        num_ratings:
+          type: integer
+          format: int64
+          nullable: true
+          example: 9234567
+
+    Author:
+      type: object
+      properties:
+        author_id:
+          type: integer
+          format: int64
+          example: 1
+        name:
+          type: string
+          example: "J.K. Rowling"
+
+    Genre:
+      type: object
+      properties:
+        genre_id:
+          type: integer
+          format: int64
+          example: 10
+        name:
+          type: string
+          example: "Fantasy"
+
+    BookPQItem:
+      type: object
+      description: Book item for Popularity vs Quality analytics listings.
+      properties:
+        isbn:
+          type: integer
+          format: int64
+          example: 9780439554930
+        name:
+          type: string
+          example: "Harry Potter and the Sorcerer's Stone"
+        pub_year:
+          type: integer
+          nullable: true
+          example: 1997
+        star_rating:
+          type: number
+          format: double
+          nullable: true
+          example: 4.47
+        num_ratings:
+          type: integer
+          format: int64
+          nullable: true
+          example: 9234567
+        discrepancy_score:
+          type: number
+          format: double
+          nullable: true
+          example: 0.42
+        genres:
+          type: array
+          items:
+            type: string
+          example: ["Fantasy", "Young Adult"]
+        authors:
+          type: array
+          items:
+            type: string
+          example: ["J.K. Rowling"]
+
+    PaginatedBookPQResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/BookPQItem"
+        total:
+          type: integer
+          example: 245
+        page:
+          type: integer
+          example: 1
+        page_size:
+          type: integer
+          example: 50
+        total_pages:
+          type: integer
+          example: 5
+
+    CorrelationResult:
+      type: object
+      properties:
+        method:
+          type: string
+          enum: [pearson, spearman]
+          example: pearson
+        correlation:
+          type: number
+          format: double
+          nullable: true
+          description: Correlation coefficient between star_rating and num_ratings.
+          example: 0.12
+        n_books:
+          type: integer
+          description: Number of books included after filters.
+          example: 152340
+        filters:
+          $ref: "#/components/schemas/PQFilters"
+
+    PublishingGrowthYear:
+      type: object
+      properties:
+        pub_year:
+          type: integer
+          example: 2005
+        books_published:
+          type: integer
+          example: 34567
+        avg_star_rating:
+          type: number
+          format: double
+          nullable: true
+          example: 3.98
+        sum_num_ratings:
+          type: integer
+          format: int64
+          nullable: true
+          example: 123456789
+
+    EraAggregates:
+      type: object
+      properties:
+        n_books:
+          type: integer
+          example: 120345
+        avg_star_rating:
+          type: number
+          format: double
+          nullable: true
+          example: 3.85
+        avg_num_ratings:
+          type: number
+          format: double
+          nullable: true
+          example: 4521.7
+        sum_num_ratings:
+          type: integer
+          format: int64
+          nullable: true
+          example: 544433221
+
+    ClassicDefinition:
+      type: object
+      properties:
+        classic_year_max:
+          type: integer
+          example: 1950
+
+    ModernDefinition:
+      type: object
+      properties:
+        modern_year_min:
+          type: integer
+          example: 2000
+
+    ClassicModernComparison:
+      type: object
+      properties:
+        classic_definition:
+          $ref: "#/components/schemas/ClassicDefinition"
+        modern_definition:
+          $ref: "#/components/schemas/ModernDefinition"
+        classic:
+          $ref: "#/components/schemas/EraAggregates"
+        modern:
+          $ref: "#/components/schemas/EraAggregates"
+        filters:
+          $ref: "#/components/schemas/PQFilters"
+
+    PQFilters:
+      type: object
+      description: Echo of applied filters (useful for reproducibility).
+      properties:
+        pub_year_from:
+          type: integer
+          nullable: true
+          example: 1950
+        pub_year_to:
+          type: integer
+          nullable: true
+          example: 2025
+        pub_year:
+          type: integer
+          nullable: true
+          example: 1997
+        genre_name:
+          type: array
+          nullable: true
+          items:
+            type: string
+          example: ["Fantasy", "Adventure"]
+        genre_id:
+          type: array
+          nullable: true
+          items:
+            type: integer
+            format: int64
+          example: [4, 7]
+        min_num_ratings:
+          type: integer
+          format: int64
+          nullable: true
+          example: 10
+        book_name:
+          type: string
+          nullable: true
+          example: "Harry Potter"
+        author_name:
+          type: string
+          nullable: true
+          example: "J.K. Rowling"
+        author_id:
+          type: integer
+          format: int64
+          nullable: true
+          example: 12
+        book_isbn:
+          type: integer
+          format: int64
+          nullable: true
+          example: 9780439554930
