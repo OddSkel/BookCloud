@@ -108,11 +108,16 @@ The system shall allow users to search books using different discovery criteria,
 - `Author` (query parameter, optional)
 - `Keywords` (query parameter, optional)
 
-##### Processing
-- The service receives one or more search parameters.
-- It queries the book catalog and author catalog.
-- It applies filtering based on title, author and summary keywords.
-- It returns the matching books.
+##### Processing:
+1. The service receives one or more search parameters.
+
+2. It gets all of the books from bookcatalog based on the first query parameter(could be title, author or keywords)
+
+3. If it doesn't have more inputs, then it returns the books that match the search.
+
+4. If not, it then filters the previous result with the next query parameter(could be author or keywords).
+
+5. If it still has more inputs, then repeat step 4, otherwise go to step 3 and end the functional requirement.
 
 ##### Outputs
 - A JSON response containing the list of matching books and their metadata.
@@ -135,10 +140,15 @@ The system shall allow users to obtain book recommendations based on:
 - `Popularity` (query parameter, optional)
 
 ##### Processing
-- The service receives the recommendation criteria.
-- It queries the catalog data and analytics data.
-- It compares books using the selected similarity dimensions.
-- It ranks the most relevant recommended books.
+1. The service receives one or more recomendation parameters.
+
+2. It gets all of the books from bookcatalog based on the first query parameter(could be genre, rating or popularity)
+
+3. If it doesn't have more inputs, then it returns the books that match the recommendation.
+
+4. If not, it then filters the previous result with the next query parameter(could be author or keywords).
+
+5. If it still has more inputs, then repeat step 4, otherwise go to step 3 and end the functional requirement.
 
 ##### Outputs
 - A JSON response containing a ranked list of recommended books.
