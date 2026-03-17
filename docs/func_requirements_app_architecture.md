@@ -484,97 +484,7 @@ The system shall support CRUD operations for ratings associated with books.
 `PUT /rating/{book_id}`  
 `DELETE /rating/{rating_id}`
 
----
-
 ## 2. Application Architecture
-
-### 2.1 System Components
-
-The application follows a microservices-based architecture organized into two main domains:
-
-- **Catalog Services**
-  - BookCatalog
-  - AuthorCatalog
-  - RatingCatalog
-
-- **Analytics Services**
-  - SearchService
-  - GenreAnalysisService
-  - CompareService
-  - AuthorAnalyticsService
-
-In addition, the system includes:
-- **Client**
-- **API Gateway**
-- **Databases** associated with catalog services and genre data
-
-### 2.2 Component Responsibilities
-
-#### Microservices
-
-**API Gateway**
-- Acts as the single entry point for client requests.
-- Routes incoming gRPC requests to the appropriate microservice.
-- Simplifies access to the distributed system.
-
-**BookCatalog**
-- Manages book data.
-- Supports CRUD operations for books.
-- Provides book metadata to analytics services.
-
-**AuthorCatalog**
-- Manages author data.
-- Supports CRUD operations for authors.
-- Provides author information to analytics services.
-
-**RatingCatalog**
-- Manages rating data.
-- Supports CRUD operations for ratings.
-- Provides rating information to analytics services.
-
-**SearchService**
-- Implements book discovery and recommendation features.
-- Uses data from BookCatalog and AuthorCatalog.
-- Supports search by title, author and summary keywords.
-- Generates recommendations based on genre, rating and popularity.
-
-**GenreAnalysisService**
-- Implements genre-related analytics.
-- Computes genre rankings, growth and popularity trends.
-- Uses book and rating data to generate aggregated genre metrics.
-
-**CompareService**
-- Implements popularity versus quality analytics.
-- Identifies popular low-rated books and hidden gems.
-- Computes correlation metrics and publishing growth.
-- Supports classic versus modern comparisons.
-
-**AuthorAnalyticsService**
-- Implements author performance analytics.
-- Ranks authors and evaluates consistency, growth and performance evolution.
-- Uses author, book and rating information.
-
-#### Database
-
-The system uses separate databases for the core catalog services and genre-related persistence shown in the architecture diagram.
-
-**Book Database**
-- Stores book metadata ingested from the Goodreads dataset.
-
-**Author Database**
-- Stores author metadata and related author information.
-
-**Rating Database**
-- Stores ratings and review-related information associated with books.
-
-**Genre Database**
-- Stores genre entities and genre-related aggregated or managed data.
-
-This separation improves modularity, service autonomy and maintainability.
-
---
-
-## 3. Application Architecture Diagram
 
 ```mermaid
 graph TB
@@ -665,12 +575,28 @@ Three independent microservices, each exposing an API and owning a dedicated dat
 #### Analytics Services
 Four independent microservices, each exposing an API:
  
-- **SearchService** — full-text or filtered search over catalog data
-- **CompareService** — comparison logic between books or authors
-- **AuthorAnalyticsService** — aggregated metrics on authors
-- **GenreAnalysisService** — genre-level insights, backed by its own dedicated database
+**Service 1: GenreAnalysisService**
+- Implements genre-related analytics.
+- Computes genre rankings, growth and popularity trends.
+- Uses book and rating data to generate aggregated genre metrics.
+
+**Service 2: SearchService**
+- Implements book discovery and recommendation features.
+- Uses data from BookCatalog and AuthorCatalog.
+- Supports search by title, author and summary keywords.
+- Generates recommendations based on genre, rating and popularity.
+
+**Service 3: AuthorAnalyticsService**
+- Implements author performance analytics.
+- Ranks authors and evaluates consistency, growth and performance evolution.
+- Uses author, book and rating information.
+
+**Service 4: CompareService**
+- Implements popularity versus quality analytics.
+- Identifies popular low-rated books and hidden gems.
+- Computes correlation metrics and publishing growth.
+- Supports classic versus modern comparisons.
  
----
  
 ### Connections
  
@@ -680,5 +606,3 @@ Four independent microservices, each exposing an API:
 | API Gateway | Catalog Services | gRPC |
 | API Gateway | Analytics Services | gRPC |
 | Analytics Services | Catalog Services | gRPC |
- 
----
