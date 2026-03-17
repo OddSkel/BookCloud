@@ -648,21 +648,21 @@ graph TB
     author_api -->|gRPC| rating_api
 ```
 
-## Architecture Description
+### Architecture Description
 
 The diagram represents a **microservices-based architecture** with the following components and connections:
  
-### API Gateway
+#### API Gateway
 The sole entry point for all client traffic. Receives requests from the **Client** over **HTTP/REST** and forwards them internally using **gRPC**.
  
-### Catalog Services
+#### Catalog Services
 Three independent microservices, each exposing an API and owning a dedicated database:
  
 - **BookCatalog** — stores and serves book metadata
 - **AuthorCatalog** — manages author information
 - **RatingCatalog** — handles ratings data
  
-### Analytics Services
+#### Analytics Services
 Four independent microservices, each exposing an API:
  
 - **SearchService** — full-text or filtered search over catalog data
@@ -672,7 +672,7 @@ Four independent microservices, each exposing an API:
  
 ---
  
-## Connections
+### Connections
  
 | From | To | Protocol |
 |---|---|---|
