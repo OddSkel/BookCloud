@@ -1219,7 +1219,22 @@
                         },
                         "description": "Search Book by keywords from summary"
                     }
-                ]
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/BookSearchResponse"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
         "/recommendation": {
@@ -1285,7 +1300,22 @@
                         },
                         "description": "Recommend books by Popularity profile"
                     }
-                ]
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/RecommendationBookResponse"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
         "/rank-author": {
@@ -1980,6 +2010,54 @@
                         "example": 5
                     }
                 }
+            },
+            "BookSearchResponse": {
+                "type": "object",
+                "description": "Book Search based on the parameters that client requested",
+                "properties": {
+                    "title": {
+                        "type": ["string", "null"],
+                        "example": "1984",
+                        "description": "title query requested."
+                    },
+                    "author": {
+                        "type": ["string", "null"],
+                        "example": "George Orwell",
+                        "description": "author query requested."
+                    },
+                    "keywords": {
+                        "type": ["string", "null"],
+                        "description": "keyword query requested"
+                    }
+                }
+            },
+            "RecommendationBookResponse": {
+                "type": "object",
+                "description": "Book Recommendation based on the parameters that client requested",
+                "properties": {
+                    "genre": {
+                        "type": ["string", "null"],
+                        "example": "Romance",
+                        "description": "genre query requested."
+                    },
+                    "rating": {
+                        "type": ["integer", "null"],
+                        "format": "double",
+                        "example": 4.89,
+                        "description": "rating query requested."
+                    },
+                    "popularity": {
+                        "type": ["integer", "null"],
+                        "format": "int64",
+                        "example": 10000,
+                        "description": "keyword query requested"
+                    }
+                },
+                "anyOf": [
+                    { "required": ["genre"] },
+                    { "required": ["rating"] },
+                    { "required": ["popularity"] }
+                ]
             },
             "CorrelationResponse": {
                 "type": "object",
