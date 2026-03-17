@@ -9,7 +9,7 @@ Group 2
 
 ##### Description
 The system shall allow users to retrieve a ranking of book genres based on either:
-- average rating, or
+- average rating of the genre, or
 - total number of ratings (popularity).
 
 This requirement supports the identification of the most highly rated genres and the most popular genres in the dataset.
@@ -42,7 +42,7 @@ This requirement supports the identification of the most highly rated genres and
 
 ---
 
-#### FR2 – Analyze genre growth or decline over time
+#### FR2 – Analyze genre evolution over time
 
 ##### Description
 The system shall allow users to analyze how a specific genre evolves over time, identifying whether it is growing, stable or declining based on yearly aggregated data.
@@ -65,7 +65,7 @@ The system shall allow users to analyze how a specific genre evolves over time, 
   - selected time interval
   - yearly data points for genre evolution
 
-**Related endpoint:** `GET /genres/{genre_id}/growth`
+**Related endpoint:** `GET /genres/{genre_id}/evolution`
 
 ---
 
@@ -81,7 +81,7 @@ The system shall allow users to retrieve the popularity trend of a specific genr
 
 ##### Processing
 - The service receives the genre and time range.
-- It collects all books associated with that genre.
+- It collects all books associated with that genre within the time period.
 - It aggregates popularity indicators by year.
 - It computes yearly popularity metrics such as total ratings.
 
@@ -646,3 +646,39 @@ graph TB
     author_api -->|gRPC| author_catalog_api
     author_api -->|gRPC| book_api
     author_api -->|gRPC| rating_api
+```
+
+## Architecture Description
+
+The diagram represents a **microservices-based architecture** with the following components and connections:
+ 
+### API Gateway
+The sole entry point for all client traffic. Receives requests from the **Client** over **HTTP/REST** and forwards them internally using **gRPC**.
+ 
+### Catalog Services
+Three independent microservices, each exposing an API and owning a dedicated database:
+ 
+- **BookCatalog** — stores and serves book metadata
+- **AuthorCatalog** — manages author information
+- **RatingCatalog** — handles ratings data
+ 
+### Analytics Services
+Four independent microservices, each exposing an API:
+ 
+- **SearchService** — full-text or filtered search over catalog data
+- **CompareService** — comparison logic between books or authors
+- **AuthorAnalyticsService** — aggregated metrics on authors
+- **GenreAnalysisService** — genre-level insights, backed by its own dedicated database
+ 
+---
+ 
+## Connections
+ 
+| From | To | Protocol |
+|---|---|---|
+| Client | API Gateway | HTTP/REST |
+| API Gateway | Catalog Services | gRPC |
+| API Gateway | Analytics Services | gRPC |
+| Analytics Services | Catalog Services | gRPC |
+ 
+---
