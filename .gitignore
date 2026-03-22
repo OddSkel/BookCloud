@@ -5,3 +5,10 @@ __pycache__
 *.txt
 *.pyc
 *.zip
+
+.env
+.env.*
+!.example.env
+
+debug
+target
