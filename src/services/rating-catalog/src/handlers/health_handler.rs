@@ -1,11 +1,4 @@
-use actix_web::{HttpResponse, Responder};
-use std::env;
 
-pub async fn health() -> impl Responder {
-    let service_name = "rating-catalog";
-
-    HttpResponse::Ok().json(serde_json::json!({
-        "status": "ok",
-        "service": service_name
-    }))
+pub fn health(service_name: &str) -> (String, String) {
+    (service_name.to_string(), "ok".to_string())
 }
