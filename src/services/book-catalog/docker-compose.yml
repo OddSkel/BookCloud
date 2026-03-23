@@ -1,35 +1,18 @@
 services:
-  book-catalog-api:
+  book-catalog:
     build:
       context: .
       dockerfile: Dockerfile
     restart: unless-stopped
     env_file:
       - .env
-    ports:
-      - "${HOST_API_PORT}:8080"
     environment:
       RUST_LOG: info
-    depends_on:
-      book-catalog-db:
-        condition: service_healthy
-
-
-  book-catalog-db:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    env_file:
-      - .env
     ports:
-      - "${HOST_POSTGRES_PORT}:5432"
-    volumes:
-      - book_catalog_postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - "${HOST_GRPC_PORT}:50051"
+    networks:
+      - bookcloud-network
 
-
-volumes:
-  book_catalog_postgres_data:
+networks:
+  bookcloud-network:
+    external: true

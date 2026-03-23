@@ -1,4 +1,15 @@
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    tonic_prost_build::compile_protos("proto/rating.proto")?;
+    let protoc = protoc_bin_vendored::protoc_bin_path()?;
+
+    unsafe {
+        std::env::set_var("PROTOC", protoc);
+    }
+
+    tonic_prost_build::configure().compile_protos(
+        &["proto/common.proto", "proto/rating_catalog.proto"],
+        &["proto"],
+    )?;
+
+    println!("cargo:rerun-if-changed=proto");
     Ok(())
 }

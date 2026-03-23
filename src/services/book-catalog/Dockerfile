@@ -28,6 +28,6 @@ RUN chown appuser:appuser /usr/local/bin/book-catalog
 
 USER appuser
 
-EXPOSE 8080
+EXPOSE 50051
 
 CMD ["book-catalog"]

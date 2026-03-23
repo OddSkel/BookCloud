@@ -1,5 +1,5 @@
 services:
-  rating-catalog-api:
+  rating-catalog:
     build:
       context: .
       dockerfile: Dockerfile
@@ -9,28 +9,11 @@ services:
     environment:
       RUST_LOG: info
     ports:
-      - "${HOST_API_PORT}:8080"
-    depends_on:
-      rating-catalog-db:
-        condition: service_healthy
+      - "${HOST_GRPC_PORT}:50053"
+    networks:
+      - bookcloud-network
 
 
-  rating-catalog-db:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    env_file:
-      - .env
-    ports:
-      - "${HOST_POSTGRES_PORT}:5432"
-    volumes:
-      - rating_catalog_postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-
-volumes:
-  rating_catalog_postgres_data:
-
+networks:
+  bookcloud-network:
+    external: true

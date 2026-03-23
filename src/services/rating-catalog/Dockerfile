@@ -28,6 +28,6 @@ RUN chown appuser:appuser /usr/local/bin/rating-catalog
 
 USER appuser
 
-EXPOSE 8080
+EXPOSE 50053
 
 CMD ["rating-catalog"]

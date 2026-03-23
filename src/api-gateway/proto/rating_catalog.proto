@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package gateway.ratingcatalog;
+
+import "common.proto";
+
+service RatingCatalogGrpc {
+  rpc HealthCheck(gateway.common.HealthCheckRequest) returns (gateway.common.HealthCheckResponse);
+}

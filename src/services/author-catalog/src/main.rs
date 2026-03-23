@@ -1,25 +1,27 @@
-use actix_web::{App, HttpServer};
-use routes::init_routes;
-use std::env;
+use config::AppConfig;
+use grpc::contracts::author_catalog::author_catalog_grpc_server::AuthorCatalogGrpcServer;
+use service::AuthorCatalogService;
+use tonic::transport::Server;
 
-mod routes;
-mod handlers;
+mod config;
+mod grpc;
+mod service;
 
-#[actix_web::main]
-async fn main() -> std::io::Result<()> {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv::dotenv().ok();
 
-    let service_name = env::var("SERVICE_NAME").unwrap_or_else(|_| "author-catalog".to_string());
-    let host = env::var("HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
-    let port = env::var("API_PORT").unwrap_or_else(|_| "8080".to_string());
-    let address = format!("{}:{}", host, port);
+    let config = AppConfig::from_env();
+    let address = config.grpc_address()?;
 
-    println!("{} started on {}", service_name, address);
+    println!("{} gRPC started on {}", config.service_name, address);
 
-    HttpServer::new(|| {
-        App::new().configure(init_routes)
-    })
-    .bind(address)?
-    .run()
-    .await
+    Server::builder()
+        .add_service(AuthorCatalogGrpcServer::new(AuthorCatalogService::new(
+            config.service_name.clone(),
+        )))
+        .serve(address)
+        .await?;
+
+    Ok(())
 }

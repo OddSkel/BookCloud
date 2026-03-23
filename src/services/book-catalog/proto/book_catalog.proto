@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package gateway.bookcatalog;
+
+import "common.proto";
+
+service BookCatalogGrpc {
+  rpc HealthCheck(gateway.common.HealthCheckRequest) returns (gateway.common.HealthCheckResponse);
+}
