@@ -1,0 +1,7 @@
+[workspace]
+members = [
+    "src/services/author-catalog",
+    "src/services/book-catalog",
+    "src/services/rating-catalog"
+]
+resolver = "2"
