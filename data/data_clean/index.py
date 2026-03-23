@@ -5,7 +5,7 @@ import psycopg2
 from create_postgresql_schema import import_csvs_to_postgres, ddl_sql
 
 
-PGHOST = os.getenv("PGHOST", "localhost")      # no docker compose: postgres
+PGHOST = os.getenv("PGHOST", "localhost")
 PGPORT = int(os.getenv("PGPORT", "5432"))
 PGUSER = os.getenv("PGUSER", "bookcloud")
 PGPASSWORD = os.getenv("PGPASSWORD", "bookcloud")
@@ -16,7 +16,7 @@ MAX_WAIT_SECONDS = int(os.getenv("PG_WAIT_SECONDS", "90"))
 
 
 def wait_for_postgres():
-    print(f"⏳ Esperando Postgres em {PGHOST}:{PGPORT} (db={PGDATABASE}) ...")
+    print(f"Waiting for PostgreSQL at {PGHOST}:{PGPORT} (db={PGDATABASE})...")
     t0 = time.time()
     last_err = None
 
@@ -30,19 +30,19 @@ def wait_for_postgres():
                 dbname=PGDATABASE,
             )
             conn.close()
-            print("✅ Postgres pronto!")
+            print("PostgreSQL is ready.")
             return
         except Exception as e:
             last_err = e
             if time.time() - t0 > MAX_WAIT_SECONDS:
                 raise RuntimeError(
-                    f"Postgres não ficou pronto em {MAX_WAIT_SECONDS}s. Último erro: {last_err}"
+                    f"PostgreSQL was not ready within {MAX_WAIT_SECONDS}s. Last error: {last_err}"
                 )
             time.sleep(2)
 
 
 def ensure_schema():
-    print(f"🧱 Criando/garantindo schema/tabelas ({SCHEMA})...")
+    print(f"Ensuring schema and tables ({SCHEMA})...")
     conn = psycopg2.connect(
         host=PGHOST,
         port=PGPORT,
@@ -54,14 +54,13 @@ def ensure_schema():
         conn.autocommit = True
         with conn.cursor() as cur:
             cur.execute(ddl_sql(SCHEMA))
-        print("✅ Schema/tabelas OK")
+        print("Schema and tables are ready.")
     finally:
         conn.close()
 
 
 def print_test_plan():
-    # só printa os limites pra você ver o que tá ativo
-    print("\n🧪 Plano de teste (env):")
+    print("\nExecution plan (env):")
     print(f"   CSV_DIR={os.getenv('CSV_DIR', '../dataset/csvs')}")
     print(f"   CSV_ONLY={os.getenv('CSV_ONLY', '') or '(none)'}")
     print(f"   CSV_SKIP={os.getenv('CSV_SKIP', '') or '(none)'}")
