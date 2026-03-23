@@ -1,0 +1,71 @@
+syntax = "proto3";
+package rating;
+
+service RatingCatalogService {
+  rpc GetRating(GetRatingRequest) returns (GetRatingResponse);
+  rpc GetRatingBook(GetRatingBookRequest) returns (GetRatingBookRequest);
+  rpc CreateRating(CreateRatingRequest) returns (CreateRatingResponse);
+  rpc UpdateRating(UpdateRatingRequest) returns (UpdateRatingResponse);
+  rpc DeleteRating(DeleteRatingRequest) returns (DeleteRatingResponse);
+
+}
+
+// ----------------------------
+// -------- GET RATING --------
+// ----------------------------
+message GetRatingRequest {
+  string fileName = 1;
+}
+
+message GetRatingResponse {
+    bool success = 1;
+    string message = 2;
+}
+
+// ---------------------------------
+// -------- GET RATING BOOK --------
+// ---------------------------------
+message GetRatingBookRequest {
+  string fileName = 1;
+}
+
+message GetRatingBookRequest {
+    bool success = 1;
+    string message = 2;
+}
+
+// -------------------------------
+// -------- CREATE RATING --------
+// -------------------------------
+message CreateRatingRequest {
+  string fileName = 1;
+}
+
+message CreateRatingResponse {
+    bool success = 1;
+    string message = 2;
+}
+
+// -------------------------------
+// -------- UPDATE RATING --------
+// -------------------------------
+message UpdateRatingRequest {
+  string fileName = 1;
+}
+
+message UpdateRatingResponse {
+  string fileName = 1;
+}
+
+// -------------------------------
+// -------- DELETE RATING --------
+// -------------------------------
+message DeleteRatingRequest {
+    bool success = 1;
+    string message = 2;
+}
+
+message DeleteRatingResponse {
+    bool success = 1;
+    string message = 2;
+}
