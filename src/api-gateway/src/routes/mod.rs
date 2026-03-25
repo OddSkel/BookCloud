@@ -10,7 +10,6 @@ pub mod book_catalog_routes;
 pub mod health_routes;
 pub mod rating_catalog_routes;
 
-
 pub fn init_routes(cfg: &mut web::ServiceConfig) {
     health_routes(cfg);
     author_routes(cfg);

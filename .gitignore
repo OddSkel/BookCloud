@@ -1,5 +1,14 @@
 /dataset
 venv/
+__pycache__
 *.csv
 *.txt
 *.pyc
+*.zip
+
+.env
+.env.*
+!.example.env
+
+debug
+target

@@ -26,4 +26,4 @@ deactivate
 
 
 
-    MAX_CHUNKS_PER_FILE=1 CHUNKSIZE=10000 python index.py
+MAX_CHUNKS_PER_FILE=1 CHUNKSIZE=10000 python index.py

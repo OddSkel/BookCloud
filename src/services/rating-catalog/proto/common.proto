@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package gateway.common;
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+  string service = 1;
+  string status = 2;
+}
