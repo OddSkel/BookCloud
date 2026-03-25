@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package gateway.ratingcatalog;
+
+import "common.proto";
+
+message Rating {
+  string id         = 1;
+  int32  evaluation = 2;
+  string critic     = 3;
+}
+
+message RatingAdd {
+  int32  evaluation = 1;
+  string critic     = 2;
+}
+
+message GetRatingsRequest  { string book_id = 1; }
+message GetRatingsResponse { repeated Rating ratings = 1; }
+
+message GetRatingRequest   { string rating_id = 1; }
+message GetRatingResponse  { Rating rating = 1; }
+
+message AddRatingRequest  { string book_id = 1; RatingAdd rating = 2; }
+message AddRatingResponse { Rating rating = 1; }
+
+message UpdateRatingRequest {
+  string book_id        = 1;
+  optional int32  rating  = 2;
+  optional string comment = 3;
+}
+message UpdateRatingResponse { repeated Rating ratings = 1; }
+
+message DeleteRatingRequest  { string rating_id = 1; }
+message DeleteRatingResponse {}
+
+service RatingCatalogGrpc {
+  rpc HealthCheck   (gateway.common.HealthCheckRequest) returns (gateway.common.HealthCheckResponse);
+  rpc GetRatings    (GetRatingsRequest)    returns (GetRatingsResponse);
+  rpc GetRating     (GetRatingRequest)     returns (GetRatingResponse);
+  rpc AddRating     (AddRatingRequest)     returns (AddRatingResponse);
+  rpc UpdateRating  (UpdateRatingRequest)  returns (UpdateRatingResponse);
+  rpc DeleteRating  (DeleteRatingRequest)  returns (DeleteRatingResponse);
+}
