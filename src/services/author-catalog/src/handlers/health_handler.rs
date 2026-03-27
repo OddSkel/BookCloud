@@ -1,11 +1,8 @@
-use actix_web::{HttpResponse, Responder};
-use std::env;
+use crate::grpc::contracts::common::{HealthCheckRequest, HealthCheckResponse};
 
-pub async fn health() -> impl Responder {
-    let service_name = "author-catalog";
-
-    HttpResponse::Ok().json(serde_json::json!({
-        "status": "ok",
-        "service": service_name
-    }))
+pub async fn health_check(service_name: HealthCheckRequest) -> HealthCheckResponse {
+    HealthCheckResponse {
+        service: service_name.service,
+        status: "OK".to_string(),
+    }
 }

@@ -1,8 +1,10 @@
 syntax = "proto3";
 
-package gateway.common;
+package common;
 
-message HealthCheckRequest {}
+message HealthCheckRequest {
+  string service = 1;
+}
 
 message HealthCheckResponse {
   string service = 1;

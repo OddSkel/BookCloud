@@ -1,9 +1,61 @@
 syntax = "proto3";
-
-package gateway.authorcatalog;
-
 import "common.proto";
 
+package author_catalog;
+
 service AuthorCatalogGrpc {
-  rpc HealthCheck(gateway.common.HealthCheckRequest) returns (gateway.common.HealthCheckResponse);
+  rpc GetAuthors(Empty) returns (AuthorsResponse);
+
+  rpc RegisterAuthor(AuthorParameters) returns (AuthorResponse);
+
+  rpc EditAuthor(AuthorEditParameters) returns (AuthorResponse);
+
+  rpc DeleteAuthor(AuthorID) returns (AuthorDeleteResponse);
+
+  rpc GetAuthor(AuthorID) returns (AuthorResponse);
+
+  rpc HealthCheck (common.HealthCheckRequest) returns (common.HealthCheckResponse);
+}
+
+message Empty{}
+
+message Author {
+  int32 id = 1;
+  string name = 2;
+  string gender = 3;
+  int32 year_born = 4;
+  int32 books_published = 5;
+}
+
+message AuthorParameters {
+  int32 id = 1;
+  string name = 2;
+  string gender = 3;
+  int32 year_born = 4;
+  int32 books_published = 5;
+}
+
+message AuthorEditParameters {
+  int32 id = 1;
+  optional string name = 2;
+  optional string gender = 3;
+  optional int32 year_born = 4;
+  optional int32 books_published = 5;
+}
+
+message AuthorID {
+  int32 id = 1;
+}
+
+message AuthorsResponse {
+  repeated Author authors = 1;
+}
+
+message AuthorResponse {
+  Author author = 1;
+}
+
+message AuthorDeleteResponse {
+  bool sucessful = 1;
+  string message = 2;
 }

@@ -12,6 +12,8 @@ services:
       - "${HOST_GRPC_PORT}:50052"
     networks:
       - bookcloud-network
+    depends_on:
+      - postgres
 
 networks:
   bookcloud-network:

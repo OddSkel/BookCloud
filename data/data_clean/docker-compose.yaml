@@ -13,6 +13,12 @@ services:
       - pgdata:/var/lib/postgresql/data
       # scripts SQL auto-executados no primeiro start (init)
       - ./db/init:/docker-entrypoint-initdb.d
+    networks:
+      - bookcloud-network
 
 volumes:
   pgdata:
+
+networks:
+  bookcloud-network:
+    external: true
