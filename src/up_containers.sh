@@ -4,6 +4,18 @@ set -eu
 
 BASE_DIR=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
 
+NETWORK_NAME="bookcloud-network"
+
+# =========================
+# NETWORK
+# =========================
+if ! docker network inspect "$NETWORK_NAME" >/dev/null 2>&1; then
+    printf 'Creating network %s...\n' "$NETWORK_NAME"
+    docker network create "$NETWORK_NAME"
+else
+    printf 'Network %s already exists.\n' "$NETWORK_NAME"
+fi
+
 # =========================
 # SERVICES
 # =========================
