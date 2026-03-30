@@ -6,7 +6,7 @@ package author_catalog;
 service AuthorCatalogGrpc {
   rpc GetAuthors(Empty) returns (AuthorsResponse);
 
-  rpc RegisterAuthor(AuthorParameters) returns (AuthorResponse);
+  rpc RegisterAuthor(Author) returns (AuthorResponse);
 
   rpc EditAuthor(AuthorEditParameters) returns (AuthorResponse);
 
@@ -25,14 +25,7 @@ message Author {
   string gender = 3;
   int32 year_born = 4;
   int32 books_published = 5;
-}
-
-message AuthorParameters {
-  int32 id = 1;
-  string name = 2;
-  string gender = 3;
-  int32 year_born = 4;
-  int32 books_published = 5;
+  optional int32 year_death = 6;
 }
 
 message AuthorEditParameters {
@@ -41,6 +34,7 @@ message AuthorEditParameters {
   optional string gender = 3;
   optional int32 year_born = 4;
   optional int32 books_published = 5;
+  optional int32 year_death = 6;
 }
 
 message AuthorID {
