@@ -1,31 +1,103 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, env};
 use tonic::Request;
+
+// Generated proto contracts
 
 pub mod contracts {
     pub mod common {
         tonic::include_proto!("gateway.common");
     }
-
     pub mod book_catalog {
         tonic::include_proto!("gateway.bookcatalog");
     }
-
     pub mod author_catalog {
         tonic::include_proto!("gateway.authorcatalog");
     }
-
     pub mod rating_catalog {
         tonic::include_proto!("gateway.ratingcatalog");
     }
 }
 
 use contracts::{
-    author_catalog::author_catalog_grpc_client::AuthorCatalogGrpcClient,
-    book_catalog::book_catalog_grpc_client::BookCatalogGrpcClient,
+    author_catalog::{
+        author_catalog_grpc_client::AuthorCatalogGrpcClient,
+        AddAuthorRequest, AuthorAdd, DeleteAuthorRequest, GetAuthorRequest,
+        GetAuthorsRequest, UpdateAuthorRequest,
+    },
+    book_catalog::{
+        book_catalog_grpc_client::BookCatalogGrpcClient,
+        AddBookRequest, BookAdd, DeleteBookRequest, GetBookRequest,
+        GetBooksRequest, UpdateBookRequest,
+    },
     common::HealthCheckRequest,
-    rating_catalog::rating_catalog_grpc_client::RatingCatalogGrpcClient,
+    rating_catalog::{
+        rating_catalog_grpc_client::RatingCatalogGrpcClient,
+        AddRatingRequest, DeleteRatingRequest, GetRatingRequest,
+        GetRatingsRequest, RatingAdd, UpdateRatingRequest,
+    },
 };
+
+// Domain models (HTTP ↔ gRPC bridge types)
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct BookModel {
+    pub id:             String,
+    pub name:           String,
+    pub isbn:           String,
+    pub author:         String,
+    pub year_published: i32,
+    pub editor:         String,
+    pub edition_number: i32,
+    pub genre:          String,
+    pub summary:        Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct BookAddPayload {
+    pub name:           String,
+    pub isbn:           String,
+    pub author:         String,
+    pub year_published: i32,
+    pub editor:         String,
+    pub edition_number: i32,
+    pub genre:          String,
+    pub summary:        Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct AuthorModel {
+    pub id:               String,
+    pub name:             String,
+    pub gender:           String,
+    pub year_born:        i32,
+    pub year_death:       Option<i32>,
+    pub books_published:  Vec<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct AuthorAddPayload {
+    pub name:            String,
+    pub gender:          String,
+    pub year_born:       i32,
+    pub year_death:      Option<i32>,
+    pub books_published: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct RatingModel {
+    pub id:         String,
+    pub evaluation: i32,
+    pub critic:     String,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct RatingAddPayload {
+    pub evaluation: i32,
+    pub critic:     String,
+}
+
+// CatalogService
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum CatalogService {
@@ -37,28 +109,28 @@ pub enum CatalogService {
 impl CatalogService {
     pub const fn slug(self) -> &'static str {
         match self {
-            Self::BookCatalog => "bookCatalog",
+            Self::BookCatalog   => "bookCatalog",
             Self::AuthorCatalog => "authorCatalog",
             Self::RatingCatalog => "ratingCatalog",
         }
     }
-
     pub const fn env_var(self) -> &'static str {
         match self {
-            Self::BookCatalog => "BOOK_CATALOG_GRPC_URL",
+            Self::BookCatalog   => "BOOK_CATALOG_GRPC_URL",
             Self::AuthorCatalog => "AUTHOR_CATALOG_GRPC_URL",
             Self::RatingCatalog => "RATING_CATALOG_GRPC_URL",
         }
     }
-
     pub const fn default_uri(self) -> &'static str {
         match self {
-            Self::BookCatalog => "http://book-catalog:50051",
+            Self::BookCatalog   => "http://book-catalog:50051",
             Self::AuthorCatalog => "http://author-catalog:50052",
             Self::RatingCatalog => "http://rating-catalog:50053",
         }
     }
 }
+
+// GrpcRegistry
 
 #[derive(Clone)]
 pub struct GrpcRegistry {
@@ -73,106 +145,247 @@ impl GrpcRegistry {
             CatalogService::RatingCatalog,
         ]
         .into_iter()
-        .map(|service| {
-            let endpoint = env::var(service.env_var())
-                .unwrap_or_else(|_| service.default_uri().to_string());
-            (service, endpoint)
+        .map(|svc| {
+            let url = env::var(svc.env_var()).unwrap_or_else(|_| svc.default_uri().to_string());
+            (svc, url)
         })
         .collect();
-
         Self { endpoints }
-    }
-
-    pub async fn health_status(&self, service: CatalogService) -> GrpcServiceStatus {
-        let endpoint = self.endpoint(service).to_string();
-
-        match health_check(service, &endpoint).await {
-            Ok(response) => GrpcServiceStatus {
-                service: service.slug().to_string(),
-                endpoint,
-                connected: true,
-                upstream_service: Some(response.service),
-                health_status: Some(response.status),
-                message: "HealthCheck RPC completed successfully".to_string(),
-            },
-            Err(error) => GrpcServiceStatus {
-                service: service.slug().to_string(),
-                endpoint,
-                connected: false,
-                upstream_service: None,
-                health_status: None,
-                message: error,
-            },
-        }
     }
 
     fn endpoint(&self, service: CatalogService) -> &str {
         self.endpoints
             .get(&service)
             .map(String::as_str)
-            .expect("gRPC service endpoint must be configured")
+            .expect("gRPC endpoint must be configured")
+    }
+
+    // Health
+
+    pub async fn health_status(&self, service: CatalogService) -> GrpcServiceStatus {
+        let endpoint = self.endpoint(service).to_string();
+        match health_check(service, &endpoint).await {
+            Ok(r) => GrpcServiceStatus {
+                service: service.slug().to_string(),
+                endpoint,
+                connected: true,
+                upstream_service: Some(r.service),
+                health_status: Some(r.status),
+                message: "HealthCheck RPC completed successfully".to_string(),
+            },
+            Err(e) => GrpcServiceStatus {
+                service: service.slug().to_string(),
+                endpoint,
+                connected: false,
+                upstream_service: None,
+                health_status: None,
+                message: e,
+            },
+        }
+    }
+
+    // Books
+
+    pub async fn get_books(&self) -> Result<Vec<BookModel>, String> {
+        let mut c = book_client(self.endpoint(CatalogService::BookCatalog)).await?;
+        let r = c.get_books(Request::new(GetBooksRequest {}))
+            .await.map(|r| r.into_inner()).map_err(|e| e.to_string())?;
+        Ok(r.books.into_iter().map(book_to_model).collect())
+    }
+
+    pub async fn get_book(&self, book_id: &str) -> Result<BookModel, String> {
+        let mut c = book_client(self.endpoint(CatalogService::BookCatalog)).await?;
+        let r = c.get_book(Request::new(GetBookRequest { book_id: book_id.to_string() }))
+            .await.map(|r| r.into_inner()).map_err(|e| e.to_string())?;
+        r.book.map(book_to_model).ok_or_else(|| "Book not found".to_string())
+    }
+
+    pub async fn add_book(&self, p: BookAddPayload) -> Result<BookModel, String> {
+        let mut c = book_client(self.endpoint(CatalogService::BookCatalog)).await?;
+        let r = c.add_book(Request::new(AddBookRequest {
+            book: Some(BookAdd {
+                name: p.name, isbn: p.isbn, author: p.author,
+                year_published: p.year_published, editor: p.editor,
+                edition_number: p.edition_number, genre: p.genre, summary: p.summary,
+            }),
+        })).await.map(|r| r.into_inner()).map_err(|e| e.to_string())?;
+        r.book.map(book_to_model).ok_or_else(|| "Failed to create book".to_string())
+    }
+
+    pub async fn update_book(
+        &self,
+        isbn: Option<String>,
+        editor: Option<String>,
+        year_edited: Option<i32>,
+    ) -> Result<Vec<BookModel>, String> {
+        let mut c = book_client(self.endpoint(CatalogService::BookCatalog)).await?;
+        let r = c.update_book(Request::new(UpdateBookRequest { isbn, editor, year_edited }))
+            .await.map(|r| r.into_inner()).map_err(|e| e.to_string())?;
+        Ok(r.books.into_iter().map(book_to_model).collect())
+    }
+
+    pub async fn delete_book(&self, book_id: &str) -> Result<(), String> {
+        let mut c = book_client(self.endpoint(CatalogService::BookCatalog)).await?;
+        c.delete_book(Request::new(DeleteBookRequest { book_id: book_id.to_string() }))
+            .await.map(|_| ()).map_err(|e| e.to_string())
+    }
+
+    // Authors
+
+    pub async fn get_authors(&self) -> Result<Vec<AuthorModel>, String> {
+        let mut c = author_client(self.endpoint(CatalogService::AuthorCatalog)).await?;
+        let r = c.get_authors(Request::new(GetAuthorsRequest {}))
+            .await.map(|r| r.into_inner()).map_err(|e| e.to_string())?;
+        Ok(r.authors.into_iter().map(author_to_model).collect())
+    }
+
+    pub async fn get_author(&self, author_id: &str) -> Result<AuthorModel, String> {
+        let mut c = author_client(self.endpoint(CatalogService::AuthorCatalog)).await?;
+        let r = c.get_author(Request::new(GetAuthorRequest { author_id: author_id.to_string() }))
+            .await.map(|r| r.into_inner()).map_err(|e| e.to_string())?;
+        r.author.map(author_to_model).ok_or_else(|| "Author not found".to_string())
+    }
+
+    pub async fn add_author(&self, p: AuthorAddPayload) -> Result<AuthorModel, String> {
+        let mut c = author_client(self.endpoint(CatalogService::AuthorCatalog)).await?;
+        let r = c.add_author(Request::new(AddAuthorRequest {
+            author: Some(AuthorAdd {
+                name: p.name, gender: p.gender, year_born: p.year_born,
+                year_death: p.year_death, books_published: p.books_published,
+            }),
+        })).await.map(|r| r.into_inner()).map_err(|e| e.to_string())?;
+        r.author.map(author_to_model).ok_or_else(|| "Failed to create author".to_string())
+    }
+
+    pub async fn update_author(&self, name: Option<String>) -> Result<Vec<AuthorModel>, String> {
+        let mut c = author_client(self.endpoint(CatalogService::AuthorCatalog)).await?;
+        let r = c.update_author(Request::new(UpdateAuthorRequest { name }))
+            .await.map(|r| r.into_inner()).map_err(|e| e.to_string())?;
+        Ok(r.authors.into_iter().map(author_to_model).collect())
+    }
+
+    pub async fn delete_author(&self, author_id: &str) -> Result<(), String> {
+        let mut c = author_client(self.endpoint(CatalogService::AuthorCatalog)).await?;
+        c.delete_author(Request::new(DeleteAuthorRequest { author_id: author_id.to_string() }))
+            .await.map(|_| ()).map_err(|e| e.to_string())
+    }
+
+    // Ratings
+
+    pub async fn get_ratings(&self, book_id: &str) -> Result<Vec<RatingModel>, String> {
+        let mut c = rating_client(self.endpoint(CatalogService::RatingCatalog)).await?;
+        let r = c.get_ratings(Request::new(GetRatingsRequest { book_id: book_id.to_string() }))
+            .await.map(|r| r.into_inner()).map_err(|e| e.to_string())?;
+        Ok(r.ratings.into_iter().map(rating_to_model).collect())
+    }
+
+    pub async fn get_rating(&self, rating_id: &str) -> Result<RatingModel, String> {
+        let mut c = rating_client(self.endpoint(CatalogService::RatingCatalog)).await?;
+        let r = c.get_rating(Request::new(GetRatingRequest { rating_id: rating_id.to_string() }))
+            .await.map(|r| r.into_inner()).map_err(|e| e.to_string())?;
+        r.rating.map(rating_to_model).ok_or_else(|| "Rating not found".to_string())
+    }
+
+    pub async fn add_rating(&self, book_id: &str, p: RatingAddPayload) -> Result<RatingModel, String> {
+        let mut c = rating_client(self.endpoint(CatalogService::RatingCatalog)).await?;
+        let r = c.add_rating(Request::new(AddRatingRequest {
+            book_id: book_id.to_string(),
+            rating: Some(RatingAdd { evaluation: p.evaluation, critic: p.critic }),
+        })).await.map(|r| r.into_inner()).map_err(|e| e.to_string())?;
+        r.rating.map(rating_to_model).ok_or_else(|| "Failed to create rating".to_string())
+    }
+
+    pub async fn update_rating(
+        &self,
+        book_id: &str,
+        rating: Option<i32>,
+        comment: Option<String>,
+    ) -> Result<Vec<RatingModel>, String> {
+        let mut c = rating_client(self.endpoint(CatalogService::RatingCatalog)).await?;
+        let r = c.update_rating(Request::new(UpdateRatingRequest {
+            book_id: book_id.to_string(), rating, comment,
+        })).await.map(|r| r.into_inner()).map_err(|e| e.to_string())?;
+        Ok(r.ratings.into_iter().map(rating_to_model).collect())
+    }
+
+    pub async fn delete_rating(&self, rating_id: &str) -> Result<(), String> {
+        let mut c = rating_client(self.endpoint(CatalogService::RatingCatalog)).await?;
+        c.delete_rating(Request::new(DeleteRatingRequest { rating_id: rating_id.to_string() }))
+            .await.map(|_| ()).map_err(|e| e.to_string())
     }
 }
+
+// GrpcServiceStatus
 
 #[derive(Serialize)]
 pub struct GrpcServiceStatus {
-    pub service: String,
-    pub endpoint: String,
-    pub connected: bool,
+    pub service:          String,
+    pub endpoint:         String,
+    pub connected:        bool,
     pub upstream_service: Option<String>,
-    pub health_status: Option<String>,
-    pub message: String,
+    pub health_status:    Option<String>,
+    pub message:          String,
 }
 
-async fn health_check(
-    service: CatalogService,
-    endpoint: &str,
-) -> Result<contracts::common::HealthCheckResponse, String> {
+// Private client constructors
+
+async fn book_client(endpoint: &str) -> Result<BookCatalogGrpcClient<tonic::transport::Channel>, String> {
+    BookCatalogGrpcClient::connect(endpoint.to_string()).await.map_err(|e| e.to_string())
+}
+
+async fn author_client(endpoint: &str) -> Result<AuthorCatalogGrpcClient<tonic::transport::Channel>, String> {
+    AuthorCatalogGrpcClient::connect(endpoint.to_string()).await.map_err(|e| e.to_string())
+}
+
+async fn rating_client(endpoint: &str) -> Result<RatingCatalogGrpcClient<tonic::transport::Channel>, String> {
+    RatingCatalogGrpcClient::connect(endpoint.to_string()).await.map_err(|e| e.to_string())
+}
+
+// Health check helpers
+
+async fn health_check(service: CatalogService, endpoint: &str) -> Result<contracts::common::HealthCheckResponse, String> {
     match service {
-        CatalogService::BookCatalog => book_catalog_health(endpoint).await,
-        CatalogService::AuthorCatalog => author_catalog_health(endpoint).await,
-        CatalogService::RatingCatalog => rating_catalog_health(endpoint).await,
+        CatalogService::BookCatalog   => book_health(endpoint).await,
+        CatalogService::AuthorCatalog => author_health(endpoint).await,
+        CatalogService::RatingCatalog => rating_health(endpoint).await,
     }
 }
 
-async fn book_catalog_health(
-    endpoint: &str,
-) -> Result<contracts::common::HealthCheckResponse, String> {
-    let mut client = BookCatalogGrpcClient::connect(endpoint.to_string())
-        .await
-        .map_err(|error| error.to_string())?;
-
-    client
+async fn book_health(endpoint: &str) -> Result<contracts::common::HealthCheckResponse, String> {
+    book_client(endpoint).await?
         .health_check(Request::new(HealthCheckRequest {}))
-        .await
-        .map(|response| response.into_inner())
-        .map_err(|error| error.to_string())
+        .await.map(|r| r.into_inner()).map_err(|e| e.to_string())
 }
 
-async fn author_catalog_health(
-    endpoint: &str,
-) -> Result<contracts::common::HealthCheckResponse, String> {
-    let mut client = AuthorCatalogGrpcClient::connect(endpoint.to_string())
-        .await
-        .map_err(|error| error.to_string())?;
-
-    client
+async fn author_health(endpoint: &str) -> Result<contracts::common::HealthCheckResponse, String> {
+    author_client(endpoint).await?
         .health_check(Request::new(HealthCheckRequest {}))
-        .await
-        .map(|response| response.into_inner())
-        .map_err(|error| error.to_string())
+        .await.map(|r| r.into_inner()).map_err(|e| e.to_string())
 }
 
-async fn rating_catalog_health(
-    endpoint: &str,
-) -> Result<contracts::common::HealthCheckResponse, String> {
-    let mut client = RatingCatalogGrpcClient::connect(endpoint.to_string())
-        .await
-        .map_err(|error| error.to_string())?;
-
-    client
+async fn rating_health(endpoint: &str) -> Result<contracts::common::HealthCheckResponse, String> {
+    rating_client(endpoint).await?
         .health_check(Request::new(HealthCheckRequest {}))
-        .await
-        .map(|response| response.into_inner())
-        .map_err(|error| error.to_string())
+        .await.map(|r| r.into_inner()).map_err(|e| e.to_string())
+}
+
+// Proto → Model converters
+
+fn book_to_model(b: contracts::book_catalog::Book) -> BookModel {
+    BookModel {
+        id: b.id, name: b.name, isbn: b.isbn, author: b.author,
+        year_published: b.year_published, editor: b.editor,
+        edition_number: b.edition_number, genre: b.genre, summary: b.summary,
+    }
+}
+
+fn author_to_model(a: contracts::author_catalog::Author) -> AuthorModel {
+    AuthorModel {
+        id: a.id, name: a.name, gender: a.gender, year_born: a.year_born,
+        year_death: a.year_death, books_published: a.books_published,
+    }
+}
+
+fn rating_to_model(r: contracts::rating_catalog::Rating) -> RatingModel {
+    RatingModel { id: r.id, evaluation: r.evaluation, critic: r.critic }
 }

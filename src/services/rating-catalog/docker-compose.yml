@@ -3,16 +3,37 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    container_name: rating-catalog
     restart: unless-stopped
     env_file:
       - .env
     environment:
       RUST_LOG: info
+      DATABASE_URL: postgres://postgres:postgres@rating-db:5432/ratings
     ports:
       - "${HOST_GRPC_PORT}:50053"
+    depends_on:
+      - rating-db
     networks:
       - bookcloud-network
 
+  rating-db:
+    image: postgres:15
+    container_name: rating-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - rating-db-data:/var/lib/postgresql/data
+    networks:
+      - bookcloud-network
+
+volumes:
+  rating-db-data:
 
 networks:
   bookcloud-network:
