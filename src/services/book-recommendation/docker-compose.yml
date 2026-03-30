@@ -1,0 +1,20 @@
+services:
+  book-recommendation:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      RUST_LOG: info
+    ports:
+      - "${HOST_GRPC_PORT}:50055"
+    networks:
+      - bookcloud-network
+    depends_on:
+      - postgres
+
+networks:
+  bookcloud-network:
+    external: true
