@@ -1,6 +1,6 @@
 use sqlx::{PgPool};
 use crate::models::author::Author as Model_Author;
-use crate::grpc::contracts::author_catalog::{AuthorParameters, AuthorsResponse, AuthorId, AuthorDeleteResponse, AuthorResponse, Author as ProtoAuthor, AuthorEditParameters};
+use crate::grpc::contracts::author_catalog::{AuthorsResponse, AuthorId, AuthorDeleteResponse, AuthorResponse, Author as ProtoAuthor, AuthorEditParameters};
 
 pub async fn get_authors(pool: &PgPool) -> Result<AuthorsResponse, sqlx:: Error> {
 
@@ -17,22 +17,24 @@ pub async fn get_authors(pool: &PgPool) -> Result<AuthorsResponse, sqlx:: Error>
                 name: a.name,
                 gender: a.gender,
                 year_born: a.year_born,
-                books_published: a.books_published
+                books_published: a.books_published,
+                year_death: a.year_death,
             }
         ).collect(),
     })
 }
 
-pub async fn register_author(pool: &PgPool, params: AuthorParameters) -> Result<AuthorResponse, sqlx:: Error> {
+pub async fn register_author(pool: &PgPool, params: ProtoAuthor) -> Result<AuthorResponse, sqlx:: Error> {
     let new_author = sqlx::query_as::<_, Model_Author>(
-        "INSERT INTO authors (name gender year_born books_published)
-        VALUES ($1, $2, $3, $4)
+        "INSERT INTO authors (name gender year_born books_published year_death)
+        VALUES ($1, $2, $3, $4, $5)
         RETURNING *"
     )
     .bind(&params.name)
     .bind(&params.gender)
     .bind(&params.year_born)
     .bind(&params.books_published)
+    .bind(&params.year_death)
     .fetch_one(pool)
     .await?;
 
@@ -44,7 +46,8 @@ pub async fn register_author(pool: &PgPool, params: AuthorParameters) -> Result<
                 name: new_author.name,
                 gender: new_author.gender,
                 year_born: new_author.year_born,
-                books_published: new_author.books_published
+                books_published: new_author.books_published,
+                year_death: new_author.year_death,
             })
         })
 }
@@ -66,6 +69,7 @@ pub async fn edit_author(pool: &PgPool, id: i32, params: AuthorEditParameters) -
     add_clause!(params.gender, "gender", set_clauses, i);
     add_clause!(params.year_born, "year_born", set_clauses, i);
     add_clause!(params.books_published, "books_published", set_clauses, i);
+    add_clause!(params.year_death, "year_death", set_clauses, i);
 
     if set_clauses.is_empty() {
         return Err(sqlx::Error::Protocol("No fields to update".to_string()));
@@ -83,6 +87,7 @@ pub async fn edit_author(pool: &PgPool, id: i32, params: AuthorEditParameters) -
     if let Some(gender) = &params.gender { q = q.bind(gender); }
     if let Some(year_born) = params.year_born { q = q.bind(year_born); }
     if let Some(books_published) = params.books_published { q = q.bind(books_published); }
+    if let Some(year_death) = params.year_death { q = q.bind(year_death); }
 
     let edited_author = q.bind(id).fetch_one(pool).await?;
 
@@ -94,14 +99,15 @@ pub async fn edit_author(pool: &PgPool, id: i32, params: AuthorEditParameters) -
                 name: edited_author.name,
                 gender: edited_author.gender,
                 year_born: edited_author.year_born,
-                books_published: edited_author.books_published
+                books_published: edited_author.books_published,
+                year_death: edited_author.year_death,
             })
         })
 }
 
 pub async fn delete_author(pool: &PgPool, params: AuthorId) -> Result<AuthorDeleteResponse, sqlx:: Error> {
     let deleted_author = sqlx::query_as::<_, Model_Author>(
-        "DELETE FROM authors WHERE id = $1 RETURNING *"
+        "DELETE FROM authors WHERE id = $1"
     ).bind(params.id)
     .fetch_optional(pool)
     .await?;
@@ -134,7 +140,8 @@ pub async fn get_author(pool: &PgPool, params: AuthorId) -> Result<AuthorRespons
                 name: author.name,
                 gender: author.gender,
                 year_born: author.year_born,
-                books_published: author.books_published
+                books_published: author.books_published,
+                year_death: author.year_death,
             }),
         }),
         None => Err(sqlx::Error::Protocol("No author found".to_string())),

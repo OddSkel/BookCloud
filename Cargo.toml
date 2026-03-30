@@ -2,6 +2,7 @@
 members = [
     "src/services/author-catalog",
     "src/services/book-catalog",
-    "src/services/rating-catalog"
+    "src/services/rating-catalog",
+    "src/services/search-service"
 ]
 resolver = "2"

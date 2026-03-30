@@ -1,0 +1,35 @@
+syntax = "proto3";
+import "common.proto";
+
+package book_search;
+
+service BookSearchGrpc {
+
+  rpc Book_Search(Query) returns (BookSearchResponse);
+
+  rpc HealthCheck (common.HealthCheckRequest) returns (common.HealthCheckResponse);
+}
+
+message Empty{}
+
+message Query {
+  optional string title = 1;
+  optional string author = 2;
+  optional string Keywords = 3;
+}
+
+message Book {
+  int32 id = 1;
+  string name = 2;
+  string author = 3;
+  int32 isbn = 4;
+  int32 year_published = 5;
+  string editor = 6;
+  int32 edition_number = 7;
+  string genre = 8;
+  optional string summary = 9;
+}
+
+message BookSearchResponse {
+  repeated Book books = 1;
+}

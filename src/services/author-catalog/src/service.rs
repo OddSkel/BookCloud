@@ -1,8 +1,22 @@
 use sqlx::PgPool;
 use tonic::{Request, Response, Status};
 
-use crate::{grpc::contracts::{author_catalog::{self, AuthorsResponse, AuthorResponse, AuthorDeleteResponse}, common::{HealthCheckRequest, HealthCheckResponse}}, handlers::{author_handler, health_handler}};
-use crate::grpc::contracts::author_catalog::author_catalog_grpc_server::AuthorCatalogGrpc;
+use crate::grpc::contracts::{
+    author_catalog::author_catalog_grpc_server::AuthorCatalogGrpc,
+    common::{HealthCheckRequest, HealthCheckResponse},
+};
+use crate::grpc::contracts::author_catalog::{
+    AuthorsResponse,
+    Empty,
+    AuthorResponse,
+    AuthorDeleteResponse,
+    Author,
+    AuthorEditParameters,
+    AuthorId
+};
+use crate::handlers::{author_handler, health_handler};
+
+
 pub struct AuthorCatalogService {
     pool: PgPool,
 }
@@ -26,7 +40,7 @@ impl AuthorCatalogGrpc for AuthorCatalogService {
     }
     async fn get_authors(
         &self,
-        _request: tonic::Request<author_catalog::Empty>,
+        _request: tonic::Request<Empty>,
     ) -> Result<Response<AuthorsResponse>, Status> {
 
         let response = author_handler::get_authors(
@@ -40,7 +54,7 @@ impl AuthorCatalogGrpc for AuthorCatalogService {
 
     async fn register_author(
         &self,
-        _request: tonic::Request<author_catalog::AuthorParameters>,
+        _request: tonic::Request<Author>,
     ) -> Result<Response<AuthorResponse>, Status> {
 
         let params = _request.into_inner();
@@ -55,7 +69,7 @@ impl AuthorCatalogGrpc for AuthorCatalogService {
 
     async fn edit_author(
         &self,
-        _request: tonic::Request<author_catalog::AuthorEditParameters>
+        _request: tonic::Request<AuthorEditParameters>
     )-> Result<Response<AuthorResponse>, Status> {
 
         let params = _request.into_inner();
@@ -71,7 +85,7 @@ impl AuthorCatalogGrpc for AuthorCatalogService {
 
     async fn delete_author(
         &self,
-        _request: tonic::Request<author_catalog::AuthorId>
+        _request: tonic::Request<AuthorId>
     ) -> Result<Response<AuthorDeleteResponse>, Status> {
         
         let params = _request.into_inner();
@@ -87,7 +101,7 @@ impl AuthorCatalogGrpc for AuthorCatalogService {
 
     async fn get_author(
         &self,
-        _request: tonic::Request<author_catalog::AuthorId>
+        _request: tonic::Request<AuthorId>
     ) -> Result<Response<AuthorResponse>, Status> {
 
         let params = _request.into_inner();
