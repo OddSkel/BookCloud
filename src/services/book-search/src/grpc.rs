@@ -4,6 +4,7 @@ pub mod contracts {
     }
 
     pub mod book_search {
+        #![allow(dead_code)]
         tonic::include_proto!("book_search");
     }
 }

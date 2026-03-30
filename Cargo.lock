@@ -157,6 +157,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "book-recommendation"
+version = "0.1.0"
+dependencies = [
+ "dotenv",
+ "prost 0.14.3",
+ "prost-types 0.12.6",
+ "protoc-bin-vendored",
+ "sqlx",
+ "tokio",
+ "tonic",
+ "tonic-prost",
+ "tonic-prost-build",
+]
+
+[[package]]
 name = "book-search"
 version = "0.1.0"
 dependencies = [
