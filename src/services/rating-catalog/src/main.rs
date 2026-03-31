@@ -3,12 +3,14 @@ use grpc::contracts::rating_catalog::rating_catalog_grpc_server::RatingCatalogGr
 use service::RatingCatalogService;
 use tonic::transport::Server;
 
+const RATING_GRPC_MESSAGE_SIZE_LIMIT: usize = 128 * 1024 * 1024;
+
 mod config;
-mod grpc;
-mod service;
 mod db;
+mod grpc;
 mod handlers;
 mod models;
+mod service;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -19,12 +21,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("{} gRPC started on {}", config.service_name, address);
 
-    let pool = db::create_pool().await.expect("Failed to connect to PostgreSQL");
+    let pool = db::create_pool()
+        .await
+        .expect("Failed to connect to PostgreSQL");
 
     Server::builder()
-        .add_service(RatingCatalogGrpcServer::new(RatingCatalogService::new(
-            config.service_name.clone(), pool,
-        )))
+        .add_service(
+            RatingCatalogGrpcServer::new(RatingCatalogService::new(
+                config.service_name.clone(),
+                pool,
+            ))
+            .max_decoding_message_size(RATING_GRPC_MESSAGE_SIZE_LIMIT)
+            .max_encoding_message_size(RATING_GRPC_MESSAGE_SIZE_LIMIT),
+        )
         .serve(address)
         .await?;
 

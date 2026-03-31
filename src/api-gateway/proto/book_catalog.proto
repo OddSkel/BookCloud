@@ -30,7 +30,7 @@ message BookAdd {
 message GetBooksRequest  {}
 message GetBooksResponse { repeated Book books = 1; }
 
-message GetBookRequest   { string book_id = 1; }
+message GetBookRequest   { string book_isbn = 1; }
 message GetBookResponse  { Book book = 1; }
 
 message AddBookRequest   { BookAdd book = 1; }
@@ -43,7 +43,7 @@ message UpdateBookRequest {
 }
 message UpdateBookResponse { repeated Book books = 1; }
 
-message DeleteBookRequest  { string book_id = 1; }
+message DeleteBookRequest  { string book_isbn = 1; }
 message DeleteBookResponse {}
 
 service BookCatalogGrpc {
