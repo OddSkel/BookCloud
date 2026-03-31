@@ -1,18 +1,13 @@
 use sqlx::PgPool;
 use tonic::{Request, Response, Status};
 
-use crate::handlers::{
-    health_handler, 
-    rating_handler
-};
+use crate::grpc::contracts::rating_catalog::{GetRatingsRequest, GetRatingsResponse};
+use crate::handlers::rating_handler;
 
 use crate::grpc::contracts::{
-    common::{HealthCheckRequest, HealthCheckResponse},
-    // rating_catalog::{GetRatingRequest, GetRatingResponse, GetRatingBookRequest, GetRatingBookResponse, CreateRatingRequest, CreateRatingResponse, UpdateRatingRequest, UpdateRatingResponse, DeleteRatingRequest, DeleteRatingResponse},
-    rating_catalog::{GetRatingRequest, GetRatingResponse},
     rating_catalog::rating_catalog_grpc_server::RatingCatalogGrpc,
+    rating_catalog::{GetRatingRequest, GetRatingResponse, Rating as GrpcRating},
 };
-
 
 pub struct RatingCatalogService {
     service_name: String,
@@ -27,17 +22,17 @@ impl RatingCatalogService {
 
 #[tonic::async_trait]
 impl RatingCatalogGrpc for RatingCatalogService {
-    async fn health_check(
-        &self,
-        _request: Request<HealthCheckRequest>,
-    ) -> Result<Response<HealthCheckResponse>, Status> {
-        let (service, status) = health_handler::health(&self.service_name);
+    // async fn health_check(
+    //     &self,
+    //     _request: Request<HealthCheckRequest>,
+    // ) -> Result<Response<HealthCheckResponse>, Status> {
+    //     let (service, status) = health_handler::health(&self.service_name);
 
-        Ok(Response::new(HealthCheckResponse {
-            service,
-            status,
-        }))
-    }
+    //     Ok(Response::new(HealthCheckResponse {
+    //         service,
+    //         status,
+    //     }))
+    // }
 
     async fn get_rating(
         &self,
@@ -45,64 +40,48 @@ impl RatingCatalogGrpc for RatingCatalogService {
     ) -> Result<Response<GetRatingResponse>, Status> {
         let req = request.into_inner();
 
-        let rating_id: i32 = req
-            .rating_id
+        let book_isbn: i64 = req
+            .book_isbn
             .parse()
-            .map_err(|_| Status::invalid_argument("Invalid rating_id"))?;
+            .map_err(|_| Status::invalid_argument("Invalid book_isbn"))?;
 
-        let rating = rating_handler::get_rating(&self.pool, rating_id)
+        let rating = rating_handler::get_rating(&self.pool, book_isbn)
+            .await
+            .map_err(|err| Status::internal(err.to_string()))?
+            .ok_or_else(|| Status::not_found("Rating not found"))?;
+
+        let response = GetRatingResponse {
+            rating: Some(GrpcRating {
+                book_isbn: rating.book_isbn.to_string(),
+                star_rating: rating.star_rating,
+                num_ratings: rating.num_ratings,
+            }),
+        };
+
+        Ok(Response::new(response))
+    }
+
+    async fn get_ratings(
+        &self,
+        request: Request<GetRatingsRequest>,
+    ) -> Result<Response<GetRatingsResponse>, Status> {
+        let req = request.into_inner();
+
+        let ratings = rating_handler::get_ratings(&self.pool, req.page_number, req.page_size)
             .await
             .map_err(|err| Status::internal(err.to_string()))?;
 
-        Ok(Response::new(GetRatingResponse {
-            status: "ok".to_string(),
-            // id: rating.id.to_string(),
-            // book_id: rating.book_id,
-            // evaluation: rating.evaluation,
-            // critic: rating.critic,
-        }))
+        let response = GetRatingsResponse {
+            ratings: ratings
+                .into_iter()
+                .map(|rating| GrpcRating {
+                    book_isbn: rating.book_isbn.to_string(),
+                    star_rating: rating.star_rating,
+                    num_ratings: rating.num_ratings,
+                })
+                .collect(),
+        };
+
+        Ok(Response::new(response))
     }
-
-    // async fn get_rating_book(
-    //     &self,
-    //     _request: Request<GetRatingRequest>,
-    // ) -> Result<Response<GetRatingResponse>, Status> {
-    //     Ok(Response::new(GetRatingResponse {
-    //         service: self.service_name.clone(),
-    //         status: "ok".to_string(),
-    //     }))
-    // }
-
-    // async fn create_rating(
-    //     &self,
-    //     _request: Request<CreateRatingRequest>,
-    // ) -> Result<Response<CreateRatingResponse>, Status> {
-    //     Ok(Response::new(CreateRatingResponse {
-    //         service: self.service_name.clone(),
-    //         status: "ok".to_string(),
-    //     }))
-    // }
-
-
-    // async fn update_rating(
-    //     &self,
-    //     _request: Request<UpdateRatingRequest>,
-    // ) -> Result<Response<UpdateRatingResponse>, Status> {
-    //     Ok(Response::new(UpdateRatingResponse {
-    //         service: self.service_name.clone(),
-    //         status: "ok".to_string(),
-    //     }))
-    // }
-    
-
-    // async fn delete_rating(
-    //     &self,
-    //     _request: Request<DeleteRatingRequest>,
-    // ) -> Result<Response<DeleteRatingResponse>, Status> {
-    //     Ok(Response::new(DeleteRatingResponse {
-    //         service: self.service_name.clone(),
-    //         status: "ok".to_string(),
-    //     }))
-    // }
-
 }

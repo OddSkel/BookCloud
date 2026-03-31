@@ -4,74 +4,49 @@ package gateway.ratingcatalog;
 
 import "common.proto";
 
+message Rating {
+  string book_isbn   = 1;
+  int64  num_ratings = 2;
+  double star_rating = 3;
+}
+
+message RatingAdd {
+  int64  num_ratings = 1;
+  double star_rating = 2;
+}
+
+message GetRatingsRequest  {
+  optional int64 page_number = 1;
+  optional int64 page_size = 2;
+}
+
+message GetRatingsResponse { repeated Rating ratings = 1; }
+
+message GetRatingRequest   { string book_isbn = 1; }
+
+message GetRatingResponse  { Rating rating = 1; }
+
+message AddRatingRequest  { string book_isbn = 1; RatingAdd rating = 2; }
+
+message AddRatingResponse { Rating rating = 1; }
+
+message UpdateRatingRequest {
+  string book_isbn   = 1;
+  int64  num_ratings = 2;
+  double star_rating = 3;
+}
+
+message UpdateRatingResponse { repeated Rating ratings = 1; }
+
+message DeleteRatingRequest  { string book_isbn = 1; }
+
+message DeleteRatingResponse {}
+
 service RatingCatalogGrpc {
-  rpc HealthCheck(gateway.common.HealthCheckRequest) returns (gateway.common.HealthCheckResponse);
-
-  rpc GetRating(GetRatingRequest) returns (GetRatingResponse);
-  // rpc GetRatingBook(GetRatingBookRequest) returns (GetRatingBookRequest);
-  // rpc CreateRating(CreateRatingRequest) returns (CreateRatingResponse);
-  // rpc UpdateRating(UpdateRatingRequest) returns (UpdateRatingResponse);
-  // rpc DeleteRating(DeleteRatingRequest) returns (DeleteRatingResponse);
+  // rpc HealthCheck   (HealthCheckRequest) returns (HealthCheckResponse);
+  rpc GetRatings    (GetRatingsRequest)    returns (GetRatingsResponse);
+  rpc GetRating     (GetRatingRequest)     returns (GetRatingResponse);
+  // rpc AddRating     (AddRatingRequest)     returns (AddRatingResponse);
+  // rpc UpdateRating  (UpdateRatingRequest)  returns (UpdateRatingResponse);
+  // rpc DeleteRating  (DeleteRatingRequest)  returns (DeleteRatingResponse);
 }
-
-
-
-
-// ----------------------------
-// -------- GET RATING --------
-// ----------------------------
-message GetRatingRequest {
-  string rating_id = 1;
-}
-
-message GetRatingResponse {
-    string status = 1;
-}
-
-// // ---------------------------------
-// // -------- GET RATING BOOK --------
-// // ---------------------------------
-// message GetRatingBookRequest {
-//   string fileName = 1;
-// }
-
-// message GetRatingBookResponse {
-//     bool service = 1;
-//     string status = 2;
-// }
-
-// // -------------------------------
-// // -------- CREATE RATING --------
-// // -------------------------------
-// message CreateRatingRequest {
-//   string fileName = 1;
-// }
-
-// message CreateRatingResponse {
-//     bool service = 1;
-//     string status = 2;
-// }
-
-// // -------------------------------
-// // -------- UPDATE RATING --------
-// // -------------------------------
-// message UpdateRatingRequest {
-//   string fileName = 1;
-// }
-
-// message UpdateRatingResponse {
-//   string fileName = 1;
-// }
-
-// // -------------------------------
-// // -------- DELETE RATING --------
-// // -------------------------------
-// message DeleteRatingRequest {
-//     bool service = 1;
-//     string status = 2;
-// }
-
-// message DeleteRatingResponse {
-//     bool service = 1;
-//     string status = 2;
-// }
