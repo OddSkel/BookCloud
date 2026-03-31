@@ -6,6 +6,8 @@ use tonic::transport::Server;
 mod config;
 mod grpc;
 mod service;
+mod db;
+mod domain;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -16,9 +18,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("{} gRPC started on {}", config.service_name, address);
 
+    let pool = db::create_pool().await.expect("Failed to connect to PostgreSQL");
+
     Server::builder()
         .add_service(BookCatalogGrpcServer::new(BookCatalogService::new(
             config.service_name.clone(),
+            pool,
         )))
         .serve(address)
         .await?;

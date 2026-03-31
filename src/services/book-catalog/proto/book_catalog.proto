@@ -4,6 +4,45 @@ package gateway.bookcatalog;
 
 import "common.proto";
 
+message Book {
+  string id             = 1;
+  string name           = 2;
+  string author         = 3;
+  string genre          = 4;
+  int32  year_published = 5;
+  string isbn           = 6;
+  optional string summary = 7;
+}
+
+message BookAdd {
+  string name           = 1;
+  string author         = 2;
+  string genre          = 3;
+  int32  year_published = 4;
+  string isbn           = 5;
+  optional string summary = 6;
+}
+
+message GetBooksRequest  {}
+message GetBooksResponse { repeated Book books = 1; }
+
+message GetBookRequest   { string book_id = 1; }
+message GetBookResponse  { Book book = 1; }
+
+message AddBookRequest   { BookAdd book = 1; }
+message AddBookResponse  { Book book = 1; }
+
+message UpdateBookRequest { string book_id = 1;}
+message UpdateBookResponse { Book book = 1; }
+
+message DeleteBookRequest  { string book_id = 1; }
+message DeleteBookResponse {}
+
 service BookCatalogGrpc {
   rpc HealthCheck(gateway.common.HealthCheckRequest) returns (gateway.common.HealthCheckResponse);
+  rpc GetBooks   (GetBooksRequest)  returns (GetBooksResponse);
+  rpc GetBook    (GetBookRequest)   returns (GetBookResponse);
+  rpc AddBook    (AddBookRequest)   returns (AddBookResponse);
+  rpc UpdateBook (UpdateBookRequest) returns (UpdateBookResponse);
+  rpc DeleteBook (DeleteBookRequest) returns (DeleteBookResponse);
 }

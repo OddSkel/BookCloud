@@ -7,24 +7,20 @@ import "common.proto";
 message Book {
   string id             = 1;
   string name           = 2;
-  string isbn           = 3;
-  string author         = 4;
+  string author         = 3;
+  string genre          = 4;
   int32  year_published = 5;
-  string editor         = 6;
-  int32  edition_number = 7;
-  string genre          = 8;
-  optional string summary = 9;
+  string isbn           = 6;
+  optional string summary = 7;
 }
 
 message BookAdd {
   string name           = 1;
-  string isbn           = 2;
-  string author         = 3;
+  string author         = 2;
+  string genre          = 3;
   int32  year_published = 4;
-  string editor         = 5;
-  int32  edition_number = 6;
-  string genre          = 7;
-  optional string summary = 8;
+  string isbn           = 5;
+  optional string summary = 6;
 }
 
 message GetBooksRequest  {}
@@ -36,12 +32,8 @@ message GetBookResponse  { Book book = 1; }
 message AddBookRequest   { BookAdd book = 1; }
 message AddBookResponse  { Book book = 1; }
 
-message UpdateBookRequest {
-  optional string isbn        = 1;
-  optional string editor      = 2;
-  optional int32  year_edited = 3;
-}
-message UpdateBookResponse { repeated Book books = 1; }
+message UpdateBookRequest { string book_id = 1;}
+message UpdateBookResponse { Book book = 1; }
 
 message DeleteBookRequest  { string book_id = 1; }
 message DeleteBookResponse {}
