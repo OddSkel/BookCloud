@@ -21,13 +21,11 @@ import common_pb2
 
 def book_row_to_pb(row) -> Book:
     return Book(
-        id=row["id"],
-        name=row["name"],
-        author=row["author"],
-        genre=row["genre"],
-        year_published=row["year_published"],
         isbn=row["isbn"],
-        summary=row["summary"] or "",
+        name=row["name"],
+        url=row["url"] or "",
+        summary_clean=row["summary_clean"] or "",
+        pub_year=row["pub_year"] or 0,
     )
 
 
@@ -36,19 +34,37 @@ class BookCatalogService(book_catalog_pb2_grpc.BookCatalogGrpcServicer):
         self.pool = pool
         self.service_name = service_name
 
-    async def health_check(self, request, context):
+    async def HealthCheck(self, request, context):
         return common_pb2.HealthCheckResponse(service=self.service_name, status="ok")
 
     async def GetBooks(self, request, context):
+        page_num = request.page_num if request.page_num > 0 else 1
+        page_size = request.page_size if request.page_size > 0 else 10
+
+        offset = (page_num - 1) * page_size
+
+        total_items_row = await self.pool.fetchrow("SELECT COUNT(*) as cnt FROM book")
+        total_items = total_items_row["cnt"] if total_items_row is not None else 0
+        total_pages = (total_items + page_size - 1) // page_size if page_size > 0 else 0
+
         rows = await self.pool.fetch(
-            "SELECT id, name, author, genre, year_published, isbn, summary FROM books"
+            "SELECT isbn, name, url, summary_clean, pub_year FROM book ORDER BY isbn LIMIT $1 OFFSET $2",
+            page_size,
+            offset,
         )
-        return GetBooksResponse(books=[book_row_to_pb(r) for r in rows])
+
+        return GetBooksResponse(
+            books=[book_row_to_pb(r) for r in rows],
+            page_num=page_num,
+            page_size=page_size,
+            total_items=total_items,
+            total_pages=total_pages,
+        )
 
     async def GetBook(self, request, context):
         row = await self.pool.fetchrow(
-            "SELECT id, name, author, genre, year_published, isbn, summary FROM books WHERE id = $1",
-            request.book_id,
+            "SELECT isbn, name, url, summary_clean, pub_year FROM book WHERE isbn = $1",
+            request.isbn,
         )
         if row is None:
             context.set_details("Book not found")
@@ -59,22 +75,18 @@ class BookCatalogService(book_catalog_pb2_grpc.BookCatalogGrpcServicer):
     async def AddBook(self, request, context):
         book = request.book
 
-        if not book.name or not book.author:
-            context.set_details("Name and author are required")
+        if not book.name or not book.isbn:
+            context.set_details("Name and isbn are required")
             context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
             return AddBookResponse()
 
-        book_id = str(uuid.uuid4())
-
         row = await self.pool.fetchrow(
-            "INSERT INTO books (id, name, author, genre, year_published, isbn, summary) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id, name, author, genre, year_published, isbn, summary",
-            book_id,
-            book.name,
-            book.author,
-            book.genre,
-            book.year_published,
+            "INSERT INTO book (isbn, name, url, summary_clean, pub_year) VALUES ($1,$2,$3,$4,$5) RETURNING isbn, name, url, summary_clean, pub_year",
             book.isbn,
-            book.summary if book.summary else None,
+            book.name,
+            book.url if book.url else None,
+            book.summary_clean if book.summary_clean else None,
+            book.pub_year,
         )
 
         return AddBookResponse(book=book_row_to_pb(row))
@@ -83,14 +95,12 @@ class BookCatalogService(book_catalog_pb2_grpc.BookCatalogGrpcServicer):
         book = request.book
 
         result = await self.pool.fetchrow(
-            "UPDATE books SET name=$1, author=$2, genre=$3, year_published=$4, isbn=$5, summary=$6 WHERE id=$7 RETURNING id, name, author, genre, year_published, isbn, summary",
+            "UPDATE book SET name=$1, url=$2, summary_clean=$3, pub_year=$4 WHERE isbn=$5 RETURNING isbn, name, url, summary_clean, pub_year",
             book.name,
-            book.author,
-            book.genre,
-            book.year_published,
-            book.isbn,
-            book.summary if book.summary else None,
-            request.book_id,
+            book.url if book.url else None,
+            book.summary_clean if book.summary_clean else None,
+            book.pub_year,
+            request.isbn,
         )
 
         if result is None:
@@ -101,7 +111,7 @@ class BookCatalogService(book_catalog_pb2_grpc.BookCatalogGrpcServicer):
         return UpdateBookResponse(book=book_row_to_pb(result))
 
     async def DeleteBook(self, request, context):
-        res = await self.pool.execute("DELETE FROM books WHERE id = $1", request.book_id)
+        res = await self.pool.execute("DELETE FROM book WHERE isbn = $1", request.isbn)
         if res.endswith("0"):
             context.set_details("Book not found")
             context.set_code(grpc.StatusCode.NOT_FOUND)
@@ -122,14 +132,12 @@ async def create_pool():
     async with pool.acquire() as connection:
         await connection.execute(
             """
-            CREATE TABLE IF NOT EXISTS books (
-                id TEXT PRIMARY KEY,
+            CREATE TABLE IF NOT EXISTS book (
+                isbn BIGINT PRIMARY KEY,
                 name TEXT NOT NULL,
-                author TEXT NOT NULL,
-                genre TEXT NOT NULL,
-                year_published INTEGER NOT NULL,
-                isbn TEXT NOT NULL,
-                summary TEXT
+                url TEXT,
+                summary_clean TEXT,
+                pub_year INTEGER
             )
             """
         )
