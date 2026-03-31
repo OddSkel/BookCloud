@@ -22,19 +22,11 @@ message Empty{}
 message Author {
   int32 id = 1;
   string name = 2;
-  string gender = 3;
-  int32 year_born = 4;
-  int32 books_published = 5;
-  optional int32 year_death = 6;
 }
 
 message AuthorEditParameters {
   int32 id = 1;
   optional string name = 2;
-  optional string gender = 3;
-  optional int32 year_born = 4;
-  optional int32 books_published = 5;
-  optional int32 year_death = 6;
 }
 
 message AuthorID {
