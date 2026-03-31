@@ -7,11 +7,10 @@ pub async fn create_pool() -> Result<Pool<Postgres>, sqlx::Error> {
     let db = std::env::var("POSTGRES_DB").expect("POSTGRES_DB not defined.");
     let password = std::env::var("POSTGRES_PASSWORD").expect("POSTGRES_PASSWORD not defined.");
     let host = std::env::var("POSTGRES_HOST").expect("POSTGRES_HOST not defined.");
-    let port = std::env::var("POSTGRES_PORT").unwrap_or_else(|_| "5432".to_string());
 
     let database_url = format!(
         "postgresql://{}:{}@{}:{}/{}",
-        user, password, host, port, db
+        user, password, host, 5432, db
     );
 
     let pool: Pool<Postgres> = PgPoolOptions::new()

@@ -1,7 +1,4 @@
-use actix_web::{
-    http::StatusCode,
-    web, HttpResponse, Responder,
-};
+use actix_web::{HttpResponse, Responder, http::StatusCode, web};
 
 use crate::grpc::{CatalogService, GrpcRegistry};
 

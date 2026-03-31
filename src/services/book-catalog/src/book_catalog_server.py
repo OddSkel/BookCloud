@@ -123,10 +123,9 @@ async def create_pool():
     user = os.getenv("POSTGRES_USER", "postgres")
     password = os.getenv("POSTGRES_PASSWORD", "postgres")
     host = os.getenv("POSTGRES_HOST", "localhost")
-    port = os.getenv("POSTGRES_PORT", "5432")
     db = os.getenv("POSTGRES_DB", "bookdb")
 
-    dsn = f"postgresql://{user}:{password}@{host}:{port}/{db}"
+    dsn = f"postgresql://{user}:{password}@{host}:5432/{db}"
     pool = await asyncpg.create_pool(dsn, min_size=1, max_size=5)
 
     async with pool.acquire() as connection:
