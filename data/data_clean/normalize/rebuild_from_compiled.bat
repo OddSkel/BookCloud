@@ -20,7 +20,8 @@ if "%CHUNKSIZE%"=="" set CHUNKSIZE=100000
 REM Python binary (assumes python in PATH)
 set PYTHON_BIN=py
 
-set OUTPUT_DIR=C:\Users\Administrador\OneDrive\Ambiente de Trabalho\Universidade\FCUL\Mestrado\1ºAno\2ºSemestre\CN\BookCloud\data\data_clean\normalized_out
+set OUTPUT_DIR=..\normalized_out
+
 
 echo ========================================
 echo REBUILD NORMALIZED OUTPUTS FROM COMPILED

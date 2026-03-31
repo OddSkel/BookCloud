@@ -32,7 +32,7 @@ message GetBookResponse  { Book book = 1; }
 message AddBookRequest   { BookAdd book = 1; }
 message AddBookResponse  { Book book = 1; }
 
-message UpdateBookRequest { string book_id = 1;}
+message UpdateBookRequest { string book_id = 1; BookAdd book = 2; }
 message UpdateBookResponse { Book book = 1; }
 
 message DeleteBookRequest  { string book_id = 1; }
