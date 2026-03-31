@@ -46,7 +46,7 @@ service RatingCatalogGrpc {
   // rpc HealthCheck   (HealthCheckRequest) returns (HealthCheckResponse);
   rpc GetRatings    (GetRatingsRequest)    returns (GetRatingsResponse);
   rpc GetRating     (GetRatingRequest)     returns (GetRatingResponse);
-  // rpc AddRating     (AddRatingRequest)     returns (AddRatingResponse);
-  // rpc UpdateRating  (UpdateRatingRequest)  returns (UpdateRatingResponse);
-  // rpc DeleteRating  (DeleteRatingRequest)  returns (DeleteRatingResponse);
+  rpc AddRating     (AddRatingRequest)     returns (AddRatingResponse);
+  rpc UpdateRating  (UpdateRatingRequest)  returns (UpdateRatingResponse);
+  rpc DeleteRating  (DeleteRatingRequest)  returns (DeleteRatingResponse);
 }

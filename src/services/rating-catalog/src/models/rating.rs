@@ -1,5 +1,5 @@
+use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
-use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Rating {
