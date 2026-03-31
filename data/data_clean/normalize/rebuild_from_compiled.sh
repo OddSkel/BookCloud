@@ -3,11 +3,15 @@ set -euo pipefail
 
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-INPUT_FILE="${1:-/home/gusta/Documents/mei/cn/BookCloud/data/dataset/compiled_books.csv}"
-MAX_ROWS="${2:-0}"
-CHUNKSIZE="${3:-100000}"
+# Defaults relativos ao projeto
+DEFAULT_INPUT="${BASE_DIR}/../data/dataset/compiled_books.csv"
+DEFAULT_OUTPUT="${BASE_DIR}/../data/data_clean/normalized_out"
+
+INPUT_FILE="${1:-${INPUT_FILE:-$DEFAULT_INPUT}}"
+OUTPUT_DIR="${OUTPUT_DIR:-$DEFAULT_OUTPUT}"
+MAX_ROWS="${2:-${MAX_ROWS:-0}}"
+CHUNKSIZE="${3:-${CHUNKSIZE:-100000}}"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
-OUTPUT_DIR="/home/gusta/Documents/mei/cn/BookCloud/data/data_clean/normalized_out"
 
 echo "========================================"
 echo "REBUILD NORMALIZED OUTPUTS FROM COMPILED"
