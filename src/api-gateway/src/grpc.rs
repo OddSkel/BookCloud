@@ -59,24 +59,18 @@ pub struct BookModel {
     pub id: String,
     pub name: String,
     pub isbn: String,
-    pub author: String,
-    pub year_published: i32,
-    pub editor: String,
-    pub edition_number: i32,
-    pub genre: String,
+    pub url: String,
     pub summary: Option<String>,
+    pub pub_year: i32,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct BookAddPayload {
     pub name: String,
     pub isbn: String,
-    pub author: String,
-    pub year_published: i32,
-    pub editor: String,
-    pub edition_number: i32,
-    pub genre: String,
+    pub url: String,
     pub summary: Option<String>,
+    pub pub_year: i32,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -199,10 +193,13 @@ impl GrpcRegistry {
 
     // Books
 
-    pub async fn get_books(&self) -> Result<Vec<BookModel>, String> {
+    pub async fn get_books(&self, page_num: Option<i32>, page_size: Option<i32>) -> Result<Vec<BookModel>, String> {
         let mut c = book_client(self.endpoint(CatalogService::BookCatalog)).await?;
+        let page_num = page_num.unwrap_or(1).max(1);
+        let page_size = page_size.unwrap_or(10).max(1);
+
         let r = c
-            .get_books(Request::new(GetBooksRequest {})).await
+            .get_books(Request::new(GetBooksRequest { page_num, page_size })).await
             .map(|r| r.into_inner())
             .map_err(|e| e.to_string())?;
         Ok(r.books.into_iter().map(book_to_model).collect())
@@ -210,8 +207,9 @@ impl GrpcRegistry {
 
     pub async fn get_book(&self, book_isbn: &str) -> Result<BookModel, String> {
         let mut c = book_client(self.endpoint(CatalogService::BookCatalog)).await?;
+        let isbn = book_isbn.parse::<i64>().map_err(|_| "Invalid ISBN".to_string())?;
         let r = c
-            .get_book(Request::new(GetBookRequest { book_isbn: book_isbn.to_string() })).await
+            .get_book(Request::new(GetBookRequest { isbn })).await
             .map(|r| r.into_inner())
             .map_err(|e| e.to_string())?;
         r.book.map(book_to_model).ok_or_else(|| "Book not found".to_string())
@@ -223,14 +221,11 @@ impl GrpcRegistry {
             .add_book(
                 Request::new(AddBookRequest {
                     book: Some(BookAdd {
+                        isbn: p.isbn.parse::<i64>().map_err(|_| "Invalid ISBN".to_string())?,
                         name: p.name,
-                        isbn: p.isbn,
-                        author: p.author,
-                        year_published: p.year_published,
-                        editor: p.editor,
-                        edition_number: p.edition_number,
-                        genre: p.genre,
-                        summary: p.summary,
+                        url: p.url,
+                        summary_clean: p.summary.unwrap_or_default(),
+                        pub_year: p.pub_year,
                     }),
                 })
             ).await
@@ -241,21 +236,35 @@ impl GrpcRegistry {
 
     pub async fn update_book(
         &self,
-        isbn: Option<String>,
-        editor: Option<String>,
-        year_edited: Option<i32>
+        isbn_header: Option<String>,
+        p: BookAddPayload,
     ) -> Result<Vec<BookModel>, String> {
         let mut c = book_client(self.endpoint(CatalogService::BookCatalog)).await?;
+        let isbn_str = isbn_header.ok_or_else(|| "ISBN header missing".to_string())?;
+        let isbn = isbn_str.parse::<i64>().map_err(|_| "Invalid ISBN".to_string())?;
+
         let r = c
-            .update_book(Request::new(UpdateBookRequest { isbn, editor, year_edited })).await
+            .update_book(Request::new(UpdateBookRequest {
+                isbn,
+                book: Some(BookAdd {
+                    isbn,
+                    name: p.name,
+                    url: p.url,
+                    summary_clean: p.summary.unwrap_or_default(),
+                    pub_year: p.pub_year,
+                }),
+            })).await
             .map(|r| r.into_inner())
             .map_err(|e| e.to_string())?;
-        Ok(r.books.into_iter().map(book_to_model).collect())
+
+        let updated = r.book.map(book_to_model).ok_or_else(|| "Failed to update book".to_string())?;
+        Ok(vec![updated])
     }
 
     pub async fn delete_book(&self, book_isbn: &str) -> Result<(), String> {
         let mut c = book_client(self.endpoint(CatalogService::BookCatalog)).await?;
-        c.delete_book(Request::new(DeleteBookRequest { book_isbn: book_isbn.to_string() })).await
+        let isbn = book_isbn.parse::<i64>().map_err(|_| "Invalid ISBN".to_string())?;
+        c.delete_book(Request::new(DeleteBookRequest { isbn })).await
             .map(|_| ())
             .map_err(|e| e.to_string())
     }
@@ -476,15 +485,12 @@ async fn rating_health(_endpoint: &str) -> Result<contracts::common::HealthCheck
 
 fn book_to_model(b: contracts::book_catalog::Book) -> BookModel {
     BookModel {
-        id: b.id,
+        id: b.isbn.to_string(),
         name: b.name,
-        isbn: b.isbn,
-        author: b.author,
-        year_published: b.year_published,
-        editor: b.editor,
-        edition_number: b.edition_number,
-        genre: b.genre,
-        summary: b.summary,
+        isbn: b.isbn.to_string(),
+        url: b.url,
+        summary: if b.summary_clean.is_empty() { None } else { Some(b.summary_clean) },
+        pub_year: b.pub_year,
     }
 }
 

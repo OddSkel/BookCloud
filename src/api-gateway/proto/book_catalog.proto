@@ -5,45 +5,43 @@ package gateway.bookcatalog;
 import "common.proto";
 
 message Book {
-  string id             = 1;
-  string name           = 2;
-  string isbn           = 3;
-  string author         = 4;
-  int32  year_published = 5;
-  string editor         = 6;
-  int32  edition_number = 7;
-  string genre          = 8;
-  optional string summary = 9;
+  int64  isbn          = 1;
+  string name          = 2;
+  string url           = 3;
+  string summary_clean = 4;
+  int32  pub_year      = 5;
 }
 
 message BookAdd {
-  string name           = 1;
-  string isbn           = 2;
-  string author         = 3;
-  int32  year_published = 4;
-  string editor         = 5;
-  int32  edition_number = 6;
-  string genre          = 7;
-  optional string summary = 8;
+  int64  isbn          = 1;
+  string name          = 2;
+  string url           = 3;
+  string summary_clean = 4;
+  int32  pub_year      = 5;
 }
 
-message GetBooksRequest  {}
-message GetBooksResponse { repeated Book books = 1; }
+message GetBooksRequest {
+  int32 page_num = 1;
+  int32 page_size = 2;
+}
+message GetBooksResponse {
+  repeated Book books = 1;
+  int32 page_num = 2;
+  int32 page_size = 3;
+  int32 total_items = 4;
+  int32 total_pages = 5;
+}
 
-message GetBookRequest   { string book_isbn = 1; }
+message GetBookRequest   { int64 isbn = 1; }
 message GetBookResponse  { Book book = 1; }
 
 message AddBookRequest   { BookAdd book = 1; }
 message AddBookResponse  { Book book = 1; }
 
-message UpdateBookRequest {
-  optional string isbn        = 1;
-  optional string editor      = 2;
-  optional int32  year_edited = 3;
-}
-message UpdateBookResponse { repeated Book books = 1; }
+message UpdateBookRequest { int64 isbn = 1; BookAdd book = 2; }
+message UpdateBookResponse { Book book = 1; }
 
-message DeleteBookRequest  { string book_isbn = 1; }
+message DeleteBookRequest  { int64 isbn = 1; }
 message DeleteBookResponse {}
 
 service BookCatalogGrpc {
