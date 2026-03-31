@@ -22,6 +22,7 @@ SERVICE_TABLES = {
             "file": "book.csv",
             "table": "book",
             "columns": ["isbn", "name", "url", "summary_clean", "pub_year"],
+            "not_null": {"name"},
             "ddl": """
                 CREATE TABLE IF NOT EXISTS {schema}.book (
                     isbn BIGINT PRIMARY KEY,
@@ -38,6 +39,7 @@ SERVICE_TABLES = {
             "file": "author.csv",
             "table": "author",
             "columns": ["author_id", "name"],
+            "not_null": {"name"},
             "ddl": """
                 CREATE TABLE IF NOT EXISTS {schema}.author (
                     author_id INTEGER PRIMARY KEY,
@@ -49,6 +51,7 @@ SERVICE_TABLES = {
             "file": "book_author.csv",
             "table": "book_author",
             "columns": ["book_isbn", "author_id"],
+            "not_null": set(),
             "ddl": """
                 CREATE TABLE IF NOT EXISTS {schema}.book_author (
                     book_isbn BIGINT NOT NULL,
@@ -63,6 +66,7 @@ SERVICE_TABLES = {
             "file": "genre.csv",
             "table": "genre",
             "columns": ["genre_id", "name"],
+            "not_null": {"name"},
             "ddl": """
                 CREATE TABLE IF NOT EXISTS {schema}.genre (
                     genre_id INTEGER PRIMARY KEY,
@@ -74,6 +78,7 @@ SERVICE_TABLES = {
             "file": "book_genre.csv",
             "table": "book_genre",
             "columns": ["book_isbn", "genre_id"],
+            "not_null": set(),
             "ddl": """
                 CREATE TABLE IF NOT EXISTS {schema}.book_genre (
                     book_isbn BIGINT NOT NULL,
@@ -88,6 +93,7 @@ SERVICE_TABLES = {
             "file": "rating.csv",
             "table": "rating",
             "columns": ["book_isbn", "star_rating", "num_ratings"],
+            "not_null": set(),
             "ddl": """
                 CREATE TABLE IF NOT EXISTS {schema}.rating (
                     book_isbn BIGINT PRIMARY KEY,
@@ -115,76 +121,18 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description="Import normalized CSV files into PostgreSQL by service."
     )
-
-    parser.add_argument(
-        "--service",
-        required=True,
-        choices=["book", "author", "genre", "rating", "books", "authors", "genres", "ratings"],
-        help="Service to import",
-    )
-
-    parser.add_argument(
-        "--csv-dir",
-        default=str(DEFAULT_CSV_DIR),
-        help="Directory containing normalized CSV files",
-    )
-
-    parser.add_argument(
-        "--host",
-        default="localhost",
-        help="PostgreSQL host",
-    )
-
-    parser.add_argument(
-        "--port",
-        type=int,
-        default=5432,
-        help="PostgreSQL port",
-    )
-
-    parser.add_argument(
-        "--user",
-        required=True,
-        help="PostgreSQL user",
-    )
-
-    parser.add_argument(
-        "--password",
-        required=True,
-        help="PostgreSQL password",
-    )
-
-    parser.add_argument(
-        "--database",
-        required=True,
-        help="PostgreSQL database name",
-    )
-
-    parser.add_argument(
-        "--schema",
-        default=DEFAULT_SCHEMA,
-        help="Target schema",
-    )
-
-    parser.add_argument(
-        "--chunk-size",
-        type=int,
-        default=DEFAULT_CHUNK_SIZE,
-        help="Number of rows per batch insert",
-    )
-
-    parser.add_argument(
-        "--drop-before-import",
-        action="store_true",
-        help="Truncate target tables before importing",
-    )
-
-    parser.add_argument(
-        "--create-tables",
-        action="store_true",
-        help="Create tables if they do not exist",
-    )
-
+    parser.add_argument("--service", required=True,
+        choices=["book", "author", "genre", "rating", "books", "authors", "genres", "ratings"])
+    parser.add_argument("--csv-dir", default=str(DEFAULT_CSV_DIR))
+    parser.add_argument("--host", default="localhost")
+    parser.add_argument("--port", type=int, default=5432)
+    parser.add_argument("--user", required=True)
+    parser.add_argument("--password", required=True)
+    parser.add_argument("--database", required=True)
+    parser.add_argument("--schema", default=DEFAULT_SCHEMA)
+    parser.add_argument("--chunk-size", type=int, default=DEFAULT_CHUNK_SIZE)
+    parser.add_argument("--drop-before-import", action="store_true")
+    parser.add_argument("--create-tables", action="store_true")
     return parser.parse_args()
 
 
@@ -214,14 +162,12 @@ def ensure_tables(conn, schema: str, service: str) -> None:
 def truncate_tables(conn, schema: str, service: str) -> None:
     tables = [item["table"] for item in SERVICE_TABLES[service]]
     tables.reverse()
-
     with conn.cursor() as cur:
         for table in tables:
             print(f"Truncating {schema}.{table} ...")
             cur.execute(
                 sql.SQL("TRUNCATE TABLE {}.{}").format(
-                    sql.Identifier(schema),
-                    sql.Identifier(table),
+                    sql.Identifier(schema), sql.Identifier(table)
                 )
             )
     conn.commit()
@@ -230,6 +176,7 @@ def truncate_tables(conn, schema: str, service: str) -> None:
 def chunked_rows(
     file_path: Path,
     expected_columns: Sequence[str],
+    not_null_columns: set,
     chunk_size: int,
 ) -> Iterable[List[List[object]]]:
     with file_path.open("r", encoding="utf-8", newline="") as f:
@@ -245,7 +192,10 @@ def chunked_rows(
         batch: List[List[object]] = []
 
         for row in reader:
-            values = [normalize_value(row.get(col)) for col in expected_columns]
+            values = [
+                normalize_value(row.get(col), preserve_null_strings=(col in not_null_columns))
+                for col in expected_columns
+            ]
             batch.append(values)
 
             if len(batch) >= chunk_size:
@@ -256,7 +206,7 @@ def chunked_rows(
             yield batch
 
 
-def normalize_value(value: object) -> object:
+def normalize_value(value: object, preserve_null_strings: bool = False) -> object:
     if value is None:
         return None
 
@@ -265,9 +215,12 @@ def normalize_value(value: object) -> object:
     if text == "":
         return None
 
-    lowered = text.lower()
-    if lowered in {"nan", "none", "null", "<na>"}:
-        return None
+    # ── For NOT NULL columns, keep "null"-like strings as-is so the DB
+    #    receives the literal text instead of a Python None that would
+    #    violate the constraint. ────────────────────────────────────────
+    if not preserve_null_strings:
+        if text.lower() in {"nan", "none", "null", "<na>"}:
+            return None
 
     return text
 
@@ -279,6 +232,7 @@ def import_csv_to_table(
     file_name: str,
     table_name: str,
     columns: Sequence[str],
+    not_null_columns: set,
     chunk_size: int,
 ) -> int:
     file_path = csv_dir / file_name
@@ -301,17 +255,11 @@ def import_csv_to_table(
     print(f"Importing {file_name} -> {full_table}")
 
     with conn.cursor() as cur:
-        for batch in chunked_rows(file_path, columns, chunk_size):
+        for batch in chunked_rows(file_path, columns, not_null_columns, chunk_size):
             batch_number += 1
             total_read += len(batch)
 
-            execute_values(
-                cur,
-                insert_sql,
-                batch,
-                page_size=chunk_size,
-            )
-
+            execute_values(cur, insert_sql, batch, page_size=chunk_size)
             total_attempted += len(batch)
 
             if batch_number % 10 == 0:
@@ -326,16 +274,9 @@ def import_csv_to_table(
     return total_attempted
 
 
-def import_service(
-    conn,
-    schema: str,
-    csv_dir: Path,
-    service: str,
-    chunk_size: int,
-) -> None:
+def import_service(conn, schema: str, csv_dir: Path, service: str, chunk_size: int) -> None:
     total_files = 0
     total_rows = 0
-
     start = time.perf_counter()
 
     for item in SERVICE_TABLES[service]:
@@ -346,13 +287,13 @@ def import_service(
             file_name=item["file"],
             table_name=item["table"],
             columns=item["columns"],
+            not_null_columns=item.get("not_null", set()),
             chunk_size=chunk_size,
         )
         total_files += 1
         total_rows += attempted
 
     elapsed = time.perf_counter() - start
-
     print("")
     print("Import finished successfully.")
     print(f"Service: {service}")
@@ -379,15 +320,15 @@ def main():
     print("========================================")
     print("CSV IMPORT TO POSTGRESQL")
     print("========================================")
-    print(f"Service: {service}")
-    print(f"CSV dir: {csv_dir}")
-    print(f"Host: {args.host}")
-    print(f"Port: {args.port}")
-    print(f"User: {args.user}")
-    print(f"Database: {args.database}")
-    print(f"Schema: {args.schema}")
-    print(f"Chunk size: {args.chunk_size}")
-    print(f"Create tables: {'yes' if args.create_tables else 'no'}")
+    print(f"Service:            {service}")
+    print(f"CSV dir:            {csv_dir}")
+    print(f"Host:               {args.host}")
+    print(f"Port:               {args.port}")
+    print(f"User:               {args.user}")
+    print(f"Database:           {args.database}")
+    print(f"Schema:             {args.schema}")
+    print(f"Chunk size:         {args.chunk_size}")
+    print(f"Create tables:      {'yes' if args.create_tables else 'no'}")
     print(f"Drop before import: {'yes' if args.drop_before_import else 'no'}")
     print("========================================")
 
@@ -395,13 +336,10 @@ def main():
 
     try:
         ensure_schema(conn, args.schema)
-
         if args.create_tables:
             ensure_tables(conn, args.schema, service)
-
         if args.drop_before_import:
             truncate_tables(conn, args.schema, service)
-
         import_service(
             conn=conn,
             schema=args.schema,

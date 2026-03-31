@@ -13,7 +13,7 @@ pub struct UpdateBookQuery {
 }
 
 pub async fn get_books(registry: web::Data<GrpcRegistry>) -> impl Responder {
-    match registry.get_books().await {
+    match registry.get_books(None, None).await {
         Ok(books) => HttpResponse::Ok().json(books),
         Err(e)    => HttpResponse::InternalServerError().json(json!({ "error": e })),
     }
@@ -42,7 +42,7 @@ pub async fn add_book(
 pub async fn update_book(
     registry: web::Data<GrpcRegistry>,
     req: HttpRequest,
-    query: web::Query<UpdateBookQuery>,
+    body: web::Json<BookAddPayload>,
 ) -> impl Responder {
     let isbn = req
         .headers()
@@ -50,7 +50,7 @@ pub async fn update_book(
         .and_then(|v| v.to_str().ok())
         .map(str::to_string);
 
-    match registry.update_book(isbn, query.editor.clone(), query.year_edited).await {
+    match registry.update_book(isbn, body.into_inner()).await {
         Ok(books) => HttpResponse::Ok().json(books),
         Err(e)    => HttpResponse::UnprocessableEntity().json(json!({ "error": e })),
     }
