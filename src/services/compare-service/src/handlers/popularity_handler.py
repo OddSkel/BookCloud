@@ -24,6 +24,10 @@ class UnsupportedFilterError(ValueError):
     pass
 
 
+DEFAULT_RANKING_MIN_NUM_RATINGS = 20
+BAYESIAN_PRIOR_WEIGHT = 50
+
+
 @dataclass
 class CatalogBookRecord:
     isbn: int
@@ -52,12 +56,21 @@ class EraAccumulator:
     num_ratings_sum: int = 0
 
 
+@dataclass(frozen=True)
+class RankingStats:
+    min_popularity: int
+    max_popularity: int
+    global_mean_rating: float
+    bayesian_prior_weight: int
+
+
 async def get_popular_low_rated(
     catalog_cache: CatalogDataCache,
     filters: PopularityFilters,
     config,
 ) -> PaginatedBookPQResponse:
     _validate_catalog_dependent_filters(filters, include_genres=True)
+    ranking_filters = _with_ranking_defaults(filters)
 
     ratings_by_isbn = await _load_ratings_by_isbn(catalog_cache)
     (
@@ -68,15 +81,20 @@ async def get_popular_low_rated(
     ) = await _collect_ranking_records(
         catalog_cache,
         ratings_by_isbn,
-        filters,
-        include_genres=_needs_genre_data(filters),
+        ranking_filters,
+        include_genres=_needs_genre_data(ranking_filters),
+    )
+
+    ranking_stats = _build_ranking_stats(
+        matching_records,
+        min_popularity,
+        max_popularity,
     )
 
     items = _collect_ranked_items(
         matching_records,
-        filters,
-        min_popularity,
-        max_popularity,
+        ranking_filters,
+        ranking_stats,
         "popular",
     )
 
@@ -87,7 +105,7 @@ async def get_popular_low_rated(
             item.books.star_rating or 0.0,
         )
     )
-    return _build_ranked_response(items, total, filters)
+    return _build_ranked_response(items, total, ranking_filters)
 
 
 async def get_hidden_gems(
@@ -96,6 +114,7 @@ async def get_hidden_gems(
     config,
 ) -> PaginatedBookPQResponse:
     _validate_catalog_dependent_filters(filters, include_genres=True)
+    ranking_filters = _with_ranking_defaults(filters)
 
     ratings_by_isbn = await _load_ratings_by_isbn(catalog_cache)
     (
@@ -106,15 +125,20 @@ async def get_hidden_gems(
     ) = await _collect_ranking_records(
         catalog_cache,
         ratings_by_isbn,
-        filters,
-        include_genres=_needs_genre_data(filters),
+        ranking_filters,
+        include_genres=_needs_genre_data(ranking_filters),
+    )
+
+    ranking_stats = _build_ranking_stats(
+        matching_records,
+        min_popularity,
+        max_popularity,
     )
 
     items = _collect_ranked_items(
         matching_records,
-        filters,
-        min_popularity,
-        max_popularity,
+        ranking_filters,
+        ranking_stats,
         "hidden",
     )
 
@@ -125,7 +149,7 @@ async def get_hidden_gems(
             item.books.num_ratings or 0,
         )
     )
-    return _build_ranked_response(items, total, filters)
+    return _build_ranked_response(items, total, ranking_filters)
 
 
 async def get_correlation(
@@ -335,8 +359,7 @@ async def _collect_ranking_records(
 def _collect_ranked_items(
     matching_records: list[CatalogBookRecord],
     filters: PopularityFilters,
-    min_popularity: int,
-    max_popularity: int,
+    ranking_stats: RankingStats,
     mode: str,
 ) -> list[BookPQItem]:
     page = max(filters.page, 1)
@@ -351,8 +374,7 @@ def _collect_ranked_items(
             discrepancy_score=_compute_discrepancy_score(
                 record.num_ratings or 0,
                 record.star_rating or 0.0,
-                min_popularity,
-                max_popularity,
+                ranking_stats,
             ),
         )
         goodness = (
@@ -468,6 +490,56 @@ def _validate_catalog_dependent_filters(
 
 def _needs_genre_data(filters: PopularityFilters) -> bool:
     return bool(filters.genre_name or filters.genre_id)
+
+
+def _with_ranking_defaults(filters: PopularityFilters) -> PopularityFilters:
+    effective_min_num_ratings = filters.min_num_ratings
+    if effective_min_num_ratings is None:
+        effective_min_num_ratings = DEFAULT_RANKING_MIN_NUM_RATINGS
+
+    return PopularityFilters(
+        author_name=filters.author_name,
+        author_id=filters.author_id,
+        genre_name=list(filters.genre_name),
+        genre_id=list(filters.genre_id),
+        book_name=filters.book_name,
+        book_isbn=filters.book_isbn,
+        pub_year_from=filters.pub_year_from,
+        pub_year_to=filters.pub_year_to,
+        pub_year=filters.pub_year,
+        page=filters.page,
+        page_size=filters.page_size,
+        min_num_ratings=effective_min_num_ratings,
+        max_num_ratings=filters.max_num_ratings,
+        min_star_rating=filters.min_star_rating,
+        max_star_rating=filters.max_star_rating,
+        method=filters.method,
+        classic_threshold=filters.classic_threshold,
+        modern_threshold=filters.modern_threshold,
+    )
+
+
+def _build_ranking_stats(
+    matching_records: list[CatalogBookRecord],
+    min_popularity: int,
+    max_popularity: int,
+) -> RankingStats:
+    rated_records = [
+        record for record in matching_records if record.star_rating is not None
+    ]
+    if rated_records:
+        global_mean_rating = sum(
+            record.star_rating or 0.0 for record in rated_records
+        ) / len(rated_records)
+    else:
+        global_mean_rating = 0.0
+
+    return RankingStats(
+        min_popularity=min_popularity,
+        max_popularity=max_popularity,
+        global_mean_rating=global_mean_rating,
+        bayesian_prior_weight=BAYESIAN_PRIOR_WEIGHT,
+    )
 
 
 def _matches_listing_filters(
@@ -610,12 +682,29 @@ def _build_ranked_response(
 def _compute_discrepancy_score(
     num_ratings: int,
     star_rating: float,
-    min_popularity: int,
-    max_popularity: int,
+    ranking_stats: RankingStats,
 ) -> float:
-    popularity_norm = _normalize(num_ratings, min_popularity, max_popularity)
-    rating_norm = star_rating / 5.0
+    popularity_norm = _normalize(
+        num_ratings,
+        ranking_stats.min_popularity,
+        ranking_stats.max_popularity,
+    )
+    rating_norm = _bayesian_rating(num_ratings, star_rating, ranking_stats) / 5.0
     return round(popularity_norm - rating_norm, 6)
+
+
+def _bayesian_rating(
+    num_ratings: int,
+    star_rating: float,
+    ranking_stats: RankingStats,
+) -> float:
+    prior_weight = max(ranking_stats.bayesian_prior_weight, 0)
+    if prior_weight == 0:
+        return star_rating
+
+    return (num_ratings / (num_ratings + prior_weight)) * star_rating + (
+        prior_weight / (num_ratings + prior_weight)
+    ) * ranking_stats.global_mean_rating
 
 
 def _push_ranked_item(
