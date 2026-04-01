@@ -1,0 +1,96 @@
+syntax = "proto3";
+
+package gateway.genreservice;
+
+import "common.proto";
+
+message Genre {
+  int64 genre_id = 1;
+  string name = 2;
+}
+
+message BookGenre{
+  int64 isbn = 1;
+  int64 genre_id = 2;
+}
+
+enum GenreSort {
+  RATING = 0;
+  POPULARITY = 1;
+}
+
+message GetGenresRequest {
+  GenreSort   sort_by = 1;
+  bool ascending      = 2;
+  int32 page_num      = 3;
+  int32 page_size     = 4;
+}
+message GetGenresResponse {
+  repeated Genre genres = 1;
+  int32 page_num        = 2;
+  int32 page_size       = 3;
+  int32 total_items     = 4;
+  int32 total_pages     = 5;
+}
+
+message GetGenreRequest { int64 genre_id = 1; }
+message GetGenreResponse { Genre genre = 1; }
+
+message AddGenreRequest { Genre genre = 1; }
+message AddGenreResponse { Genre genre = 1; }
+
+message UpdateGenreRequest {
+  int64 genre_id = 1;
+  Genre genre = 2;
+}
+message UpdateGenreResponse { Genre genre = 1; }
+
+message DeleteGenreRequest { int64 genre_id = 1; }
+message DeleteGenreResponse {}
+
+message AddGenreToBookRequest { BookGenre bookGenre = 1; }
+message AddGenreToBookResponse { BookGenre bookGenre = 1; }
+
+message RemoveGenreFromBookRequest { BookGenre bookGenre = 1;}
+message RemoveGenreFromBookResponse {}
+
+message GenreTrendPoint {
+  string timestamp = 1;
+  double rating = 2;
+  int32 popularity = 3;
+}
+
+message GenreGrowthRequest {
+  int64 genre_id = 1;
+  int32 max_points = 2;
+}
+
+message GenreGrowthResponse {
+  repeated GenreTrendPoint points = 1;
+  double growth_rate = 2;
+  string metric = 3;
+}
+
+message GenrePopularityRequest {
+  int64 genre_id = 1;
+  int32 max_points = 2;
+}
+
+message GenrePopularityResponse {
+  repeated GenreTrendPoint points = 1;
+  double trend = 2;
+  string metric = 3;
+}
+
+service GenreAnalysisGrpc {
+  rpc GetGenres(GetGenresRequest) returns (GetGenresResponse);
+  rpc AddGenre(AddGenreRequest) returns (AddGenreResponse);
+  rpc GetGenre(GetGenreRequest) returns (GetGenreResponse);
+  rpc UpdateGenre(UpdateGenreRequest) returns (UpdateGenreResponse);
+  rpc DeleteGenre(DeleteGenreRequest) returns (DeleteGenreResponse);
+  rpc AddGenreToBook(AddGenreToBookRequest) returns (AddGenreToBookResponse);
+  rpc RemoveGenreFromBook(RemoveGenreFromBookRequest) returns (RemoveGenreFromBookResponse);
+  rpc GetGenreGrowth(GenreGrowthRequest) returns (GenreGrowthResponse);
+  rpc GetGenrePopularity(GenrePopularityRequest) returns (GenrePopularityResponse);
+}
+
