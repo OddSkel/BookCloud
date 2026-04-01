@@ -1,0 +1,18 @@
+services:
+  book-search:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      RUST_LOG: info
+    ports:
+      - "${HOST_GRPC_PORT}:50054"
+    networks:
+      - bookcloud-network
+
+networks:
+  bookcloud-network:
+    external: true

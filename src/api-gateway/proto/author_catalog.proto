@@ -5,36 +5,39 @@ package gateway.authorcatalog;
 import "common.proto";
 
 message Author {
-  string id               = 1;
+  int32 id               = 1;
   string name             = 2;
-  string gender           = 3;
-  int32  year_born        = 4;
-  optional int32 year_death = 5;
-  repeated string books_published = 6;
 }
 
 message AuthorAdd {
-  string name             = 1;
-  string gender           = 2;
-  int32  year_born        = 3;
-  optional int32 year_death = 4;
-  repeated string books_published = 5;
+  int32 id               = 1;
+  string name             = 2;
 }
 
-message GetAuthorsRequest  {}
+message GetAuthorsRequest  {
+  optional int64 page = 1;
+  optional int64 page_size = 2;
+}
+
 message GetAuthorsResponse { repeated Author authors = 1; }
 
 message GetAuthorRequest   { string author_id = 1; }
 message GetAuthorResponse  { Author author = 1; }
 
-message AddAuthorRequest   { AuthorAdd author = 1; }
+message AddAuthorRequest   { int32 id = 1; string name = 2; }
 message AddAuthorResponse  { Author author = 1; }
 
-message UpdateAuthorRequest  { optional string name = 1; }
+message UpdateAuthorRequest  {
+  int32 id = 1;
+  optional string name = 2;
+}
 message UpdateAuthorResponse { repeated Author authors = 1; }
 
 message DeleteAuthorRequest  { string author_id = 1; }
-message DeleteAuthorResponse {}
+message DeleteAuthorResponse {
+  bool sucessful = 1;
+  string message = 2;
+}
 
 service AuthorCatalogGrpc {
   rpc HealthCheck  (gateway.common.HealthCheckRequest) returns (gateway.common.HealthCheckResponse);
