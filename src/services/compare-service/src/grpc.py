@@ -13,6 +13,8 @@ import book_catalog_pb2
 import book_catalog_pb2_grpc
 import compare_service_pb2
 import compare_service_pb2_grpc
+import genre_service_pb2
+import genre_service_pb2_grpc
 import rating_catalog_pb2
 import rating_catalog_pb2_grpc
 
@@ -101,7 +103,9 @@ async def iter_rating_pages(
         batch_end = page_number + parallelism
         responses = await asyncio.gather(
             *[
-                fetch_rating_page(endpoint, page_number=current_page, page_size=page_size)
+                fetch_rating_page(
+                    endpoint, page_number=current_page, page_size=page_size
+                )
                 for current_page in range(page_number, batch_end)
             ]
         )
@@ -129,24 +133,50 @@ def compare_filters_from_proto(proto_filters) -> "PopularityFilters":
         return PopularityFilters()
 
     return PopularityFilters(
-        author_name=proto_filters.author_name if proto_filters.HasField("author_name") else None,
-        author_id=proto_filters.author_id if proto_filters.HasField("author_id") else None,
+        author_name=proto_filters.author_name
+        if proto_filters.HasField("author_name")
+        else None,
+        author_id=proto_filters.author_id
+        if proto_filters.HasField("author_id")
+        else None,
         genre_name=list(proto_filters.genre_name),
         genre_id=list(proto_filters.genre_id),
-        book_name=proto_filters.book_name if proto_filters.HasField("book_name") else None,
-        book_isbn=proto_filters.book_isbn if proto_filters.HasField("book_isbn") else None,
-        pub_year_from=proto_filters.pub_year_from if proto_filters.HasField("pub_year_from") else None,
-        pub_year_to=proto_filters.pub_year_to if proto_filters.HasField("pub_year_to") else None,
+        book_name=proto_filters.book_name
+        if proto_filters.HasField("book_name")
+        else None,
+        book_isbn=proto_filters.book_isbn
+        if proto_filters.HasField("book_isbn")
+        else None,
+        pub_year_from=proto_filters.pub_year_from
+        if proto_filters.HasField("pub_year_from")
+        else None,
+        pub_year_to=proto_filters.pub_year_to
+        if proto_filters.HasField("pub_year_to")
+        else None,
         pub_year=proto_filters.pub_year if proto_filters.HasField("pub_year") else None,
         page=proto_filters.page if proto_filters.HasField("page") else 1,
-        page_size=proto_filters.page_size if proto_filters.HasField("page_size") else 50,
-        min_num_ratings=proto_filters.min_num_ratings if proto_filters.HasField("min_num_ratings") else None,
-        max_num_ratings=proto_filters.max_num_ratings if proto_filters.HasField("max_num_ratings") else None,
-        min_star_rating=proto_filters.min_star_rating if proto_filters.HasField("min_star_rating") else None,
-        max_star_rating=proto_filters.max_star_rating if proto_filters.HasField("max_star_rating") else None,
+        page_size=proto_filters.page_size
+        if proto_filters.HasField("page_size")
+        else 50,
+        min_num_ratings=proto_filters.min_num_ratings
+        if proto_filters.HasField("min_num_ratings")
+        else None,
+        max_num_ratings=proto_filters.max_num_ratings
+        if proto_filters.HasField("max_num_ratings")
+        else None,
+        min_star_rating=proto_filters.min_star_rating
+        if proto_filters.HasField("min_star_rating")
+        else None,
+        max_star_rating=proto_filters.max_star_rating
+        if proto_filters.HasField("max_star_rating")
+        else None,
         method=proto_filters.method if proto_filters.HasField("method") else None,
-        classic_threshold=proto_filters.classic_threshold if proto_filters.HasField("classic_threshold") else None,
-        modern_threshold=proto_filters.modern_threshold if proto_filters.HasField("modern_threshold") else None,
+        classic_threshold=proto_filters.classic_threshold
+        if proto_filters.HasField("classic_threshold")
+        else None,
+        modern_threshold=proto_filters.modern_threshold
+        if proto_filters.HasField("modern_threshold")
+        else None,
     )
 
 

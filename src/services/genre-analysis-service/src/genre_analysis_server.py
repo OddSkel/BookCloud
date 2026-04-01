@@ -17,7 +17,9 @@ from dotenv import load_dotenv
 from generated_protos.genre_service_pb2 import (
     Genre,
     BookGenre,
+    BookGenreInfo,
     GetGenresResponse,
+    GetBookGenresResponse,
     GetGenreResponse,
     AddGenreResponse,
     UpdateGenreResponse,
@@ -39,13 +41,17 @@ def row_to_genre_pb(row) -> Genre:
     )
 
 
-class GenreAnalysisService(generated_protos.genre_service_pb2_grpc.GenreAnalysisGrpcServicer):
+class GenreAnalysisService(
+    generated_protos.genre_service_pb2_grpc.GenreAnalysisGrpcServicer
+):
     def __init__(self, pool: asyncpg.pool.Pool, service_name: str):
         self.pool = pool
         self.service_name = service_name
 
     async def HealthCheck(self, request, context):
-        return generated_protos.common_pb2.HealthCheckResponse(service=self.service_name, status="ok")
+        return generated_protos.common_pb2.HealthCheckResponse(
+            service=self.service_name, status="ok"
+        )
 
     async def GetGenres(self, request, context):
         page_num = request.page_num if request.page_num > 0 else 1
@@ -61,7 +67,9 @@ class GenreAnalysisService(generated_protos.genre_service_pb2_grpc.GenreAnalysis
                 "SELECT COUNT(*)::int AS cnt FROM genre"
             )
             total_items = total_items_row["cnt"] if total_items_row else 0
-            total_pages = (total_items + page_size - 1) // page_size if page_size > 0 else 0
+            total_pages = (
+                (total_items + page_size - 1) // page_size if page_size > 0 else 0
+            )
 
             rows = await self.pool.fetch(
                 "SELECT g.genre_id, g.name, COALESCE(COUNT(bg.book_isbn),0) AS book_count "
@@ -76,7 +84,9 @@ class GenreAnalysisService(generated_protos.genre_service_pb2_grpc.GenreAnalysis
                 "SELECT COUNT(*)::int AS cnt FROM genre"
             )
             total_items = total_items_row["cnt"] if total_items_row else 0
-            total_pages = (total_items + page_size - 1) // page_size if page_size > 0 else 0
+            total_pages = (
+                (total_items + page_size - 1) // page_size if page_size > 0 else 0
+            )
 
             rows = await self.pool.fetch(
                 f"SELECT genre_id, name FROM genre ORDER BY name {sort_order} LIMIT $1 OFFSET $2",
@@ -86,6 +96,41 @@ class GenreAnalysisService(generated_protos.genre_service_pb2_grpc.GenreAnalysis
 
         return GetGenresResponse(
             genres=[row_to_genre_pb(r) for r in rows],
+            page_num=page_num,
+            page_size=page_size,
+            total_items=total_items,
+            total_pages=total_pages,
+        )
+
+    async def GetBookGenres(self, request, context):
+        page_num = request.page_num if request.page_num > 0 else 1
+        page_size = request.page_size if request.page_size > 0 else 1000
+        offset = (page_num - 1) * page_size
+
+        total_items_row = await self.pool.fetchrow(
+            "SELECT COUNT(*)::int AS cnt FROM book_genre"
+        )
+        total_items = total_items_row["cnt"] if total_items_row else 0
+        total_pages = (total_items + page_size - 1) // page_size if page_size > 0 else 0
+
+        rows = await self.pool.fetch(
+            "SELECT bg.book_isbn, bg.genre_id, g.name AS genre_name "
+            "FROM book_genre bg "
+            "JOIN genre g ON g.genre_id = bg.genre_id "
+            "ORDER BY bg.book_isbn, bg.genre_id LIMIT $1 OFFSET $2",
+            page_size,
+            offset,
+        )
+
+        return GetBookGenresResponse(
+            items=[
+                BookGenreInfo(
+                    isbn=row["book_isbn"],
+                    genre_id=row["genre_id"],
+                    genre_name=row["genre_name"],
+                )
+                for row in rows
+            ],
             page_num=page_num,
             page_size=page_size,
             total_items=total_items,
@@ -134,7 +179,9 @@ class GenreAnalysisService(generated_protos.genre_service_pb2_grpc.GenreAnalysis
         return UpdateGenreResponse(genre=row_to_genre_pb(row))
 
     async def DeleteGenre(self, request, context):
-        result = await self.pool.execute("DELETE FROM genre WHERE genre_id=$1", request.genre_id)
+        result = await self.pool.execute(
+            "DELETE FROM genre WHERE genre_id=$1", request.genre_id
+        )
         if result.endswith("0"):
             context.set_details("Genre not found")
             context.set_code(grpc.StatusCode.NOT_FOUND)
@@ -152,8 +199,12 @@ class GenreAnalysisService(generated_protos.genre_service_pb2_grpc.GenreAnalysis
             context.set_code(grpc.StatusCode.NOT_FOUND)
             return GenreGrowthResponse()
 
-        points = [GenreTrendPoint(timestamp="", rating=0.0, popularity=row["book_count"])]
-        return GenreGrowthResponse(points=points, growth_rate=float(row["book_count"]), metric="book_count")
+        points = [
+            GenreTrendPoint(timestamp="", rating=0.0, popularity=row["book_count"])
+        ]
+        return GenreGrowthResponse(
+            points=points, growth_rate=float(row["book_count"]), metric="book_count"
+        )
 
     async def GetGenrePopularity(self, request, context):
         row = await self.pool.fetchrow(
@@ -165,8 +216,12 @@ class GenreAnalysisService(generated_protos.genre_service_pb2_grpc.GenreAnalysis
             context.set_code(grpc.StatusCode.NOT_FOUND)
             return GenrePopularityResponse()
 
-        points = [GenreTrendPoint(timestamp="", rating=0.0, popularity=row["book_count"])]
-        return GenrePopularityResponse(points=points, trend=float(row["book_count"]), metric="book_count")
+        points = [
+            GenreTrendPoint(timestamp="", rating=0.0, popularity=row["book_count"])
+        ]
+        return GenrePopularityResponse(
+            points=points, trend=float(row["book_count"]), metric="book_count"
+        )
 
 
 async def create_pool():

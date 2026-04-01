@@ -9,7 +9,7 @@ message Genre {
   string name = 2;
 }
 
-message BookGenre{
+message BookGenre {
   int64 isbn = 1;
   int64 genre_id = 2;
 }
@@ -21,16 +21,17 @@ enum GenreSort {
 
 message GetGenresRequest {
   GenreSort sort_by = 1;
-  bool ascending      = 2;
-  int32 page_num      = 3;
-  int32 page_size     = 4;
+  bool ascending = 2;
+  int32 page_num = 3;
+  int32 page_size = 4;
 }
+
 message GetGenresResponse {
   repeated Genre genres = 1;
-  int32 page_num        = 2;
-  int32 page_size       = 3;
-  int32 total_items     = 4;
-  int32 total_pages     = 5;
+  int32 page_num = 2;
+  int32 page_size = 3;
+  int32 total_items = 4;
+  int32 total_pages = 5;
 }
 
 message GetBookGenresRequest {
@@ -62,6 +63,7 @@ message UpdateGenreRequest {
   int64 genre_id = 1;
   Genre genre = 2;
 }
+
 message UpdateGenreResponse { Genre genre = 1; }
 
 message DeleteGenreRequest { int64 genre_id = 1; }
@@ -70,7 +72,7 @@ message DeleteGenreResponse {}
 message AddGenreToBookRequest { BookGenre bookGenre = 1; }
 message AddGenreToBookResponse { BookGenre bookGenre = 1; }
 
-message RemoveGenreFromBookRequest { BookGenre bookGenre = 1;}
+message RemoveGenreFromBookRequest { BookGenre bookGenre = 1; }
 message RemoveGenreFromBookResponse {}
 
 message GenreTrendPoint {
