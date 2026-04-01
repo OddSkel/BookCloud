@@ -9,7 +9,7 @@ services:
     ports:
       - "${HOST_GRPC_PORT}:50055"
     networks:
-      - genrecloud-network
+      - bookcloud-network
     
   genre-db:
     image: postgres:15
@@ -24,11 +24,11 @@ services:
     volumes:
       - genre-db-data:/var/lib/postgresql/data
     networks:
-      - genrecloud-network
+      - bookcloud-network
   
 volumes:
   genre-db-data:
 
 networks:
-  genrecloud-network:
+  bookcloud-network:
     external: true
