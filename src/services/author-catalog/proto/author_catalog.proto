@@ -4,40 +4,60 @@ import "common.proto";
 package author_catalog;
 
 service AuthorCatalogGrpc {
-  rpc GetAuthors(Empty) returns (AuthorsResponse);
+  rpc GetAuthors(GetAuthorsRequest) returns (GetAuthorsResponse);
 
-  rpc RegisterAuthor(Author) returns (AuthorResponse);
+  rpc AddAuthor(AddAuthorRequest) returns (AddAuthorResponse);
 
-  rpc EditAuthor(AuthorEditParameters) returns (AuthorResponse);
+  rpc UpdateAuthor(UpdateAuthorRequest) returns (UpdateAuthorResponse);
 
-  rpc DeleteAuthor(AuthorID) returns (AuthorDeleteResponse);
+  rpc DeleteAuthor(DeleteAuthorRequest) returns (AuthorDeleteResponse);
 
-  rpc GetAuthor(AuthorID) returns (AuthorResponse);
+  rpc GetAuthor(GetAuthorRequest) returns (GetAuthorResponse);
 
   rpc HealthCheck (common.HealthCheckRequest) returns (common.HealthCheckResponse);
 }
 
-message Empty{}
+message GetAuthorsRequest{
+  optional int64 page = 1;
+  optional int64 page_size = 2;
+}
 
 message Author {
   int32 id = 1;
   string name = 2;
 }
 
-message AuthorEditParameters {
+message AddAuthorRequest {
+  int32 id = 1;
+  string name = 2;
+}
+
+message UpdateAuthorResponse {
+  repeated Author authors = 1;
+}
+
+message UpdateAuthorRequest {
   int32 id = 1;
   optional string name = 2;
 }
 
-message AuthorID {
-  int32 id = 1;
+message AddAuthorResponse {
+  Author author = 1;
 }
 
-message AuthorsResponse {
+message GetAuthorRequest {
+  string author_id = 1;
+}
+
+message DeleteAuthorRequest {
+  string author_id = 1;
+}
+
+message GetAuthorsResponse {
   repeated Author authors = 1;
 }
 
-message AuthorResponse {
+message GetAuthorResponse {
   Author author = 1;
 }
 

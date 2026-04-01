@@ -1,16 +1,34 @@
 use sqlx::{PgPool};
 use crate::models::author::Author as Model_Author;
-use crate::grpc::contracts::author_catalog::{AuthorsResponse, AuthorId, AuthorDeleteResponse, AuthorResponse, Author as ProtoAuthor, AuthorEditParameters};
+use crate::grpc::contracts::author_catalog::{
+    GetAuthorsRequest,
+    GetAuthorsResponse,
+    AddAuthorResponse,
+    UpdateAuthorRequest,
+    UpdateAuthorResponse,
+    DeleteAuthorRequest,
+    AuthorDeleteResponse,
+    GetAuthorRequest,
+    GetAuthorResponse,
+    Author as ProtoAuthor
+};
 
-pub async fn get_authors(pool: &PgPool) -> Result<AuthorsResponse, sqlx:: Error> {
+const DEFAULT_PAGE_SIZE: i64 = 10;
+const DEFAULT_PAGE_NUMBER: i64 = 1;
+
+pub async fn get_authors(pool: &PgPool, params: &GetAuthorsRequest) -> Result<GetAuthorsResponse, sqlx:: Error> {
+
+    let (pages, pages_size) = normalize_pagination(params.page, params.page_size);
 
     let all_authors: Vec<Model_Author> = sqlx::query_as::<_, Model_Author>(
-        "SELECT * FROM authors"
+        "SELECT * FROM authors LIMIT $1 OFFSET $2"
     )
+    .bind(pages)
+    .bind(pages_size)
     .fetch_all(pool)
     .await?;
 
-    Ok(AuthorsResponse {
+    Ok(GetAuthorsResponse {
         authors: all_authors.into_iter().map(
             |a| ProtoAuthor {
                 id: a.id,
@@ -20,7 +38,7 @@ pub async fn get_authors(pool: &PgPool) -> Result<AuthorsResponse, sqlx:: Error>
     })
 }
 
-pub async fn register_author(pool: &PgPool, params: ProtoAuthor) -> Result<AuthorResponse, sqlx:: Error> {
+pub async fn register_author(pool: &PgPool, params: ProtoAuthor) -> Result<AddAuthorResponse, sqlx:: Error> {
     let new_author = sqlx::query_as::<_, Model_Author>(
         "INSERT INTO authors (name)
         VALUES ($1)
@@ -31,7 +49,7 @@ pub async fn register_author(pool: &PgPool, params: ProtoAuthor) -> Result<Autho
     .await?;
 
     Ok(
-        AuthorResponse
+        AddAuthorResponse
         { author: Some(
             ProtoAuthor{
                 id: new_author.id,
@@ -40,7 +58,7 @@ pub async fn register_author(pool: &PgPool, params: ProtoAuthor) -> Result<Autho
         })
 }
 
-pub async fn edit_author(pool: &PgPool, id: i32, params: AuthorEditParameters) -> Result<AuthorResponse, sqlx:: Error> {
+pub async fn edit_author(pool: &PgPool, id: i32, params: UpdateAuthorRequest) -> Result<UpdateAuthorResponse, sqlx:: Error> {
     let mut set_clauses = vec![];
     let mut i = 1;
 
@@ -69,22 +87,24 @@ pub async fn edit_author(pool: &PgPool, id: i32, params: AuthorEditParameters) -
 
     if let Some(name) = &params.name { q = q.bind(name); }
 
-    let edited_author = q.bind(id).fetch_one(pool).await?;
+    let edited_author = q.bind(id).fetch_all(pool).await?;
 
-    Ok(
-        AuthorResponse
-        { author: Some(
-            ProtoAuthor{
-                id: edited_author.id,
-                name: edited_author.name,
-            })
-        })
+    Ok(UpdateAuthorResponse{
+        authors: edited_author.into_iter().map(
+        |a| ProtoAuthor {
+            id: a.id,
+            name: a.name,
+        }
+    ).collect(),
+    })
 }
 
-pub async fn delete_author(pool: &PgPool, params: AuthorId) -> Result<AuthorDeleteResponse, sqlx:: Error> {
+pub async fn delete_author(pool: &PgPool, params: DeleteAuthorRequest) -> Result<AuthorDeleteResponse, sqlx:: Error> {
+    let id = params.author_id.parse::<i32>().map_err(|_| sqlx::Error::Protocol("Invalid author_id".to_string()))?;
+    
     let deleted_author = sqlx::query_as::<_, Model_Author>(
         "DELETE FROM authors WHERE id = $1"
-    ).bind(params.id)
+    ).bind(id)
     .fetch_optional(pool)
     .await?;
 
@@ -96,21 +116,22 @@ pub async fn delete_author(pool: &PgPool, params: AuthorId) -> Result<AuthorDele
         }),
         None => Ok(AuthorDeleteResponse {
             sucessful: false,
-            message: format!("Author with id {} not found", params.id),
+            message: format!("Author with id {} not found", id),
         }),
     }
 }
 
-pub async fn get_author(pool: &PgPool, params: AuthorId) -> Result<AuthorResponse, sqlx:: Error> {
+pub async fn get_author(pool: &PgPool, params: GetAuthorRequest) -> Result<GetAuthorResponse, sqlx:: Error> {
+    let id = params.author_id.parse::<i32>().map_err(|_| sqlx::Error::Protocol("Invalid author_id".to_string()))?;
     
     let get_author = sqlx::query_as::<_, Model_Author>(
-        "SELECT * FROM authors WHERE id = $1 RETURNING *"
-    ).bind(params.id)
+        "SELECT * FROM authors WHERE id = $1"
+    ).bind(id)
     .fetch_optional(pool)
     .await?;
 
     match get_author {
-        Some(author) => Ok(AuthorResponse {
+        Some(author) => Ok(GetAuthorResponse {
             author: Some(ProtoAuthor{
                 id: author.id,
                 name: author.name,
@@ -118,4 +139,13 @@ pub async fn get_author(pool: &PgPool, params: AuthorId) -> Result<AuthorRespons
         }),
         None => Err(sqlx::Error::Protocol("No author found".to_string())),
     }
+}
+
+fn normalize_pagination(page_number: Option<i64>, page_size: Option<i64>) -> (i64, i64) {
+    let page_number = page_number.unwrap_or(DEFAULT_PAGE_NUMBER).max(1);
+
+    let page_size = page_size.unwrap_or(DEFAULT_PAGE_SIZE).max(1);
+    let offset = (page_number - 1) * page_size;
+
+    (page_size, offset)
 }

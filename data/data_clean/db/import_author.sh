@@ -3,7 +3,7 @@ set -euo pipefail
 
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
-CSV_DIR="${CSV_DIR:-../normalized_out}"
+CSV_DIR="${CSV_DIR:-../data/data_clean/normalized_out}"
 HOST="${HOST:-localhost}"
 SCHEMA="${SCHEMA:-public}"
 

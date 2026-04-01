@@ -1,7 +1,6 @@
 [workspace]
 members = [
     "src/services/author-catalog",
-    "src/services/book-catalog",
     "src/services/rating-catalog",
     "src/services/book-search",
     "src/services/book-recommendation",
