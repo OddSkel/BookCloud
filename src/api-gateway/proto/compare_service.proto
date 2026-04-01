@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package gateway.compare;
+
+message CompareFilters {
+  optional string author_name = 1;
+  optional int64 author_id = 2;
+  repeated string genre_name = 3;
+  repeated int64 genre_id = 4;
+  optional string book_name = 5;
+  optional int64 book_isbn = 6;
+  optional int32 pub_year_from = 7;
+  optional int32 pub_year_to = 8;
+  optional int32 pub_year = 9;
+  optional int32 page = 10;
+  optional int32 page_size = 11;
+  optional int64 min_num_ratings = 12;
+  optional int64 max_num_ratings = 13;
+  optional double min_star_rating = 14;
+  optional double max_star_rating = 15;
+  optional string method = 16;
+  optional int32 classic_threshold = 17;
+  optional int32 modern_threshold = 18;
+}
+
+message GetPopularLowRatedRequest {
+  CompareFilters filters = 1;
+}
+
+message GetHiddenGemsRequest {
+  CompareFilters filters = 1;
+}
+
+message GetCorrelationRequest {
+  CompareFilters filters = 1;
+}
+
+message GetPublishingGrowthRequest {
+  CompareFilters filters = 1;
+}
+
+message GetErasRequest {
+  CompareFilters filters = 1;
+}
+
+message JsonPayloadResponse {
+  string json_payload = 1;
+}
+
+service CompareServiceGrpc {
+  rpc GetPopularLowRated(GetPopularLowRatedRequest) returns (JsonPayloadResponse);
+  rpc GetHiddenGems(GetHiddenGemsRequest) returns (JsonPayloadResponse);
+  rpc GetCorrelation(GetCorrelationRequest) returns (JsonPayloadResponse);
+  rpc GetPublishingGrowth(GetPublishingGrowthRequest) returns (JsonPayloadResponse);
+  rpc GetEras(GetErasRequest) returns (JsonPayloadResponse);
+}

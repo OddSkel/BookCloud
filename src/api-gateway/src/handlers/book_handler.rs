@@ -1,4 +1,4 @@
-use actix_web::{web, HttpRequest, HttpResponse, Responder};
+use actix_web::{HttpRequest, HttpResponse, Responder, web};
 use serde::Deserialize;
 use serde_json::json;
 
@@ -15,7 +15,7 @@ pub struct UpdateBookQuery {
 pub async fn get_books(registry: web::Data<GrpcRegistry>) -> impl Responder {
     match registry.get_books(None, None).await {
         Ok(books) => HttpResponse::Ok().json(books),
-        Err(e)    => HttpResponse::InternalServerError().json(json!({ "error": e })),
+        Err(e) => HttpResponse::InternalServerError().json(json!({ "error": e })),
     }
 }
 
@@ -25,7 +25,7 @@ pub async fn get_book(
 ) -> impl Responder {
     match registry.get_book(&path.into_inner()).await {
         Ok(book) => HttpResponse::Ok().json(book),
-        Err(e)   => HttpResponse::NotFound().json(json!({ "error": e })),
+        Err(e) => HttpResponse::NotFound().json(json!({ "error": e })),
     }
 }
 
@@ -35,7 +35,7 @@ pub async fn add_book(
 ) -> impl Responder {
     match registry.add_book(body.into_inner()).await {
         Ok(book) => HttpResponse::Created().json(book),
-        Err(e)   => HttpResponse::UnprocessableEntity().json(json!({ "error": e })),
+        Err(e) => HttpResponse::UnprocessableEntity().json(json!({ "error": e })),
     }
 }
 
@@ -52,7 +52,7 @@ pub async fn update_book(
 
     match registry.update_book(isbn, body.into_inner()).await {
         Ok(books) => HttpResponse::Ok().json(books),
-        Err(e)    => HttpResponse::UnprocessableEntity().json(json!({ "error": e })),
+        Err(e) => HttpResponse::UnprocessableEntity().json(json!({ "error": e })),
     }
 }
 

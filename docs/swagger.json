@@ -423,22 +423,35 @@
                 }
             }
         },
-        "/ratings/{book_id}": {
+        "/ratings": {
             "get": {
                 "tags": [
                     "Ratings"
                 ],
-                "summary": "Get Ratings of a book",
-                "operationId": "rating_rating_get",
+                "summary": "List ratings",
+                "operationId": "get_ratings",
                 "parameters": [
                     {
-                        "name": "book_id",
-                        "in": "path",
-                        "required": true,
+                        "name": "page_number",
+                        "in": "query",
+                        "required": false,
                         "schema": {
-                            "type": "string",
-                            "title": "Book Id"
-                        }
+                            "type": "integer",
+                            "format": "int64",
+                            "title": "Page Number"
+                        },
+                        "description": "Optional page number for paginated results."
+                    },
+                    {
+                        "name": "page_size",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64",
+                            "title": "Page Size"
+                        },
+                        "description": "Optional page size for paginated results."
                     }
                 ],
                 "responses": {
@@ -446,20 +459,41 @@
                         "description": "Successful Response",
                         "content": {
                             "application/json": {
-                                "schema": {}
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Rating"
+                                    },
+                                    "title": "Ratings Response"
+                                }
                             }
                         }
                     }
                 }
             }
         },
-        "/rating/{book_id}": {
+        "/rating/{book_isbn}": {
             "post": {
                 "tags": [
                     "Ratings"
                 ],
                 "summary": "Add rating to book",
                 "operationId": "rating_add_post",
+                "parameters": [
+                    {
+                        "name": "book_isbn",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Book ISBN",
+                            "examples": [
+                                "9780439554930"
+                            ]
+                        },
+                        "description": "ISBN of the book whose rating will be created."
+                    }
+                ],
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -497,47 +531,33 @@
                 "tags": [
                     "Ratings"
                 ],
-                "summary": "Edit Rating",
-                "operationId": "Rating_put",
+                "summary": "Update rating",
+                "operationId": "update_rating",
                 "parameters": [
                     {
-                        "name": "rating",
-                        "in": "query",
-                        "required": false,
+                        "name": "book_isbn",
+                        "in": "path",
+                        "required": true,
                         "schema": {
-                            "anyOf": [
-                                {
-                                    "type": "integer",
-                                    "minimum": 1,
-                                    "maximum": 5
-                                },
-                                {
-                                    "type": "null"
-                                }
-                            ],
-                            "title": "rating"
+                            "type": "string",
+                            "title": "Book ISBN",
+                            "examples": [
+                                "9780439554930"
+                            ]
                         },
-                        "description": "Edit rating by its evaluation"
-                    },
-                    {
-                        "name": "comment",
-                        "in": "query",
-                        "required": false,
-                        "schema": {
-                            "anyOf": [
-                                {
-                                    "type": "string"
-                                },
-                                {
-                                    "type": "null"
-                                }
-                            ],
-                            "description": "Edit Rating by its comment",
-                            "title": "Comment"
-                        },
-                        "description": "Edit Rating by its comment"
+                        "description": "ISBN of the rating to update."
                     }
                 ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RatingUpdate"
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "200": {
                         "description": "Successful Response",
@@ -564,24 +584,26 @@
                         }
                     }
                 }
-            }
-        },
-        "/rating/{rating_id}": {
+            },
             "get": {
                 "tags": [
                     "Ratings"
                 ],
-                "summary": "Get rating",
-                "operationId": "get_rating__rating_id",
+                "summary": "Get rating by book ISBN",
+                "operationId": "get_rating",
                 "parameters": [
                     {
-                        "name": "rating_id",
+                        "name": "book_isbn",
                         "in": "path",
                         "required": true,
                         "schema": {
                             "type": "string",
-                            "title": "Rating Id"
-                        }
+                            "title": "Book ISBN",
+                            "examples": [
+                                "9780439554930"
+                            ]
+                        },
+                        "description": "ISBN of the rating to retrieve."
                     }
                 ],
                 "responses": {
@@ -595,15 +617,8 @@
                             }
                         }
                     },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        }
+                    "404": {
+                        "description": "Rating not found"
                     }
                 }
             },
@@ -612,31 +627,28 @@
                     "Ratings"
                 ],
                 "summary": "Delete Rating",
-                "operationId": "delete_rating__rating_id",
+                "operationId": "delete_rating",
                 "parameters": [
                     {
-                        "name": "rating_id",
+                        "name": "book_isbn",
                         "in": "path",
                         "required": true,
                         "schema": {
                             "type": "string",
-                            "title": "Rating Id"
-                        }
+                            "title": "Book ISBN",
+                            "examples": [
+                                "9780439554930"
+                            ]
+                        },
+                        "description": "ISBN of the rating to delete."
                     }
                 ],
                 "responses": {
                     "204": {
                         "description": "Successful Response"
                     },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        }
+                    "404": {
+                        "description": "Rating not found"
                     }
                 }
             }
@@ -1641,27 +1653,37 @@
             },
             "Rating": {
                 "properties": {
-                    "evaluation": {
-                        "type": "integer",
-                        "title": "evaluation",
+                    "book_isbn": {
+                        "type": "string",
+                        "title": "Book ISBN",
                         "examples": [
-                            "5"
+                            "9780439554930"
                         ]
                     },
-                    "critic": {
-                        "type": "string",
-                        "title": "critic"
+                    "num_ratings": {
+                        "type": "integer",
+                        "format": "int64",
+                        "title": "Number of Ratings",
+                        "examples": [
+                            9234567
+                        ]
                     },
-                    "id": {
-                        "type": "string",
-                        "title": "Id"
+                    "star_rating": {
+                        "type": "number",
+                        "format": "double",
+                        "title": "Star Rating",
+                        "minimum": 0,
+                        "maximum": 5,
+                        "examples": [
+                            4.47
+                        ]
                     }
                 },
                 "type": "object",
                 "required": [
-                    "evaluation",
-                    "critic",
-                    "id"
+                    "book_isbn",
+                    "num_ratings",
+                    "star_rating"
                 ],
                 "title": "Rating"
             },
@@ -1798,28 +1820,59 @@
             },
             "RatingAdd": {
                 "properties": {
-                    "evaluation": {
+                    "num_ratings": {
                         "type": "integer",
-                        "title": "evaluation",
+                        "format": "int64",
+                        "title": "Number of Ratings",
                         "examples": [
-                            "5"
+                            9234567
                         ]
                     },
-                    "critic": {
-                        "type": "string",
-                        "title": "critic"
-                    },
-                    "id": {
-                        "type": "string",
-                        "title": "Id"
+                    "star_rating": {
+                        "type": "number",
+                        "format": "double",
+                        "title": "Star Rating",
+                        "minimum": 0,
+                        "maximum": 5,
+                        "examples": [
+                            4.47
+                        ]
                     }
                 },
                 "type": "object",
                 "required": [
-                    "evaluation",
-                    "critic"
+                    "num_ratings",
+                    "star_rating"
                 ],
                 "title": "RatingAdd"
+            },
+            "RatingUpdate": {
+                "properties": {
+                    "num_ratings": {
+                        "type": "integer",
+                        "format": "int64",
+                        "title": "Number of Ratings",
+                        "examples": [
+                            9234567
+                        ]
+                    },
+                    "star_rating": {
+                        "type": "number",
+                        "format": "double",
+                        "title": "Star Rating",
+                        "minimum": 0,
+                        "maximum": 5,
+                        "examples": [
+                            4.47
+                        ]
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "num_ratings",
+                    "star_rating"
+                ],
+                "title": "RatingUpdate"
             },
             "ValidationError": {
                 "properties": {
@@ -2016,17 +2069,26 @@
                 "description": "Book Search based on the parameters that client requested",
                 "properties": {
                     "title": {
-                        "type": ["string", "null"],
+                        "type": [
+                            "string",
+                            "null"
+                        ],
                         "example": "1984",
                         "description": "title query requested."
                     },
                     "author": {
-                        "type": ["string", "null"],
+                        "type": [
+                            "string",
+                            "null"
+                        ],
                         "example": "George Orwell",
                         "description": "author query requested."
                     },
                     "keywords": {
-                        "type": ["string", "null"],
+                        "type": [
+                            "string",
+                            "null"
+                        ],
                         "description": "keyword query requested"
                     }
                 }
@@ -2036,27 +2098,48 @@
                 "description": "Book Recommendation based on the parameters that client requested",
                 "properties": {
                     "genre": {
-                        "type": ["string", "null"],
+                        "type": [
+                            "string",
+                            "null"
+                        ],
                         "example": "Romance",
                         "description": "genre query requested."
                     },
                     "rating": {
-                        "type": ["integer", "null"],
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
                         "format": "double",
                         "example": 4.89,
                         "description": "rating query requested."
                     },
                     "popularity": {
-                        "type": ["integer", "null"],
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
                         "format": "int64",
                         "example": 10000,
                         "description": "keyword query requested"
                     }
                 },
                 "anyOf": [
-                    { "required": ["genre"] },
-                    { "required": ["rating"] },
-                    { "required": ["popularity"] }
+                    {
+                        "required": [
+                            "genre"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "rating"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "popularity"
+                        ]
+                    }
                 ]
             },
             "CorrelationResponse": {
@@ -2546,11 +2629,17 @@
                         "type": "object",
                         "properties": {
                             "pub_year_from": {
-                                "type": ["integer", "null"],
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ],
                                 "example": 1966
                             },
                             "pub_year_to": {
-                                "type": ["integer", "null"],
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ],
                                 "example": 2001
                             }
                         }
@@ -2840,7 +2929,10 @@
                 "required": false,
                 "description": "Partial match on author name.",
                 "schema": {
-                    "type": ["string", "null"],
+                    "type": [
+                        "string",
+                        "null"
+                    ],
                     "example": "J.K. Rowling"
                 }
             },
