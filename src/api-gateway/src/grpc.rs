@@ -75,21 +75,14 @@ pub struct BookAddPayload {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct AuthorModel {
-    pub id: String,
+    pub id: i32,
     pub name: String,
-    pub gender: String,
-    pub year_born: i32,
-    pub year_death: Option<i32>,
-    pub books_published: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct AuthorAddPayload {
+    pub id: i32,
     pub name: String,
-    pub gender: String,
-    pub year_born: i32,
-    pub year_death: Option<i32>,
-    pub books_published: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -271,10 +264,17 @@ impl GrpcRegistry {
 
     // Authors
 
-    pub async fn get_authors(&self) -> Result<Vec<AuthorModel>, String> {
-        let mut c = author_client(self.endpoint(CatalogService::AuthorCatalog)).await?;
-        let r = c
-            .get_authors(Request::new(GetAuthorsRequest {})).await
+    pub async fn get_authors(
+        &self,
+        page: Option<i64>,
+        page_size: Option<i64>) -> Result<Vec<AuthorModel>, String> {
+        let endpoint = self.endpoint(CatalogService::AuthorCatalog);
+        println!("DEBUG: Calling get_authors on endpoint: {}", endpoint);
+        let mut c = author_client(endpoint).await?;
+        let result = c
+            .get_authors(Request::new(GetAuthorsRequest {page, page_size})).await;
+        println!("DEBUG: get_authors result: {:?}", result);
+        let r = result
             .map(|r| r.into_inner())
             .map_err(|e| e.to_string())?;
         Ok(r.authors.into_iter().map(author_to_model).collect())
@@ -294,13 +294,8 @@ impl GrpcRegistry {
         let r = c
             .add_author(
                 Request::new(AddAuthorRequest {
-                    author: Some(AuthorAdd {
-                        name: p.name,
-                        gender: p.gender,
-                        year_born: p.year_born,
-                        year_death: p.year_death,
-                        books_published: p.books_published,
-                    }),
+                    id: p.id,
+                    name: p.name,
                 })
             ).await
             .map(|r| r.into_inner())
@@ -308,10 +303,10 @@ impl GrpcRegistry {
         r.author.map(author_to_model).ok_or_else(|| "Failed to create author".to_string())
     }
 
-    pub async fn update_author(&self, name: Option<String>) -> Result<Vec<AuthorModel>, String> {
+    pub async fn update_author(&self, id: i32, name: Option<String>) -> Result<Vec<AuthorModel>, String> {
         let mut c = author_client(self.endpoint(CatalogService::AuthorCatalog)).await?;
         let r = c
-            .update_author(Request::new(UpdateAuthorRequest { name })).await
+            .update_author(Request::new(UpdateAuthorRequest { id, name })).await
             .map(|r| r.into_inner())
             .map_err(|e| e.to_string())?;
         Ok(r.authors.into_iter().map(author_to_model).collect())
@@ -498,10 +493,6 @@ fn author_to_model(a: contracts::author_catalog::Author) -> AuthorModel {
     AuthorModel {
         id: a.id,
         name: a.name,
-        gender: a.gender,
-        year_born: a.year_born,
-        year_death: a.year_death,
-        books_published: a.books_published,
     }
 }
 

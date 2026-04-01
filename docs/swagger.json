@@ -142,7 +142,7 @@
                                     "items": {
                                         "$ref": "#/components/schemas/Book"
                                     },
-                                    "title": "Response List Rooms Rooms Get"
+                                    "title": "Response List Books Get"
                                 }
                             }
                         }
@@ -247,7 +247,13 @@
                         "description": "Successful Response",
                         "content": {
                             "application/json": {
-                                "schema": {}
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Author"
+                                    },
+                                    "title": "Response List Author Get"
+                                }
                             }
                         }
                     }
