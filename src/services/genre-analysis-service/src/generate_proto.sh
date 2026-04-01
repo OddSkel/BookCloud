@@ -1,6 +1,6 @@
-#!/bin/bash
-# to run bash or:
-# py -3 -m grpc_tools.protoc -I ..\proto --python_out=.\generated_protos --grpc_python_out=.\generated_protos ..\proto\common.proto ..\proto\book_catalog.proto 
+#!/usr/bin/env bash
+#run or use:
+#py -3 -m grpc_tools.protoc -I..\proto --python_out=.\generated_protos --grpc_python_out=.\generated_protos ..\proto\common.proto ..\proto\genre_service.proto 
 set -e
 
 # Resolve directory of this script so output locations are deterministic regardless of cwd.
@@ -17,6 +17,6 @@ python -m grpc_tools.protoc \
   --python_out=${PY_OUT} \
   --grpc_python_out=${GRPC_OUT} \
   ${PROTO_ROOT}/proto/common.proto \
-  ${PROTO_ROOT}/proto/book_catalog.proto
+  ${PROTO_ROOT}/proto/genre_service.proto
 
 echo "Protobuf classes generated in ${PY_OUT}"
