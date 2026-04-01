@@ -1,13 +1,9 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PROTO_ROOT="${PROTO_ROOT:-${SCRIPT_DIR}/../..}"
-OUT_DIR="${OUT_DIR:-${SCRIPT_DIR}/generated_protos}"
-PY_OUT="${PY_OUT:-$OUT_DIR}"
-GRPC_OUT="${GRPC_OUT:-$OUT_DIR}"
-
-mkdir -p "${PY_OUT}" "${GRPC_OUT}"
+PROTO_ROOT="${PROTO_ROOT:-../..}"  # can be overridden, e.g. PROTO_ROOT=. in Docker
+PY_OUT="."
+GRPC_OUT="."
 
 python -m grpc_tools.protoc \
   -I${PROTO_ROOT}/proto \

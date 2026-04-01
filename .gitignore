@@ -1,8 +1,8 @@
-/dataset
+**/normalized_out/
+
 venv/
 __pycache__
 *.csv
-*.txt
 *.pyc
 *.zip
 

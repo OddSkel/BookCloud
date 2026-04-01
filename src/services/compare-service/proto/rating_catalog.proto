@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package gateway.ratingcatalog;
+
+import "common.proto";
+
+message Rating {
+  string book_isbn = 1;
+  int64  num_ratings = 2;
+  double star_rating = 3;
+}
+
+message GetRatingsRequest  {
+  optional int64 page_number = 1;
+  optional int64 page_size = 2;
+}
+
+message GetRatingsResponse { repeated Rating ratings = 1; }
+
+service RatingCatalogGrpc {
+  rpc GetRatings(GetRatingsRequest) returns (GetRatingsResponse);
+}
