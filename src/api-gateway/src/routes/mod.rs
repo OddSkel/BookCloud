@@ -15,4 +15,5 @@ pub fn init_routes(cfg: &mut web::ServiceConfig) {
     author_routes(cfg);
     book_routes(cfg);
     rating_routes(cfg);
+    genre_analysis_routes(cfg);
 }

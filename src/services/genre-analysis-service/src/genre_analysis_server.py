@@ -16,11 +16,14 @@ from dotenv import load_dotenv
 
 from generated_protos.genre_service_pb2 import (
     Genre,
+    BookGenre,
     GetGenresResponse,
     GetGenreResponse,
     AddGenreResponse,
     UpdateGenreResponse,
     DeleteGenreResponse,
+    AddGenreToBookResponse,
+    RemoveGenreFromBookResponse,
     GenreTrendPoint,
     GenreGrowthResponse,
     GenrePopularityResponse,
@@ -49,43 +52,34 @@ class GenreAnalysisService(generated_protos.genre_service_pb2_grpc.GenreAnalysis
         page_size = request.page_size if request.page_size > 0 else 10
         offset = (page_num - 1) * page_size
 
-        sort_field_map = {
-            1: "name",
-            2: "book_count",
-        }
-        sort_field = sort_field_map.get(request.sort_by, "genre_id")
+        # existing proto has GenreSort enum with RATING=0 and POPULARITY=1
+        # RATING is not available in schema: fallback to name
         sort_order = "ASC" if request.ascending else "DESC"
 
-        where_clauses = []
-        values = []
-        if request.query:
-            where_clauses.append("g.name ILIKE $1")
-            values.append(f"%{request.query}%")
+        if request.sort_by == 1:  # POPULARITY
+            total_items_row = await self.pool.fetchrow(
+                "SELECT COUNT(*)::int AS cnt FROM genre"
+            )
+            total_items = total_items_row["cnt"] if total_items_row else 0
+            total_pages = (total_items + page_size - 1) // page_size if page_size > 0 else 0
 
-        where_sql = ""
-        if where_clauses:
-            where_sql = "WHERE " + " AND ".join(where_clauses)
-
-        total_items_row = await self.pool.fetchrow(
-            f"SELECT COUNT(*)::int as cnt FROM genre g {where_sql}", *values
-        )
-        total_items = total_items_row["cnt"] if total_items_row else 0
-        total_pages = (total_items + page_size - 1) // page_size if page_size > 0 else 0
-
-        # count books per genre when needed for sorting, otherwise simple select
-        if request.sort_by == 2:
             rows = await self.pool.fetch(
-                f"SELECT g.genre_id, g.name, COALESCE(COUNT(bg.book_isbn),0) AS book_count "
-                f"FROM genre g LEFT JOIN book_genre bg ON g.genre_id = bg.genre_id {where_sql} "
-                f"GROUP BY g.genre_id, g.name ORDER BY book_count {sort_order} LIMIT $2 OFFSET $3",
-                *values,
+                "SELECT g.genre_id, g.name, COALESCE(COUNT(bg.book_isbn),0) AS book_count "
+                "FROM genre g LEFT JOIN book_genre bg ON g.genre_id = bg.genre_id "
+                "GROUP BY g.genre_id, g.name "
+                f"ORDER BY book_count {sort_order} LIMIT $1 OFFSET $2",
                 page_size,
                 offset,
             )
         else:
+            total_items_row = await self.pool.fetchrow(
+                "SELECT COUNT(*)::int AS cnt FROM genre"
+            )
+            total_items = total_items_row["cnt"] if total_items_row else 0
+            total_pages = (total_items + page_size - 1) // page_size if page_size > 0 else 0
+
             rows = await self.pool.fetch(
-                f"SELECT g.genre_id, g.name FROM genre g {where_sql} ORDER BY {sort_field} {sort_order} LIMIT $2 OFFSET $3",
-                *values,
+                f"SELECT genre_id, name FROM genre ORDER BY name {sort_order} LIMIT $1 OFFSET $2",
                 page_size,
                 offset,
             )

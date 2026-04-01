@@ -9,8 +9,14 @@ COPY ./proto ./proto
 COPY ./src/book_catalog_server.py .
 COPY ./src/generate_proto.sh .
 
-RUN chmod +x generate_proto.sh \
- && PROTO_ROOT="." ./generate_proto.sh
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends bash \
+ && rm -rf /var/lib/apt/lists/* \
+ && chmod +x generate_proto.sh \
+ && PROTO_ROOT="." bash generate_proto.sh \
+ && cp generated_protos/*.py .
+
+ENV PYTHONPATH="/app/generated_protos:${PYTHONPATH:-}"
 
 EXPOSE 50051
 

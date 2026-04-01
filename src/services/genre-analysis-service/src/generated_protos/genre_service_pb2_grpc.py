@@ -65,6 +65,16 @@ class GenreAnalysisGrpcStub(object):
                 request_serializer=genre__service__pb2.DeleteGenreRequest.SerializeToString,
                 response_deserializer=genre__service__pb2.DeleteGenreResponse.FromString,
                 _registered_method=True)
+        self.AddGenreToBook = channel.unary_unary(
+                '/gateway.genreservice.GenreAnalysisGrpc/AddGenreToBook',
+                request_serializer=genre__service__pb2.AddGenreToBookRequest.SerializeToString,
+                response_deserializer=genre__service__pb2.AddGenreToBookResponse.FromString,
+                _registered_method=True)
+        self.RemoveGenreFromBook = channel.unary_unary(
+                '/gateway.genreservice.GenreAnalysisGrpc/RemoveGenreFromBook',
+                request_serializer=genre__service__pb2.RemoveGenreFromBookRequest.SerializeToString,
+                response_deserializer=genre__service__pb2.RemoveGenreFromBookResponse.FromString,
+                _registered_method=True)
         self.GetGenreGrowth = channel.unary_unary(
                 '/gateway.genreservice.GenreAnalysisGrpc/GetGenreGrowth',
                 request_serializer=genre__service__pb2.GenreGrowthRequest.SerializeToString,
@@ -116,6 +126,18 @@ class GenreAnalysisGrpcServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def AddGenreToBook(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def RemoveGenreFromBook(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def GetGenreGrowth(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -160,6 +182,16 @@ def add_GenreAnalysisGrpcServicer_to_server(servicer, server):
                     servicer.DeleteGenre,
                     request_deserializer=genre__service__pb2.DeleteGenreRequest.FromString,
                     response_serializer=genre__service__pb2.DeleteGenreResponse.SerializeToString,
+            ),
+            'AddGenreToBook': grpc.unary_unary_rpc_method_handler(
+                    servicer.AddGenreToBook,
+                    request_deserializer=genre__service__pb2.AddGenreToBookRequest.FromString,
+                    response_serializer=genre__service__pb2.AddGenreToBookResponse.SerializeToString,
+            ),
+            'RemoveGenreFromBook': grpc.unary_unary_rpc_method_handler(
+                    servicer.RemoveGenreFromBook,
+                    request_deserializer=genre__service__pb2.RemoveGenreFromBookRequest.FromString,
+                    response_serializer=genre__service__pb2.RemoveGenreFromBookResponse.SerializeToString,
             ),
             'GetGenreGrowth': grpc.unary_unary_rpc_method_handler(
                     servicer.GetGenreGrowth,
@@ -334,6 +366,60 @@ class GenreAnalysisGrpc(object):
             '/gateway.genreservice.GenreAnalysisGrpc/DeleteGenre',
             genre__service__pb2.DeleteGenreRequest.SerializeToString,
             genre__service__pb2.DeleteGenreResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def AddGenreToBook(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/gateway.genreservice.GenreAnalysisGrpc/AddGenreToBook',
+            genre__service__pb2.AddGenreToBookRequest.SerializeToString,
+            genre__service__pb2.AddGenreToBookResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def RemoveGenreFromBook(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/gateway.genreservice.GenreAnalysisGrpc/RemoveGenreFromBook',
+            genre__service__pb2.RemoveGenreFromBookRequest.SerializeToString,
+            genre__service__pb2.RemoveGenreFromBookResponse.FromString,
             options,
             channel_credentials,
             insecure,

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # to run bash or:
 # py -3 -m grpc_tools.protoc -I ..\proto --python_out=.\generated_protos --grpc_python_out=.\generated_protos ..\proto\common.proto ..\proto\book_catalog.proto 
 set -e
