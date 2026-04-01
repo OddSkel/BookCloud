@@ -35,7 +35,14 @@ def _normalize_isbn(value) -> Optional[str]:
     except Exception:
         pass
 
-    text = re.sub(r"[^0-9]", "", str(value)).strip()
+    text = str(value).strip()
+    if not text:
+        return None
+
+    if re.fullmatch(r"\d+\.0+", text):
+        text = text.split(".", 1)[0]
+
+    text = re.sub(r"[^0-9]", "", text).strip()
     if not text:
         return None
 

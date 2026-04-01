@@ -5,6 +5,7 @@ from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from threading import Lock
 from typing import List
+import re
 
 import pandas as pd
 
@@ -18,6 +19,30 @@ MAX_WORKERS = min(8, (os.cpu_count() or 4))
 # Global structures for deduplication across all files/chunks
 seen_isbns = set()
 seen_lock = Lock()
+
+
+def normalize_isbn(value) -> str | None:
+    if value is None:
+        return None
+
+    try:
+        if pd.isna(value):
+            return None
+    except Exception:
+        pass
+
+    text = str(value).strip()
+    if not text or text.lower() == "nan":
+        return None
+
+    if re.fullmatch(r"\d+\.0+", text):
+        text = text.split(".", 1)[0]
+
+    digits = re.sub(r"[^0-9]", "", text)
+    if not digits:
+        return None
+
+    return digits
 
 
 def process_chunk(chunk: pd.DataFrame) -> pd.DataFrame:
@@ -37,12 +62,10 @@ def process_chunk(chunk: pd.DataFrame) -> pd.DataFrame:
         return pd.DataFrame(columns=chunk.columns)
 
     # Normalize isbn values to avoid false duplicates
-    chunk["isbn"] = chunk["isbn"].astype(str).str.strip()
+    chunk["isbn"] = chunk["isbn"].map(normalize_isbn)
 
     # Remove null/empty values
-    chunk = chunk[chunk["isbn"].notna()]
-    chunk = chunk[chunk["isbn"] != ""]
-    chunk = chunk[chunk["isbn"].str.lower() != "nan"]
+    chunk = chunk.loc[chunk["isbn"].notna()].copy()
 
     # Deduplicate within the chunk first
     chunk = chunk.drop_duplicates(subset=["isbn"], keep="first")
@@ -102,7 +125,10 @@ def main() -> None:
 
     # Parallel processing using threads
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-        futures = {executor.submit(process_file, file_path): file_path for file_path in csv_files}
+        futures = {
+            executor.submit(process_file, file_path): file_path
+            for file_path in csv_files
+        }
 
         for future in as_completed(futures):
             file_path = futures[future]
