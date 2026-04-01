@@ -14,6 +14,10 @@ pub async fn rating_catalog_status(registry: web::Data<GrpcRegistry>) -> impl Re
     service_status_response(CatalogService::RatingCatalog, registry).await
 }
 
+pub async fn genre_analysis_status(registry: web::Data<GrpcRegistry>) -> impl Responder {
+    service_status_response(CatalogService::GenreAnalysis, registry).await
+}
+
 async fn service_status_response(
     service: CatalogService,
     registry: web::Data<GrpcRegistry>,

@@ -211,6 +211,113 @@ import_csv() {
     return 1
 }
 
+import_genre_csvs() {
+    local genre_csv="$DATA_DIR/genre.csv"
+    local book_genre_csv="$DATA_DIR/book_genre.csv"
+    local genre_create_sql="CREATE TABLE IF NOT EXISTS genre (genre_id BIGINT, name TEXT);"
+    local book_genre_create_sql="CREATE TABLE IF NOT EXISTS book_genre (book_isbn BIGINT, genre_id BIGINT);"
+    local truncate_sql="TRUNCATE TABLE book_genre, genre RESTART IDENTITY CASCADE;"
+    local genre_copy_sql="\\copy genre (genre_id, name) FROM STDIN WITH (FORMAT csv, HEADER true)"
+    local book_genre_copy_sql="\\copy book_genre (book_isbn, genre_id) FROM STDIN WITH (FORMAT csv, HEADER true)"
+
+    log "Importing genre tables from ${DATA_DIR}"
+
+    if [[ ! -f "$genre_csv" ]]; then
+        error "genre.genre: CSV file not found: ${genre_csv}"
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+        return 1
+    fi
+
+    if [[ ! -f "$book_genre_csv" ]]; then
+        error "genre.book_genre: CSV file not found: ${book_genre_csv}"
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+        return 1
+    fi
+
+    if container_running "$GENRE_CONTAINER"; then
+        if ! run_psql_in_container "$GENRE_CONTAINER" "$GENRE_DB_USER" "$GENRE_DB_PASSWORD" "$GENRE_DB_NAME" "$genre_create_sql"; then
+            error "genre.genre: failed to create table genre in container ${GENRE_CONTAINER}"
+            FAIL_COUNT=$((FAIL_COUNT + 1))
+            return 1
+        fi
+
+        if ! run_psql_in_container "$GENRE_CONTAINER" "$GENRE_DB_USER" "$GENRE_DB_PASSWORD" "$GENRE_DB_NAME" "$book_genre_create_sql"; then
+            error "genre.book_genre: failed to create table book_genre in container ${GENRE_CONTAINER}"
+            FAIL_COUNT=$((FAIL_COUNT + 1))
+            return 1
+        fi
+
+        if [[ "$TRUNCATE_BEFORE_IMPORT" == "1" ]] && ! run_psql_in_container "$GENRE_CONTAINER" "$GENRE_DB_USER" "$GENRE_DB_PASSWORD" "$GENRE_DB_NAME" "$truncate_sql"; then
+            error "genre: failed to truncate genre and book_genre in container ${GENRE_CONTAINER}"
+            FAIL_COUNT=$((FAIL_COUNT + 2))
+            return 1
+        fi
+
+        log "Importing genre.genre from ${genre_csv}"
+        if ! pipe_csv_to_container "$GENRE_CONTAINER" "$GENRE_DB_USER" "$GENRE_DB_PASSWORD" "$GENRE_DB_NAME" "$genre_copy_sql" "$genre_csv"; then
+            error "genre.genre: import failed through container ${GENRE_CONTAINER}"
+            FAIL_COUNT=$((FAIL_COUNT + 1))
+            return 1
+        fi
+        log "genre.genre: import completed through container ${GENRE_CONTAINER}"
+        SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
+
+        log "Importing genre.book_genre from ${book_genre_csv}"
+        if ! pipe_csv_to_container "$GENRE_CONTAINER" "$GENRE_DB_USER" "$GENRE_DB_PASSWORD" "$GENRE_DB_NAME" "$book_genre_copy_sql" "$book_genre_csv"; then
+            error "genre.book_genre: import failed through container ${GENRE_CONTAINER}"
+            FAIL_COUNT=$((FAIL_COUNT + 1))
+            return 1
+        fi
+        log "genre.book_genre: import completed through container ${GENRE_CONTAINER}"
+        SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
+        return 0
+    fi
+
+    warn "genre: container ${GENRE_CONTAINER} is not running. Trying host port ${GENRE_PORT}."
+
+    if ! command -v psql >/dev/null 2>&1; then
+        error "genre: psql is not available on the host and container ${GENRE_CONTAINER} is unavailable"
+        FAIL_COUNT=$((FAIL_COUNT + 2))
+        return 1
+    fi
+
+    if ! run_psql_via_host "$GENRE_PORT" "$GENRE_DB_USER" "$GENRE_DB_PASSWORD" "$GENRE_DB_NAME" "$genre_create_sql"; then
+        error "genre.genre: failed to create table genre via host port ${GENRE_PORT}"
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+        return 1
+    fi
+
+    if ! run_psql_via_host "$GENRE_PORT" "$GENRE_DB_USER" "$GENRE_DB_PASSWORD" "$GENRE_DB_NAME" "$book_genre_create_sql"; then
+        error "genre.book_genre: failed to create table book_genre via host port ${GENRE_PORT}"
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+        return 1
+    fi
+
+    if [[ "$TRUNCATE_BEFORE_IMPORT" == "1" ]] && ! run_psql_via_host "$GENRE_PORT" "$GENRE_DB_USER" "$GENRE_DB_PASSWORD" "$GENRE_DB_NAME" "$truncate_sql"; then
+        error "genre: failed to truncate genre and book_genre via host port ${GENRE_PORT}"
+        FAIL_COUNT=$((FAIL_COUNT + 2))
+        return 1
+    fi
+
+    log "Importing genre.genre from ${genre_csv}"
+    if ! pipe_csv_via_host "$GENRE_PORT" "$GENRE_DB_USER" "$GENRE_DB_PASSWORD" "$GENRE_DB_NAME" "$genre_copy_sql" "$genre_csv"; then
+        error "genre.genre: import failed via host port ${GENRE_PORT}"
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+        return 1
+    fi
+    log "genre.genre: import completed through host port ${GENRE_PORT}"
+    SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
+
+    log "Importing genre.book_genre from ${book_genre_csv}"
+    if ! pipe_csv_via_host "$GENRE_PORT" "$GENRE_DB_USER" "$GENRE_DB_PASSWORD" "$GENRE_DB_NAME" "$book_genre_copy_sql" "$book_genre_csv"; then
+        error "genre.book_genre: import failed via host port ${GENRE_PORT}"
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+        return 1
+    fi
+    log "genre.book_genre: import completed through host port ${GENRE_PORT}"
+    SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
+}
+
 main() {
     log "CSV directory: ${DATA_DIR}"
     log "Imports continue even if one container or file fails."
@@ -251,29 +358,7 @@ main() {
         "isbn, name, url, summary_clean, pub_year" \
         "$DATA_DIR/book.csv"
 
-    import_csv \
-        "genre.genre" \
-        "$GENRE_CONTAINER" \
-        "$GENRE_PORT" \
-        "$GENRE_DB_NAME" \
-        "$GENRE_DB_USER" \
-        "$GENRE_DB_PASSWORD" \
-        "genre" \
-        "genre_id BIGINT, name TEXT" \
-        "genre_id, name" \
-        "$DATA_DIR/genre.csv"
-
-    import_csv \
-        "genre.book_genre" \
-        "$GENRE_CONTAINER" \
-        "$GENRE_PORT" \
-        "$GENRE_DB_NAME" \
-        "$GENRE_DB_USER" \
-        "$GENRE_DB_PASSWORD" \
-        "book_genre" \
-        "book_isbn BIGINT, genre_id BIGINT" \
-        "book_isbn, genre_id" \
-        "$DATA_DIR/book_genre.csv"
+    import_genre_csvs
 
     import_csv \
         "rating.rating" \
