@@ -1,14 +1,8 @@
-use actix_web::{web, HttpResponse, Responder};
+use actix_web::{HttpResponse, Responder, web};
 use serde::Deserialize;
 use serde_json::json;
 
 use crate::grpc::{GrpcRegistry, RatingAddPayload};
-
-#[derive(Deserialize)]
-pub struct UpdateRatingQuery {
-    pub num_ratings: i64,
-    pub star_rating: f64,
-}
 
 #[derive(Deserialize)]
 pub struct GetRatingsQuery {
@@ -43,7 +37,10 @@ pub async fn add_rating(
     path: web::Path<String>,
     body: web::Json<RatingAddPayload>,
 ) -> impl Responder {
-    match registry.add_rating(&path.into_inner(), body.into_inner()).await {
+    match registry
+        .add_rating(&path.into_inner(), body.into_inner())
+        .await
+    {
         Ok(rating) => HttpResponse::Created().json(rating),
         Err(e) => HttpResponse::UnprocessableEntity().json(json!({ "error": e })),
     }
@@ -52,12 +49,12 @@ pub async fn add_rating(
 pub async fn update_rating(
     registry: web::Data<GrpcRegistry>,
     path: web::Path<String>,
-    query: web::Query<UpdateRatingQuery>,
+    body: web::Json<RatingAddPayload>,
 ) -> impl Responder {
-    let q = query.into_inner();
+    let payload = body.into_inner();
 
     match registry
-        .update_rating(&path.into_inner(), q.num_ratings, q.star_rating)
+        .update_rating(&path.into_inner(), payload.num_ratings, payload.star_rating)
         .await
     {
         Ok(ratings) => HttpResponse::Ok().json(ratings),
