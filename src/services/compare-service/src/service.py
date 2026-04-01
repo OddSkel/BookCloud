@@ -72,6 +72,7 @@ class CompareService(compare_service_pb2_grpc.CompareServiceGrpcServicer):
                 self.config.book_catalog_grpc_url,
                 self.config.rating_catalog_grpc_url,
                 compare_filters_from_proto(filters),
+                self.config,
             )
         except UnsupportedFilterError as exc:
             await context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(exc))

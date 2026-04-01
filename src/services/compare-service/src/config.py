@@ -10,6 +10,9 @@ class AppConfig:
     book_catalog_grpc_url: str
     author_catalog_grpc_url: str
     rating_catalog_grpc_url: str
+    book_page_size: int
+    rating_page_size: int
+    parallel_requests: int
 
     @classmethod
     def from_env(cls) -> "AppConfig":
@@ -29,6 +32,9 @@ class AppConfig:
                 "RATING_CATALOG_GRPC_URL",
                 "http://rating-catalog:50053",
             ),
+            book_page_size=int(os.getenv("BOOK_PAGE_SIZE", "5000")),
+            rating_page_size=int(os.getenv("RATING_PAGE_SIZE", "10000")),
+            parallel_requests=int(os.getenv("PARALLEL_REQUESTS", "8")),
         )
 
     @property

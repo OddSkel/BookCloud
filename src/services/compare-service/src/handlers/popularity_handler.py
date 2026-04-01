@@ -1,8 +1,11 @@
+from array import array
 from collections import defaultdict
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
+import heapq
 import math
+from itertools import count
 
-from src.grpc import fetch_all_books, fetch_ratings
+from src.grpc import iter_book_pages, iter_rating_pages
 from src.models.popularity import (
     BookPQItem,
     ClassicModernComparisonResponse,
@@ -31,21 +34,48 @@ class CatalogBookRecord:
     genres: list[str]
 
 
+@dataclass
+class YearAccumulator:
+    books_published: int = 0
+    rated_books: int = 0
+    star_sum: float = 0.0
+    num_ratings_sum: int = 0
+
+
+@dataclass
+class EraAccumulator:
+    n_books: int = 0
+    rated_books: int = 0
+    star_sum: float = 0.0
+    num_ratings_sum: int = 0
+
+
 async def get_popular_low_rated(
     book_catalog_grpc_url: str,
     rating_catalog_grpc_url: str,
     filters: PopularityFilters,
+    config,
 ) -> PaginatedBookPQResponse:
     _validate_catalog_dependent_filters(filters)
 
-    records = await _load_catalog_snapshot(book_catalog_grpc_url, rating_catalog_grpc_url)
-    items = [
-        _record_to_book_item(record)
-        for record in records
-        if _matches_listing_filters(record, filters) and record.star_rating is not None
-    ]
+    ratings_by_isbn = await _load_ratings_by_isbn(rating_catalog_grpc_url, config)
+    total, min_popularity, max_popularity = await _scan_ranking_stats(
+        book_catalog_grpc_url,
+        ratings_by_isbn,
+        filters,
+        config,
+    )
 
-    _apply_discrepancy_scores(items)
+    items = await _collect_ranked_items(
+        book_catalog_grpc_url,
+        ratings_by_isbn,
+        filters,
+        config,
+        min_popularity,
+        max_popularity,
+        "popular",
+    )
+
     items.sort(
         key=lambda item: (
             -(item.discrepancy_score or 0.0),
@@ -53,24 +83,35 @@ async def get_popular_low_rated(
             item.star_rating or 0.0,
         )
     )
-    return _paginate_book_items(items, filters)
+    return _build_ranked_response(items, total, filters)
 
 
 async def get_hidden_gems(
     book_catalog_grpc_url: str,
     rating_catalog_grpc_url: str,
     filters: PopularityFilters,
+    config,
 ) -> PaginatedBookPQResponse:
     _validate_catalog_dependent_filters(filters)
 
-    records = await _load_catalog_snapshot(book_catalog_grpc_url, rating_catalog_grpc_url)
-    items = [
-        _record_to_book_item(record)
-        for record in records
-        if _matches_listing_filters(record, filters) and record.star_rating is not None
-    ]
+    ratings_by_isbn = await _load_ratings_by_isbn(rating_catalog_grpc_url, config)
+    total, min_popularity, max_popularity = await _scan_ranking_stats(
+        book_catalog_grpc_url,
+        ratings_by_isbn,
+        filters,
+        config,
+    )
 
-    _apply_discrepancy_scores(items)
+    items = await _collect_ranked_items(
+        book_catalog_grpc_url,
+        ratings_by_isbn,
+        filters,
+        config,
+        min_popularity,
+        max_popularity,
+        "hidden",
+    )
+
     items.sort(
         key=lambda item: (
             item.discrepancy_score or 0.0,
@@ -78,13 +119,14 @@ async def get_hidden_gems(
             item.num_ratings or 0,
         )
     )
-    return _paginate_book_items(items, filters)
+    return _build_ranked_response(items, total, filters)
 
 
 async def get_correlation(
     book_catalog_grpc_url: str,
     rating_catalog_grpc_url: str,
     filters: PopularityFilters,
+    config,
 ) -> CorrelationResponse:
     _validate_catalog_dependent_filters(filters)
 
@@ -94,26 +136,28 @@ async def get_correlation(
             "Unsupported correlation method. Use pearson or spearman."
         )
 
-    records = await _load_catalog_snapshot(book_catalog_grpc_url, rating_catalog_grpc_url)
-    filtered = [
-        record
-        for record in records
-        if _matches_correlation_filters(record, filters) and record.star_rating is not None
-    ]
+    ratings_by_isbn = await _load_ratings_by_isbn(rating_catalog_grpc_url, config)
 
-    star_ratings = [record.star_rating for record in filtered if record.star_rating is not None]
-    num_ratings = [float(record.num_ratings) for record in filtered if record.num_ratings is not None]
-    sample_size = min(len(star_ratings), len(num_ratings))
-
-    if sample_size < 2:
-        correlation = None
-        interpretation = "Insufficient data to compute correlation"
+    if method == "pearson":
+        sample_size, correlation = await _compute_pearson_correlation(
+            book_catalog_grpc_url,
+            ratings_by_isbn,
+            filters,
+            config,
+        )
     else:
-        if method == "pearson":
-            correlation = _pearson_correlation(star_ratings, num_ratings)
-        else:
-            correlation = _spearman_correlation(star_ratings, num_ratings)
-        interpretation = _interpret_correlation(correlation)
+        sample_size, correlation = await _compute_spearman_correlation(
+            book_catalog_grpc_url,
+            ratings_by_isbn,
+            filters,
+            config,
+        )
+
+    interpretation = (
+        "Insufficient data to compute correlation"
+        if sample_size < 2
+        else _interpret_correlation(correlation)
+    )
 
     return CorrelationResponse(
         method=method,
@@ -127,33 +171,40 @@ async def get_publishing_growth(
     book_catalog_grpc_url: str,
     rating_catalog_grpc_url: str,
     filters: PopularityFilters,
+    config,
 ) -> PublishingGrowthResponse:
     _validate_catalog_dependent_filters(filters)
 
-    records = await _load_catalog_snapshot(book_catalog_grpc_url, rating_catalog_grpc_url)
-    filtered = [
-        record for record in records if _matches_publishing_growth_filters(record, filters)
-    ]
+    ratings_by_isbn = await _load_ratings_by_isbn(rating_catalog_grpc_url, config)
+    grouped: dict[int, YearAccumulator] = defaultdict(YearAccumulator)
 
-    grouped: dict[int, list[CatalogBookRecord]] = defaultdict(list)
-    for record in filtered:
+    async for record in _iter_catalog_records(book_catalog_grpc_url, ratings_by_isbn, config):
+        if not _matches_publishing_growth_filters(record, filters):
+            continue
         if record.pub_year is None:
             continue
-        grouped[record.pub_year].append(record)
+
+        accumulator = grouped[record.pub_year]
+        accumulator.books_published += 1
+        if record.star_rating is not None:
+            accumulator.rated_books += 1
+            accumulator.star_sum += record.star_rating
+            accumulator.num_ratings_sum += record.num_ratings or 0
 
     items: list[PublishingGrowthItem] = []
     for pub_year in sorted(grouped):
-        year_records = grouped[pub_year]
-        rated_records = [record for record in year_records if record.star_rating is not None]
+        accumulator = grouped[pub_year]
         items.append(
             PublishingGrowthItem(
                 pub_year=pub_year,
-                books_published=len(year_records),
-                avg_star_rating=_rounded_average(
-                    [record.star_rating for record in rated_records if record.star_rating is not None]
+                books_published=accumulator.books_published,
+                avg_star_rating=(
+                    round(accumulator.star_sum / accumulator.rated_books, 6)
+                    if accumulator.rated_books
+                    else None
                 ),
-                sum_num_ratings=_sum_or_none(
-                    [record.num_ratings for record in rated_records if record.num_ratings is not None]
+                sum_num_ratings=(
+                    accumulator.num_ratings_sum if accumulator.rated_books else None
                 ),
             )
         )
@@ -173,6 +224,7 @@ async def get_eras(
     book_catalog_grpc_url: str,
     rating_catalog_grpc_url: str,
     filters: PopularityFilters,
+    config,
 ) -> ClassicModernComparisonResponse:
     _validate_catalog_dependent_filters(filters)
 
@@ -183,54 +235,188 @@ async def get_eras(
             "classic_threshold must be smaller than modern_threshold."
         )
 
-    records = await _load_catalog_snapshot(book_catalog_grpc_url, rating_catalog_grpc_url)
-    filtered = [record for record in records if _matches_eras_filters(record, filters)]
+    ratings_by_isbn = await _load_ratings_by_isbn(rating_catalog_grpc_url, config)
+    classic = EraAccumulator()
+    modern = EraAccumulator()
 
-    classic_records = [
-        record
-        for record in filtered
-        if record.pub_year is not None and record.pub_year <= classic_threshold
-    ]
-    modern_records = [
-        record
-        for record in filtered
-        if record.pub_year is not None and record.pub_year >= modern_threshold
-    ]
+    async for record in _iter_catalog_records(book_catalog_grpc_url, ratings_by_isbn, config):
+        if not _matches_eras_filters(record, filters):
+            continue
+        if record.pub_year is None:
+            continue
+
+        if record.pub_year <= classic_threshold:
+            _accumulate_era(classic, record)
+        if record.pub_year >= modern_threshold:
+            _accumulate_era(modern, record)
 
     return ClassicModernComparisonResponse(
         classic_threshold=classic_threshold,
         modern_threshold=modern_threshold,
         items=[
-            _build_era_item("classic", classic_records),
-            _build_era_item("modern", modern_records),
+            _build_era_item("classic", classic),
+            _build_era_item("modern", modern),
         ],
     )
 
 
-async def _load_catalog_snapshot(
-    book_catalog_grpc_url: str,
-    rating_catalog_grpc_url: str,
-) -> list[CatalogBookRecord]:
-    books = await fetch_all_books(book_catalog_grpc_url)
-    ratings = await fetch_ratings(rating_catalog_grpc_url)
-    ratings_by_isbn = {int(rating.book_isbn): rating for rating in ratings}
+async def _load_ratings_by_isbn(rating_catalog_grpc_url: str, config) -> dict[int, tuple[int, float]]:
+    ratings_by_isbn: dict[int, tuple[int, float]] = {}
 
-    return [
-        CatalogBookRecord(
-            isbn=int(book.isbn),
-            name=book.name,
-            pub_year=book.pub_year if book.pub_year != 0 else None,
-            star_rating=ratings_by_isbn.get(int(book.isbn)).star_rating
-            if int(book.isbn) in ratings_by_isbn
-            else None,
-            num_ratings=ratings_by_isbn.get(int(book.isbn)).num_ratings
-            if int(book.isbn) in ratings_by_isbn
-            else None,
-            authors=[],
-            genres=[],
+    async for ratings in iter_rating_pages(
+        rating_catalog_grpc_url,
+        page_size=max(config.rating_page_size, 1),
+        parallelism=max(config.parallel_requests, 1),
+    ):
+        for rating in ratings:
+            ratings_by_isbn[int(rating.book_isbn)] = (
+                rating.num_ratings,
+                rating.star_rating,
+            )
+
+    return ratings_by_isbn
+
+
+async def _iter_catalog_records(book_catalog_grpc_url: str, ratings_by_isbn: dict[int, tuple[int, float]], config):
+    async for books in iter_book_pages(
+        book_catalog_grpc_url,
+        page_size=max(config.book_page_size, 1),
+        parallelism=max(config.parallel_requests, 1),
+    ):
+        for book in books:
+            isbn = int(book.isbn)
+            rating = ratings_by_isbn.get(isbn)
+            yield CatalogBookRecord(
+                isbn=isbn,
+                name=book.name,
+                pub_year=book.pub_year if book.pub_year != 0 else None,
+                star_rating=rating[1] if rating else None,
+                num_ratings=rating[0] if rating else None,
+                authors=[],
+                genres=[],
+            )
+
+
+async def _scan_ranking_stats(
+    book_catalog_grpc_url: str,
+    ratings_by_isbn: dict[int, tuple[int, float]],
+    filters: PopularityFilters,
+    config,
+) -> tuple[int, int, int]:
+    total = 0
+    min_popularity: int | None = None
+    max_popularity: int | None = None
+
+    async for record in _iter_catalog_records(book_catalog_grpc_url, ratings_by_isbn, config):
+        if not _matches_listing_filters(record, filters):
+            continue
+
+        popularity = record.num_ratings or 0
+        total += 1
+        min_popularity = popularity if min_popularity is None else min(min_popularity, popularity)
+        max_popularity = popularity if max_popularity is None else max(max_popularity, popularity)
+
+    return total, min_popularity or 0, max_popularity or 0
+
+
+async def _collect_ranked_items(
+    book_catalog_grpc_url: str,
+    ratings_by_isbn: dict[int, tuple[int, float]],
+    filters: PopularityFilters,
+    config,
+    min_popularity: int,
+    max_popularity: int,
+    mode: str,
+) -> list[BookPQItem]:
+    page = max(filters.page, 1)
+    page_size = max(filters.page_size, 1)
+    keep_limit = page * page_size
+    ranked_heap: list[tuple[tuple[float, float, float], int, BookPQItem]] = []
+    serial = count()
+
+    async for record in _iter_catalog_records(book_catalog_grpc_url, ratings_by_isbn, config):
+        if not _matches_listing_filters(record, filters):
+            continue
+
+        item = _record_to_book_item(
+            record,
+            discrepancy_score=_compute_discrepancy_score(
+                record.num_ratings or 0,
+                record.star_rating or 0.0,
+                min_popularity,
+                max_popularity,
+            ),
         )
-        for book in books
-    ]
+        goodness = (
+            _popular_goodness(item) if mode == "popular" else _hidden_goodness(item)
+        )
+        _push_ranked_item(ranked_heap, keep_limit, goodness, next(serial), item)
+
+    return [entry[2] for entry in ranked_heap]
+
+
+async def _compute_pearson_correlation(
+    book_catalog_grpc_url: str,
+    ratings_by_isbn: dict[int, tuple[int, float]],
+    filters: PopularityFilters,
+    config,
+) -> tuple[int, float | None]:
+    sample_size = 0
+    sum_x = 0.0
+    sum_y = 0.0
+    sum_xy = 0.0
+    sum_x_squared = 0.0
+    sum_y_squared = 0.0
+
+    async for record in _iter_catalog_records(book_catalog_grpc_url, ratings_by_isbn, config):
+        if not _matches_correlation_filters(record, filters):
+            continue
+
+        x = record.star_rating or 0.0
+        y = float(record.num_ratings or 0)
+        sample_size += 1
+        sum_x += x
+        sum_y += y
+        sum_xy += x * y
+        sum_x_squared += x * x
+        sum_y_squared += y * y
+
+    if sample_size < 2:
+        return sample_size, None
+
+    numerator = sample_size * sum_xy - sum_x * sum_y
+    denominator_left = sample_size * sum_x_squared - sum_x * sum_x
+    denominator_right = sample_size * sum_y_squared - sum_y * sum_y
+    denominator = math.sqrt(max(denominator_left, 0.0) * max(denominator_right, 0.0))
+
+    if denominator == 0:
+        return sample_size, 0.0
+
+    return sample_size, numerator / denominator
+
+
+async def _compute_spearman_correlation(
+    book_catalog_grpc_url: str,
+    ratings_by_isbn: dict[int, tuple[int, float]],
+    filters: PopularityFilters,
+    config,
+) -> tuple[int, float | None]:
+    star_ratings = array("d")
+    num_ratings = array("d")
+
+    async for record in _iter_catalog_records(book_catalog_grpc_url, ratings_by_isbn, config):
+        if not _matches_correlation_filters(record, filters):
+            continue
+
+        star_ratings.append(record.star_rating or 0.0)
+        num_ratings.append(float(record.num_ratings or 0))
+
+    sample_size = len(star_ratings)
+    if sample_size < 2:
+        return sample_size, None
+
+    correlation = _spearman_correlation(star_ratings, num_ratings)
+    return sample_size, correlation
 
 
 # ##############################
@@ -336,23 +522,27 @@ def _matches_pub_year_filters(record: CatalogBookRecord, filters: PopularityFilt
     return True
 
 
-def _record_to_book_item(record: CatalogBookRecord) -> BookPQItem:
+def _record_to_book_item(
+    record: CatalogBookRecord,
+    discrepancy_score: float | None = None,
+) -> BookPQItem:
     return BookPQItem(
         isbn=record.isbn,
         name=record.name,
         pub_year=record.pub_year,
         star_rating=record.star_rating,
         num_ratings=record.num_ratings,
-        discrepancy_score=None,
+        discrepancy_score=discrepancy_score,
         genres=list(record.genres),
         authors=list(record.authors),
     )
 
 
-def _paginate_book_items(
-    items: list[BookPQItem], filters: PopularityFilters
+def _build_ranked_response(
+    items: list[BookPQItem],
+    total: int,
+    filters: PopularityFilters,
 ) -> PaginatedBookPQResponse:
-    total = len(items)
     page = max(filters.page, 1)
     page_size = max(filters.page_size, 1)
     total_pages = math.ceil(total / page_size) if total else 0
@@ -368,23 +558,50 @@ def _paginate_book_items(
     )
 
 
-def _apply_discrepancy_scores(items: list[BookPQItem]) -> None:
-    if not items:
+def _compute_discrepancy_score(
+    num_ratings: int,
+    star_rating: float,
+    min_popularity: int,
+    max_popularity: int,
+) -> float:
+    popularity_norm = _normalize(num_ratings, min_popularity, max_popularity)
+    rating_norm = star_rating / 5.0
+    return round(popularity_norm - rating_norm, 6)
+
+
+def _push_ranked_item(
+    ranked_heap: list[tuple[tuple[float, float, float], int, BookPQItem]],
+    keep_limit: int,
+    goodness: tuple[float, float, float],
+    serial: int,
+    item: BookPQItem,
+) -> None:
+    if keep_limit <= 0:
         return
 
-    popularities = [item.num_ratings or 0 for item in items]
-    min_pop = min(popularities)
-    max_pop = max(popularities)
+    entry = (goodness, serial, item)
+    if len(ranked_heap) < keep_limit:
+        heapq.heappush(ranked_heap, entry)
+        return
 
-    updated_items = []
-    for item in items:
-        popularity_norm = _normalize(item.num_ratings or 0, min_pop, max_pop)
-        rating_norm = (item.star_rating or 0.0) / 5.0
-        updated_items.append(
-            replace(item, discrepancy_score=round(popularity_norm - rating_norm, 6))
-        )
+    if entry > ranked_heap[0]:
+        heapq.heapreplace(ranked_heap, entry)
 
-    items[:] = updated_items
+
+def _popular_goodness(item: BookPQItem) -> tuple[float, float, float]:
+    return (
+        item.discrepancy_score or 0.0,
+        float(item.num_ratings or 0),
+        -(item.star_rating or 0.0),
+    )
+
+
+def _hidden_goodness(item: BookPQItem) -> tuple[float, float, float]:
+    return (
+        -(item.discrepancy_score or 0.0),
+        item.star_rating or 0.0,
+        -float(item.num_ratings or 0),
+    )
 
 
 def _normalize(value: int, minimum: int, maximum: int) -> float:
@@ -393,7 +610,11 @@ def _normalize(value: int, minimum: int, maximum: int) -> float:
     return (value - minimum) / (maximum - minimum)
 
 
-def _pearson_correlation(xs: list[float], ys: list[float]) -> float | None:
+def _spearman_correlation(xs, ys) -> float | None:
+    return _pearson_from_sequences(_rank_values(xs), _rank_values(ys))
+
+
+def _pearson_from_sequences(xs, ys) -> float | None:
     if len(xs) != len(ys) or len(xs) < 2:
         return None
 
@@ -410,11 +631,7 @@ def _pearson_correlation(xs: list[float], ys: list[float]) -> float | None:
     return numerator / denominator
 
 
-def _spearman_correlation(xs: list[float], ys: list[float]) -> float | None:
-    return _pearson_correlation(_rank_values(xs), _rank_values(ys))
-
-
-def _rank_values(values: list[float]) -> list[float]:
+def _rank_values(values) -> list[float]:
     ordered = sorted(enumerate(values), key=lambda pair: pair[1])
     ranks = [0.0] * len(values)
     index = 0
@@ -459,30 +676,29 @@ def _interpret_correlation(correlation: float | None) -> str:
     return f"{intensity} {direction} correlation"
 
 
-def _build_era_item(era: str, records: list[CatalogBookRecord]) -> ClassicModernItem:
-    rated_records = [record for record in records if record.star_rating is not None]
+def _accumulate_era(accumulator: EraAccumulator, record: CatalogBookRecord) -> None:
+    accumulator.n_books += 1
+    if record.star_rating is not None:
+        accumulator.rated_books += 1
+        accumulator.star_sum += record.star_rating
+        accumulator.num_ratings_sum += record.num_ratings or 0
+
+
+def _build_era_item(era: str, accumulator: EraAccumulator) -> ClassicModernItem:
     return ClassicModernItem(
         era=era,
-        n_books=len(records),
-        avg_star_rating=_rounded_average(
-            [record.star_rating for record in rated_records if record.star_rating is not None]
+        n_books=accumulator.n_books,
+        avg_star_rating=(
+            round(accumulator.star_sum / accumulator.rated_books, 6)
+            if accumulator.rated_books
+            else None
         ),
-        avg_num_ratings=_rounded_average(
-            [float(record.num_ratings) for record in rated_records if record.num_ratings is not None]
+        avg_num_ratings=(
+            round(accumulator.num_ratings_sum / accumulator.rated_books, 6)
+            if accumulator.rated_books
+            else None
         ),
-        sum_num_ratings=_sum_or_none(
-            [record.num_ratings for record in rated_records if record.num_ratings is not None]
+        sum_num_ratings=(
+            accumulator.num_ratings_sum if accumulator.rated_books else None
         ),
     )
-
-
-def _rounded_average(values: list[float]) -> float | None:
-    if not values:
-        return None
-    return round(sum(values) / len(values), 6)
-
-
-def _sum_or_none(values: list[int]) -> int | None:
-    if not values:
-        return None
-    return sum(values)
