@@ -9,7 +9,6 @@ COPY ./proto ./proto
 COPY ./src/genre_analysis_server.py .
 COPY ./src/generate_proto.sh .
 
-
 RUN apt-get update \
  && apt-get install -y --no-install-recommends bash dos2unix \
  && rm -rf /var/lib/apt/lists/* \

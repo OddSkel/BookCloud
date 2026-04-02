@@ -17,27 +17,6 @@ RUN apt-get update \
  && PROTO_ROOT="/app" bash generate_proto.sh \
  && cp generated_protos/*.py .
 
-FROM debian:bookworm-slim AS runtime
-
-WORKDIR /app
-
-RUN apt-get update && apt-get install -y \
-    ca-certificates \
-    libssl3 \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN useradd -ms /bin/bash appuser
-
-COPY --from=builder /app/target/release/book-catalog /usr/local/bin/book-catalog
-
-RUN chown appuser:appuser /usr/local/bin/book-catalog
-
-USER appuser
-
-RUN sed -i 's/\r$//' generate_proto.sh \
- && chmod +x generate_proto.sh \
- && PROTO_ROOT=/app /bin/sh generate_proto.sh
-
 EXPOSE 50051
 
 CMD ["python", "book_catalog_server.py"]
