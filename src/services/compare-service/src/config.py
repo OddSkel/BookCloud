@@ -10,9 +10,12 @@ class AppConfig:
     book_catalog_grpc_url: str
     author_catalog_grpc_url: str
     rating_catalog_grpc_url: str
+    genre_analysis_grpc_url: str
     book_page_size: int
     rating_page_size: int
+    genre_page_size: int
     parallel_requests: int
+    cache_ttl_seconds: int
 
     @classmethod
     def from_env(cls) -> "AppConfig":
@@ -32,9 +35,15 @@ class AppConfig:
                 "RATING_CATALOG_GRPC_URL",
                 "http://rating-catalog:50053",
             ),
+            genre_analysis_grpc_url=os.getenv(
+                "GENRE_ANALYSIS_GRPC_URL",
+                "http://genre-analysis-service:50055",
+            ),
             book_page_size=int(os.getenv("BOOK_PAGE_SIZE", "5000")),
             rating_page_size=int(os.getenv("RATING_PAGE_SIZE", "10000")),
+            genre_page_size=int(os.getenv("GENRE_PAGE_SIZE", "10000")),
             parallel_requests=int(os.getenv("PARALLEL_REQUESTS", "8")),
+            cache_ttl_seconds=int(os.getenv("CACHE_TTL_SECONDS", "60")),
         )
 
     @property

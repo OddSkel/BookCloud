@@ -33,6 +33,25 @@ message GetGenresResponse {
   int32 total_pages     = 5;
 }
 
+message GetBookGenresRequest {
+  int32 page_num = 1;
+  int32 page_size = 2;
+}
+
+message BookGenreInfo {
+  int64 isbn = 1;
+  int64 genre_id = 2;
+  string genre_name = 3;
+}
+
+message GetBookGenresResponse {
+  repeated BookGenreInfo items = 1;
+  int32 page_num = 2;
+  int32 page_size = 3;
+  int32 total_items = 4;
+  int32 total_pages = 5;
+}
+
 message GetGenreRequest { int64 genre_id = 1; }
 message GetGenreResponse { Genre genre = 1; }
 
@@ -83,7 +102,9 @@ message GenrePopularityResponse {
 }
 
 service GenreAnalysisGrpc {
+  rpc HealthCheck(gateway.common.HealthCheckRequest) returns (gateway.common.HealthCheckResponse);
   rpc GetGenres(GetGenresRequest) returns (GetGenresResponse);
+  rpc GetBookGenres(GetBookGenresRequest) returns (GetBookGenresResponse);
   rpc AddGenre(AddGenreRequest) returns (AddGenreResponse);
   rpc GetGenre(GetGenreRequest) returns (GetGenreResponse);
   rpc UpdateGenre(UpdateGenreRequest) returns (UpdateGenreResponse);
@@ -93,4 +114,3 @@ service GenreAnalysisGrpc {
   rpc GetGenreGrowth(GenreGrowthRequest) returns (GenreGrowthResponse);
   rpc GetGenrePopularity(GenrePopularityRequest) returns (GenrePopularityResponse);
 }
-

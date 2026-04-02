@@ -2,6 +2,7 @@ import logging
 
 import grpc
 
+from src.catalog_cache import CatalogDataCache
 from src.handlers.popularity_handler import (
     UnsupportedFilterError,
     get_correlation,
@@ -23,6 +24,10 @@ LOGGER = logging.getLogger(__name__)
 class CompareService(compare_service_pb2_grpc.CompareServiceGrpcServicer):
     def __init__(self, config) -> None:
         self.config = config
+        self.catalog_cache = CatalogDataCache(config)
+
+    async def close(self) -> None:
+        await self.catalog_cache.close()
 
     async def GetPopularLowRated(self, request, context):
         return await self._handle_json_rpc(
@@ -66,16 +71,17 @@ class CompareService(compare_service_pb2_grpc.CompareServiceGrpcServicer):
 
     async def _handle_json_rpc(self, context, request, handler, operation_name: str):
         filters = request.filters if request.HasField("filters") else None
+        response = None
 
         try:
             response = await handler(
-                self.config.book_catalog_grpc_url,
-                self.config.rating_catalog_grpc_url,
+                self.catalog_cache,
                 compare_filters_from_proto(filters),
                 self.config,
             )
         except UnsupportedFilterError as exc:
             await context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(exc))
+            raise AssertionError("context.abort should terminate the RPC")
         except grpc.RpcError as exc:
             LOGGER.exception("upstream gRPC error while computing %s", operation_name)
             details = exc.details() or exc.code().name
@@ -83,10 +89,10 @@ class CompareService(compare_service_pb2_grpc.CompareServiceGrpcServicer):
                 grpc.StatusCode.UNAVAILABLE,
                 f"Failed to fetch upstream catalog data: {details}",
             )
+            raise AssertionError("context.abort should terminate the RPC")
         except Exception as exc:
             LOGGER.exception("unexpected compare-service failure in %s", operation_name)
             await context.abort(grpc.StatusCode.INTERNAL, str(exc))
+            raise AssertionError("context.abort should terminate the RPC")
 
-        return compare_service_pb2.JsonPayloadResponse(
-            json_payload=response.to_json()
-        )
+        return compare_service_pb2.JsonPayloadResponse(json_payload=response.to_json())

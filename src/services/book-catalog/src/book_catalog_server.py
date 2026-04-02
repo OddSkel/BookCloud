@@ -1,13 +1,19 @@
 import os
-import uuid
+import sys
 import logging
 import asyncio
+
+# Ensure generated_protos directory is on sys.path to support generated files
+# that use unqualified imports like `import common_pb2`.
+ROOT_DIR = os.path.dirname(__file__)
+sys.path.insert(0, ROOT_DIR)
+sys.path.insert(0, os.path.join(ROOT_DIR, "generated_protos"))
 
 import grpc
 import asyncpg
 from dotenv import load_dotenv
 
-from book_catalog_pb2 import (
+from generated_protos.book_catalog_pb2 import (
     Book,
     GetBooksResponse,
     GetBookResponse,
@@ -15,8 +21,8 @@ from book_catalog_pb2 import (
     UpdateBookResponse,
     DeleteBookResponse,
 )
-import book_catalog_pb2_grpc
-import common_pb2
+import generated_protos.book_catalog_pb2_grpc
+import generated_protos.common_pb2
 
 
 def book_row_to_pb(row) -> Book:
@@ -29,13 +35,10 @@ def book_row_to_pb(row) -> Book:
     )
 
 
-class BookCatalogService(book_catalog_pb2_grpc.BookCatalogGrpcServicer):
+class BookCatalogService(generated_protos.book_catalog_pb2_grpc.BookCatalogGrpcServicer):
     def __init__(self, pool: asyncpg.pool.Pool, service_name: str):
         self.pool = pool
         self.service_name = service_name
-
-    async def HealthCheck(self, request, context):
-        return common_pb2.HealthCheckResponse(service=self.service_name, status="ok")
 
     async def GetBooks(self, request, context):
         page_num = request.page_num if request.page_num > 0 else 1
@@ -154,7 +157,7 @@ async def serve():
     pool = await create_pool()
 
     server = grpc.aio.server()
-    book_catalog_pb2_grpc.add_BookCatalogGrpcServicer_to_server(
+    generated_protos.book_catalog_pb2_grpc.add_BookCatalogGrpcServicer_to_server(
         BookCatalogService(pool=pool, service_name=service_name),
         server,
     )

@@ -46,6 +46,12 @@ use contracts::{
         GetPopularLowRatedRequest, GetPublishingGrowthRequest, JsonPayloadResponse,
         compare_service_grpc_client::CompareServiceGrpcClient,
     },
+    genre_service::{
+        AddGenreRequest, DeleteGenreRequest, GenreGrowthRequest, GenrePopularityRequest,
+        GenreSort as ProtoGenreSort, GetGenreRequest as GetGenreAnalysisRequest,
+        GetGenresRequest, UpdateGenreRequest,
+        genre_analysis_grpc_client::GenreAnalysisGrpcClient,
+    },
     rating_catalog::{
         AddRatingRequest, DeleteRatingRequest, GetRatingRequest, GetRatingsRequest, RatingAdd,
         UpdateRatingRequest, rating_catalog_grpc_client::RatingCatalogGrpcClient,
@@ -80,21 +86,14 @@ pub struct BookAddPayload {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct AuthorModel {
-    pub id: String,
+    pub id: i32,
     pub name: String,
-    pub gender: String,
-    pub year_born: i32,
-    pub year_death: Option<i32>,
-    pub books_published: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct AuthorAddPayload {
+    pub id: i32,
     pub name: String,
-    pub gender: String,
-    pub year_born: i32,
-    pub year_death: Option<i32>,
-    pub books_published: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -108,6 +107,42 @@ pub struct RatingModel {
 pub struct RatingAddPayload {
     pub num_ratings: i64,
     pub star_rating: f64,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct GenreModel {
+    pub genre_id: i64,
+    pub name: String,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct GenreAddPayload {
+    pub name: String,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct GenreTrendPointModel {
+    pub timestamp: String,
+    pub rating: f64,
+    pub popularity: i32,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct GenreGrowthModel {
+    pub genre_id: i64,
+    pub genre: String,
+    pub points: Vec<GenreTrendPointModel>,
+    pub growth_rate: f64,
+    pub metric: String,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct GenrePopularityModel {
+    pub genre_id: i64,
+    pub genre: String,
+    pub points: Vec<GenreTrendPointModel>,
+    pub trend: f64,
+    pub metric: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default)]
@@ -390,11 +425,17 @@ impl GrpcRegistry {
 
     // Authors
 
-    pub async fn get_authors(&self) -> Result<Vec<AuthorModel>, String> {
-        let mut c = author_client(self.endpoint(CatalogService::AuthorCatalog)).await?;
-        let r = c
-            .get_authors(Request::new(GetAuthorsRequest {}))
-            .await
+    pub async fn get_authors(
+        &self,
+        page: Option<i64>,
+        page_size: Option<i64>) -> Result<Vec<AuthorModel>, String> {
+        let endpoint = self.endpoint(CatalogService::AuthorCatalog);
+        println!("DEBUG: Calling get_authors on endpoint: {}", endpoint);
+        let mut c = author_client(endpoint).await?;
+        let result = c
+            .get_authors(Request::new(GetAuthorsRequest {page, page_size})).await;
+        println!("DEBUG: get_authors result: {:?}", result);
+        let r = result
             .map(|r| r.into_inner())
             .map_err(|e| e.to_string())?;
         Ok(r.authors.into_iter().map(author_to_model).collect())
@@ -417,16 +458,12 @@ impl GrpcRegistry {
     pub async fn add_author(&self, p: AuthorAddPayload) -> Result<AuthorModel, String> {
         let mut c = author_client(self.endpoint(CatalogService::AuthorCatalog)).await?;
         let r = c
-            .add_author(Request::new(AddAuthorRequest {
-                author: Some(AuthorAdd {
+            .add_author(
+                Request::new(AddAuthorRequest {
+                    id: p.id,
                     name: p.name,
-                    gender: p.gender,
-                    year_born: p.year_born,
-                    year_death: p.year_death,
-                    books_published: p.books_published,
-                }),
-            }))
-            .await
+                })
+            ).await
             .map(|r| r.into_inner())
             .map_err(|e| e.to_string())?;
         r.author
@@ -434,11 +471,10 @@ impl GrpcRegistry {
             .ok_or_else(|| "Failed to create author".to_string())
     }
 
-    pub async fn update_author(&self, name: Option<String>) -> Result<Vec<AuthorModel>, String> {
+    pub async fn update_author(&self, id: i32, name: Option<String>) -> Result<Vec<AuthorModel>, String> {
         let mut c = author_client(self.endpoint(CatalogService::AuthorCatalog)).await?;
         let r = c
-            .update_author(Request::new(UpdateAuthorRequest { name }))
-            .await
+            .update_author(Request::new(UpdateAuthorRequest { id, name })).await
             .map(|r| r.into_inner())
             .map_err(|e| e.to_string())?;
         Ok(r.authors.into_iter().map(author_to_model).collect())
@@ -540,6 +576,145 @@ impl GrpcRegistry {
         .await
         .map(|_| ())
         .map_err(|e| e.to_string())
+    }
+
+    // Genre analysis
+
+    pub async fn get_genres(
+        &self,
+        rank_sort: Option<String>,
+        page_num: Option<i32>,
+        page_size: Option<i32>,
+    ) -> Result<Vec<GenreModel>, String> {
+        let mut c = genre_client(self.endpoint(CatalogService::GenreAnalysis)).await?;
+        let (sort_by, ascending) = genre_sort_from_query(rank_sort.as_deref());
+        let response = c
+            .get_genres(Request::new(GetGenresRequest {
+                sort_by,
+                ascending,
+                page_num: page_num.unwrap_or(1).max(1),
+                page_size: page_size.unwrap_or(50).max(1),
+            }))
+            .await
+            .map(|r| r.into_inner())
+            .map_err(|e| e.to_string())?;
+
+        Ok(response.genres.into_iter().map(genre_to_model).collect())
+    }
+
+    pub async fn get_genre(&self, genre_id: i64) -> Result<GenreModel, String> {
+        let mut c = genre_client(self.endpoint(CatalogService::GenreAnalysis)).await?;
+        let response = c
+            .get_genre(Request::new(GetGenreAnalysisRequest { genre_id }))
+            .await
+            .map(|r| r.into_inner())
+            .map_err(|e| e.to_string())?;
+
+        response
+            .genre
+            .map(genre_to_model)
+            .ok_or_else(|| "Genre not found".to_string())
+    }
+
+    pub async fn add_genre(&self, payload: GenreAddPayload) -> Result<GenreModel, String> {
+        let mut c = genre_client(self.endpoint(CatalogService::GenreAnalysis)).await?;
+        let response = c
+            .add_genre(Request::new(AddGenreRequest {
+                genre: Some(contracts::genre_service::Genre {
+                    genre_id: 0,
+                    name: payload.name,
+                }),
+            }))
+            .await
+            .map(|r| r.into_inner())
+            .map_err(|e| e.to_string())?;
+
+        response
+            .genre
+            .map(genre_to_model)
+            .ok_or_else(|| "Failed to create genre".to_string())
+    }
+
+    pub async fn update_genre(
+        &self,
+        genre_id: i64,
+        payload: GenreAddPayload,
+    ) -> Result<GenreModel, String> {
+        let mut c = genre_client(self.endpoint(CatalogService::GenreAnalysis)).await?;
+        let response = c
+            .update_genre(Request::new(UpdateGenreRequest {
+                genre_id,
+                genre: Some(contracts::genre_service::Genre {
+                    genre_id,
+                    name: payload.name,
+                }),
+            }))
+            .await
+            .map(|r| r.into_inner())
+            .map_err(|e| e.to_string())?;
+
+        response
+            .genre
+            .map(genre_to_model)
+            .ok_or_else(|| "Genre not found".to_string())
+    }
+
+    pub async fn delete_genre(&self, genre_id: i64) -> Result<(), String> {
+        let mut c = genre_client(self.endpoint(CatalogService::GenreAnalysis)).await?;
+        c.delete_genre(Request::new(DeleteGenreRequest { genre_id }))
+            .await
+            .map(|_| ())
+            .map_err(|e| e.to_string())
+    }
+
+    pub async fn get_genre_growth(
+        &self,
+        genre_id: i64,
+        max_points: Option<i32>,
+    ) -> Result<GenreGrowthModel, String> {
+        let genre = self.get_genre(genre_id).await?;
+        let mut c = genre_client(self.endpoint(CatalogService::GenreAnalysis)).await?;
+        let response = c
+            .get_genre_growth(Request::new(GenreGrowthRequest {
+                genre_id,
+                max_points: max_points.unwrap_or(50).max(1),
+            }))
+            .await
+            .map(|r| r.into_inner())
+            .map_err(|e| e.to_string())?;
+
+        Ok(GenreGrowthModel {
+            genre_id,
+            genre: genre.name,
+            points: response.points.into_iter().map(genre_trend_point_to_model).collect(),
+            growth_rate: response.growth_rate,
+            metric: response.metric,
+        })
+    }
+
+    pub async fn get_genre_popularity(
+        &self,
+        genre_id: i64,
+        max_points: Option<i32>,
+    ) -> Result<GenrePopularityModel, String> {
+        let genre = self.get_genre(genre_id).await?;
+        let mut c = genre_client(self.endpoint(CatalogService::GenreAnalysis)).await?;
+        let response = c
+            .get_genre_popularity(Request::new(GenrePopularityRequest {
+                genre_id,
+                max_points: max_points.unwrap_or(50).max(1),
+            }))
+            .await
+            .map(|r| r.into_inner())
+            .map_err(|e| e.to_string())?;
+
+        Ok(GenrePopularityModel {
+            genre_id,
+            genre: genre.name,
+            points: response.points.into_iter().map(genre_trend_point_to_model).collect(),
+            trend: response.trend,
+            metric: response.metric,
+        })
     }
 
     // Compare
@@ -869,10 +1044,6 @@ fn author_to_model(a: contracts::author_catalog::Author) -> AuthorModel {
     AuthorModel {
         id: a.id,
         name: a.name,
-        gender: a.gender,
-        year_born: a.year_born,
-        year_death: a.year_death,
-        books_published: a.books_published,
     }
 }
 
@@ -881,6 +1052,33 @@ fn rating_to_model(r: contracts::rating_catalog::Rating) -> RatingModel {
         book_isbn: r.book_isbn,
         num_ratings: r.num_ratings,
         star_rating: r.star_rating,
+    }
+}
+
+fn genre_to_model(g: contracts::genre_service::Genre) -> GenreModel {
+    GenreModel {
+        genre_id: g.genre_id,
+        name: g.name,
+    }
+}
+
+fn genre_trend_point_to_model(
+    point: contracts::genre_service::GenreTrendPoint,
+) -> GenreTrendPointModel {
+    GenreTrendPointModel {
+        timestamp: point.timestamp,
+        rating: point.rating,
+        popularity: point.popularity,
+    }
+}
+
+fn genre_sort_from_query(rank_sort: Option<&str>) -> (i32, bool) {
+    match rank_sort.unwrap_or("rate_desc") {
+        "rate_asc" => (ProtoGenreSort::Rating as i32, true),
+        "rate_desc" => (ProtoGenreSort::Rating as i32, false),
+        "pop_asc" => (ProtoGenreSort::Popularity as i32, true),
+        "pop_desc" => (ProtoGenreSort::Popularity as i32, false),
+        _ => (ProtoGenreSort::Rating as i32, false),
     }
 }
 

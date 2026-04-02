@@ -14,6 +14,7 @@ pub mod author_analytics_routes;
 pub mod author_catalog_routes;
 pub mod book_catalog_routes;
 pub mod compare_service_routes;
+pub mod genre_analysis_routes;
 pub mod health_routes;
 pub mod rating_catalog_routes;
 

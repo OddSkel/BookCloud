@@ -13,6 +13,7 @@ RUN python -m grpc_tools.protoc \
     --grpc_python_out=./src/generated \
     ./proto/common.proto \
     ./proto/book_catalog.proto \
+    ./proto/genre_service.proto \
     ./proto/rating_catalog.proto \
     ./proto/compare_service.proto
 

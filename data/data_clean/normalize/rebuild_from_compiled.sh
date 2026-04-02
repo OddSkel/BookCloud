@@ -4,7 +4,7 @@ set -euo pipefail
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Defaults relativos ao projeto
-DEFAULT_INPUT="${BASE_DIR}/../compiled_books.csv"
+DEFAULT_INPUT="${BASE_DIR}/../../dataset/compiled_books.csv"
 DEFAULT_OUTPUT="${BASE_DIR}/../normalized_out"
 
 INPUT_FILE="${1:-${INPUT_FILE:-$DEFAULT_INPUT}}"

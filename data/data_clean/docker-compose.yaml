@@ -1,0 +1,24 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: bookcloud_pg
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: bookcloud
+      POSTGRES_PASSWORD: bookcloud
+      POSTGRES_DB: bookcloud_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # scripts SQL auto-executados no primeiro start (init)
+      - ./db/init:/docker-entrypoint-initdb.d
+    networks:
+      - bookcloud-network
+
+volumes:
+  pgdata:
+
+networks:
+  bookcloud-network:
+    external: true

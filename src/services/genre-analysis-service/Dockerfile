@@ -23,4 +23,3 @@ ENV PYTHONPATH=/app
 EXPOSE 50055
 
 CMD ["python", "genre_analysis_server.py"]
->>>>>>> Stashed changes

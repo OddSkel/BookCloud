@@ -3,6 +3,21 @@ import json
 from typing import Optional
 
 
+def _compact_payload(value):
+    if isinstance(value, dict):
+        compacted = {
+            key: _compact_payload(item)
+            for key, item in value.items()
+            if item is not None and item != []
+        }
+        return compacted
+
+    if isinstance(value, list):
+        return [_compact_payload(item) for item in value]
+
+    return value
+
+
 @dataclass
 class PopularityFilters:
     author_name: Optional[str] = None
@@ -26,15 +41,17 @@ class PopularityFilters:
 
 
 @dataclass
-class BookPQItem:
+class RankedBook:
     isbn: int
     name: str
-    pub_year: Optional[int]
     star_rating: Optional[float]
     num_ratings: Optional[int]
+
+
+@dataclass
+class BookPQItem:
+    books: RankedBook
     discrepancy_score: Optional[float]
-    genres: list[str] = field(default_factory=list)
-    authors: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -46,7 +63,7 @@ class PaginatedBookPQResponse:
     total_pages: int
 
     def to_json(self) -> str:
-        return json.dumps(asdict(self))
+        return json.dumps(_compact_payload(asdict(self)))
 
 
 @dataclass

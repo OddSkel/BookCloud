@@ -1,0 +1,6 @@
+pandas == 3.0.2
+numpy == 2.4.4
+pip == 26.0.1
+python-dateutil == 2.9.0.post0
+six == 1.17.0
+psycopg2 == 2.9.11
