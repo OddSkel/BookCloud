@@ -1,0 +1,100 @@
+syntax = "proto3";
+
+package gateway.authoranalytics;
+
+import "common.proto";
+
+message RankAuthorRequest {
+  optional double average_rating       = 1;
+  optional int64  total_number_ratings = 2;
+}
+
+message RankedAuthor {
+  string author_name          = 1;
+  double average_rating       = 2;
+  int64  total_number_ratings = 3;
+}
+
+message RankAuthorResponse {
+  repeated RankedAuthor authors = 1;  
+}
+
+// ---
+
+message AuthorPerformanceRequest {
+  optional string author_name   = 1;
+  optional int32  author_id     = 2;
+  optional int32  pub_year_from = 3;
+  optional int32  pub_year_to   = 4;
+}
+
+message AuthorEvolutionPoint {
+  int32  year             = 1;
+  string title            = 2;
+  double quality_score    = 3;
+  double popularity_score = 4;
+  string genre            = 5;
+}
+
+message AuthorPerformanceResponse {
+  string  author_id               = 1;
+  string  author_name             = 2;
+  int32   pub_year_from           = 3;
+  int32   pub_year_to             = 4;
+  double  correlation_coefficient = 5;
+  int32   sample_size             = 6;
+  string  interpretation          = 7;
+  repeated AuthorEvolutionPoint evolution = 8;
+}
+
+// ---
+
+message AuthorsConsistencyRequest {
+  optional string author_name = 1;
+  optional int32  author_id   = 2;
+}
+
+message AuthorConsistencyItem {
+  string author_id         = 1;
+  string author_name       = 2;
+  double consistency_score = 3;
+  double average_rating    = 4;
+  double std_deviation     = 5;
+  int32  total_books       = 6;
+  int32  rank              = 7;
+}
+
+message AuthorsConsistencyResponse {
+  repeated AuthorConsistencyItem authors = 1;
+}
+
+// ---
+
+message AuthorsGrowthRequest {
+  optional string author_name = 1;
+  optional int32  author_id   = 2;
+}
+
+message AuthorGrowthItem {
+  string author_id     = 1;
+  string author_name   = 2;
+  double growth_score  = 3;
+  double first_rating  = 4;
+  double latest_rating = 5;
+  int32  total_books   = 6;
+  int32  rank          = 7;
+}
+
+message AuthorsGrowthResponse {
+  repeated AuthorGrowthItem authors = 1;
+}
+
+// ---
+
+service AuthorAnalyticsGrpc {
+  rpc HealthCheck        (gateway.common.HealthCheckRequest) returns (gateway.common.HealthCheckResponse);
+  rpc RankAuthors        (RankAuthorRequest)                 returns (RankAuthorResponse);
+  rpc AuthorPerformance  (AuthorPerformanceRequest)          returns (AuthorPerformanceResponse);
+  rpc AuthorsConsistency (AuthorsConsistencyRequest)         returns (AuthorsConsistencyResponse);
+  rpc AuthorsGrowth      (AuthorsGrowthRequest)              returns (AuthorsGrowthResponse);
+}
