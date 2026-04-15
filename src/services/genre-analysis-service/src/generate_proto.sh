@@ -17,6 +17,8 @@ python -m grpc_tools.protoc \
   --python_out=${PY_OUT} \
   --grpc_python_out=${GRPC_OUT} \
   ${PROTO_ROOT}/proto/common.proto \
-  ${PROTO_ROOT}/proto/genre_service.proto
+  ${PROTO_ROOT}/proto/genre_service.proto \
+  ${PROTO_ROOT}/proto/rating_catalog.proto \
+  ${PROTO_ROOT}/proto/book_catalog.proto
 
 echo "Protobuf classes generated in ${PY_OUT}"
