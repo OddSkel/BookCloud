@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rating-catalog-config
+  namespace: bookcloud
+data:
+  HOST: "0.0.0.0"
+  GRPC_PORT: "50053"
+  POSTGRES_HOST: "rating-db"
+  POSTGRES_DB: "rating_catalog"
+  POSTGRES_PORT: "5432"

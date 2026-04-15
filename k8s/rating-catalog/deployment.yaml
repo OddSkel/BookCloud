@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rating-catalog
+  namespace: bookcloud
+  labels:
+    app: rating-catalog
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rating-catalog
+  template:
+    metadata:
+      labels:
+        app: rating-catalog
+    spec:
+      containers:
+        - name: rating-catalog
+          image: bookcloud/rating-catalog:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: grpc
+              containerPort: 50053
+          envFrom:
+            - configMapRef:
+                name: rating-catalog-config
+            - secretRef:
+                name: postgres-credentials
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "400m"
+              memory: "512Mi"
+          readinessProbe:
+            tcpSocket:
+              port: grpc
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: grpc
+            initialDelaySeconds: 15
+            periodSeconds: 20

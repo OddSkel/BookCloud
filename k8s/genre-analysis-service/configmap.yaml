@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: genre-analysis-service-config
+  namespace: bookcloud
+data:
+  SERVICE_NAME: "genre-analysis-service"
+  GRPC_HOST: "0.0.0.0"
+  GRPC_PORT: "50055"
+  POSTGRES_HOST: "genre-db"
+  POSTGRES_DB: "genre_analysis"
+  POSTGRES_PORT: "5432"

@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rating-db-config
+  namespace: bookcloud
+data:
+  POSTGRES_DB: "rating_catalog"

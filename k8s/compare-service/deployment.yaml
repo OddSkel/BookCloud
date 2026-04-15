@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: compare-service
+  namespace: bookcloud
+  labels:
+    app: compare-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: compare-service
+  template:
+    metadata:
+      labels:
+        app: compare-service
+    spec:
+      containers:
+        - name: compare-service
+          image: bookcloud/compare-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: grpc
+              containerPort: 50054
+          envFrom:
+            - configMapRef:
+                name: compare-service-config
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "400m"
+              memory: "512Mi"
+          readinessProbe:
+            tcpSocket:
+              port: grpc
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: grpc
+            initialDelaySeconds: 15
+            periodSeconds: 20

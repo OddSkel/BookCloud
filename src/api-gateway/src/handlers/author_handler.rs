@@ -6,9 +6,9 @@ use crate::grpc::{AuthorAddPayload, GrpcRegistry};
 
 #[derive(Deserialize)]
 pub struct UpdateAuthorQuery {
-    #[serde(rename = "Id")]
-    pub id: i32,
-    #[serde(rename = "Name")]
+    #[serde(alias = "Id", alias = "id", alias = "AuthorId")]
+    pub author_id: i32,
+    #[serde(alias = "Name")]
     pub name: Option<String>,
 }
 
@@ -20,7 +20,7 @@ pub struct GetAuthorsRequest {
 
 pub async fn get_authors(
     registry: web::Data<GrpcRegistry>,
-    page: web::Query<GetAuthorsRequest>
+    page: web::Query<GetAuthorsRequest>,
 ) -> impl Responder {
     let q = page.into_inner();
     match registry.get_authors(q.page, q.page_size).await {
@@ -54,7 +54,7 @@ pub async fn update_author(
     query: web::Query<UpdateAuthorQuery>,
 ) -> impl Responder {
     let q = query.into_inner();
-    match registry.update_author(q.id, q.name).await {
+    match registry.update_author(q.author_id, q.name).await {
         Ok(authors) => HttpResponse::Ok().json(authors),
         Err(e) => HttpResponse::UnprocessableEntity().json(json!({ "error": e })),
     }

@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: author-catalog-config
+  namespace: bookcloud
+data:
+  HOST: "0.0.0.0"
+  GRPC_PORT: "50052"
+  POSTGRES_HOST: "author-db"
+  POSTGRES_DB: "author_catalog"
+  POSTGRES_PORT: "5432"

@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: rating-catalog
+  namespace: bookcloud
+spec:
+  selector:
+    app: rating-catalog
+  ports:
+    - name: grpc
+      port: 50053
+      targetPort: grpc
+  type: ClusterIP
