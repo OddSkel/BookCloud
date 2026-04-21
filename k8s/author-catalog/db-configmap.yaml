@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: author-db-config
+  namespace: bookcloud
+data:
+  POSTGRES_DB: "author_catalog"

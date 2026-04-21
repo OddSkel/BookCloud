@@ -1,4 +1,4 @@
-use actix_web::{HttpResponse, Responder, http::StatusCode, web};
+use actix_web::{http::StatusCode, web, HttpResponse, Responder};
 
 use crate::grpc::{CatalogService, GrpcRegistry};
 
@@ -12,6 +12,10 @@ pub async fn author_catalog_status(registry: web::Data<GrpcRegistry>) -> impl Re
 
 pub async fn rating_catalog_status(registry: web::Data<GrpcRegistry>) -> impl Responder {
     service_status_response(CatalogService::RatingCatalog, registry).await
+}
+
+pub async fn compare_service_status(registry: web::Data<GrpcRegistry>) -> impl Responder {
+    service_status_response(CatalogService::CompareService, registry).await
 }
 
 pub async fn genre_analysis_status(registry: web::Data<GrpcRegistry>) -> impl Responder {

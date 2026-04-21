@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: compare-service-config
+  namespace: bookcloud
+data:
+  SERVICE_NAME: "compare-service"
+  HOST: "0.0.0.0"
+  GRPC_PORT: "50054"
+  BOOK_CATALOG_GRPC_URL: "http://book-catalog:50051"
+  AUTHOR_CATALOG_GRPC_URL: "http://author-catalog:50052"
+  RATING_CATALOG_GRPC_URL: "http://rating-catalog:50053"
+  GENRE_ANALYSIS_GRPC_URL: "http://genre-analysis-service:50055"
+  BOOK_PAGE_SIZE: "8000"
+  RATING_PAGE_SIZE: "12000"
+  GENRE_PAGE_SIZE: "12000"
+  PARALLEL_REQUESTS: "12"
+  CACHE_TTL_SECONDS: "60"

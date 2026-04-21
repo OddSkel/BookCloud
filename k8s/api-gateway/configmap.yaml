@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-gateway-config
+  namespace: bookcloud
+data:
+  SERVICE_NAME: "api-gateway"
+  HOST: "0.0.0.0"
+  API_PORT: "8080"
+  RUST_LOG: "info"
+  BOOK_CATALOG_GRPC_URL: "http://book-catalog:50051"
+  AUTHOR_CATALOG_GRPC_URL: "http://author-catalog:50052"
+  RATING_CATALOG_GRPC_URL: "http://rating-catalog:50053"
+  COMPARE_SERVICE_GRPC_URL: "http://compare-service:50054"
+  GENRE_ANALYSIS_GRPC_URL: "http://genre-analysis-service:50055"

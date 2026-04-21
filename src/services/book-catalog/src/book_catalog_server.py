@@ -40,6 +40,12 @@ class BookCatalogService(generated_protos.book_catalog_pb2_grpc.BookCatalogGrpcS
         self.pool = pool
         self.service_name = service_name
 
+    async def HealthCheck(self, request, context):
+        return generated_protos.common_pb2.HealthCheckResponse(
+            service=self.service_name,
+            status="ok",
+        )
+
     async def GetBooks(self, request, context):
         page_num = request.page_num if request.page_num > 0 else 1
         page_size = request.page_size if request.page_size > 0 else 10

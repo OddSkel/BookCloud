@@ -9,7 +9,7 @@ pub struct AppConfig {
 impl AppConfig {
     pub fn from_env() -> Self {
         Self {
-            service_name: "BOOK CLOUD".to_string(),
+            service_name: env::var("SERVICE_NAME").unwrap_or_else(|_| "api-gateway".to_string()),
             host: env::var("HOST").unwrap_or_else(|_| "0.0.0.0".to_string()),
             api_port: read_port("API_PORT", 8080),
         }

@@ -1,5 +1,5 @@
 #[derive(Debug, sqlx::FromRow, Clone)]
 pub struct Author {
     pub name: String,
-    pub id: i32,
+    pub author_id: i64,
 }
