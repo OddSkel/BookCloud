@@ -16,8 +16,6 @@ INGRESS_HOST="${BOOKCLOUD_INGRESS_HOST:-api.bookcloud.local}"
 NAMESPACE="${BOOKCLOUD_NAMESPACE:-bookcloud}"
 CREATE_CLUSTER="${GKE_CREATE_CLUSTER:-1}"
 
-REGISTRY_HOST="${REGION}-docker.pkg.dev"
-IMAGE_PREFIX="${REGISTRY_HOST}/${PROJECT_ID}/${REPOSITORY}"
 RENDER_DIR="$(mktemp -d)"
 
 cleanup() {
@@ -129,6 +127,14 @@ build_and_push() {
   run docker push "$image"
 }
 
+replace_image() {
+  local service="$1"
+  local image="${IMAGE_PREFIX}/${service}:${IMAGE_TAG}"
+
+  sed -i "s#image: bookcloud/${service}:latest#image: ${image}#g" \
+    "$RENDER_DIR/${service}/deployment.yaml"
+}
+
 render_manifests() {
   cp -R "$SCRIPT_DIR"/. "$RENDER_DIR"/
 
@@ -144,14 +150,6 @@ render_manifests() {
 
   sed -i "s/host: api.bookcloud.local/host: ${INGRESS_HOST}/g" \
     "$RENDER_DIR/api-gateway/ingress.yaml"
-}
-
-replace_image() {
-  local service="$1"
-  local image="${IMAGE_PREFIX}/${service}:${IMAGE_TAG}"
-
-  sed -i "s#image: bookcloud/${service}:latest#image: ${image}#g" \
-    "$RENDER_DIR/${service}/deployment.yaml"
 }
 
 wait_for_rollouts() {
@@ -174,12 +172,13 @@ print_ingress_info() {
 
 BookCloud was deployed to GKE.
 
-Project:     $PROJECT_ID
-Region:      $REGION
-Zone:        $ZONE
-Cluster:     $CLUSTER_NAME
-Image tag:   $IMAGE_TAG
-Namespace:   $NAMESPACE
+Project:      $PROJECT_ID
+Region:       $REGION
+Zone:         $ZONE
+Cluster:      $CLUSTER_NAME
+Repository:   $REPOSITORY
+Image tag:    $IMAGE_TAG
+Namespace:    $NAMESPACE
 Ingress host: $INGRESS_HOST
 
 Ingress external IP may take a few minutes to appear.
@@ -203,8 +202,12 @@ EOF
 require_command gcloud
 require_command docker
 require_command kubectl
+
 resolve_from_gcloud
 require_project
+
+REGISTRY_HOST="${REGION}-docker.pkg.dev"
+IMAGE_PREFIX="${REGISTRY_HOST}/${PROJECT_ID}/${REPOSITORY}"
 
 cd "$REPO_ROOT"
 
