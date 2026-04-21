@@ -28,7 +28,7 @@ message GenreWithRating {
 }
 
 message GetGenresRequest {
-  GenreSort   sort_by = 1;
+  GenreSort sort_by = 1;
   bool ascending      = 2;
   int32 page_num      = 3;
   int32 page_size     = 4;
@@ -102,7 +102,7 @@ message GenrePopularityResponse {
 }
 
 service GenreAnalysisGrpc {
-  rpc HealthCheck(gateway.common.HealthCheckRequest) returns (gateway.common.HealthCheckResponse);
+  //rpc HealthCheck(gateway.common.HealthCheckRequest) returns (gateway.common.HealthCheckResponse);
   rpc GetGenres(GetGenresRequest) returns (GetGenresResponse);
   rpc AddGenre(AddGenreRequest) returns (AddGenreResponse);
   rpc GetGenre(GetGenreRequest) returns (GetGenreResponse);

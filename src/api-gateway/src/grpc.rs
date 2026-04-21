@@ -1160,16 +1160,6 @@ fn genre_trend_point_popularity_to_model(
     }
 }
 
-fn genre_sort_from_query(rank_sort: Option<&str>) -> (i32, bool) {
-    match rank_sort.unwrap_or("rate_desc") {
-        "rate_asc" => (ProtoGenreSort::Rating as i32, true),
-        "rate_desc" => (ProtoGenreSort::Rating as i32, false),
-        "pop_asc" => (ProtoGenreSort::Popularity as i32, true),
-        "pop_desc" => (ProtoGenreSort::Popularity as i32, false),
-        _ => (ProtoGenreSort::Rating as i32, false),
-    }
-}
-
 fn compare_filters_to_proto(payload: CompareFiltersPayload) -> CompareFilters {
     CompareFilters {
         author_name: payload.author_name,

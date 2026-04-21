@@ -4,14 +4,6 @@ use serde_json::json;
 
 use crate::grpc::{BookAddPayload, GrpcRegistry};
 
-#[derive(Deserialize)]
-pub struct UpdateBookQuery {
-    #[serde(rename = "Editor")]
-    pub editor: Option<String>,
-    #[serde(rename = "Year edited")]
-    pub year_edited: Option<i32>,
-}
-
 pub async fn get_books(registry: web::Data<GrpcRegistry>) -> impl Responder {
     match registry.get_books(None, None).await {
         Ok(books) => HttpResponse::Ok().json(books),

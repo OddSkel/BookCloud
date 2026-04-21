@@ -326,8 +326,8 @@ class GenreAnalysisService(genre_service_grpc.GenreAnalysisGrpcServicer):
             context.set_code(grpc.StatusCode.NOT_FOUND)
             return GenreGrowthResponse()
 
-        year_from = request.year_from if request.year_from > 0 else (datetime.now().year - 5)
         year_to = request.year_to if request.year_to > 0 else datetime.now().year
+        year_from = request.year_from if request.year_from > 0 else (year_to - 5)
 
         year_rows = await self.pool.fetch(
             "SELECT year, avg_rating, total_num_ratings FROM genre_year_stats_cache "
@@ -362,8 +362,8 @@ class GenreAnalysisService(genre_service_grpc.GenreAnalysisGrpcServicer):
             context.set_code(grpc.StatusCode.NOT_FOUND)
             return GenrePopularityResponse()
 
-        year_from = request.year_from if request.year_from > 0 else (datetime.now().year - 5)
         year_to = request.year_to if request.year_to > 0 else datetime.now().year
+        year_from = request.year_from if request.year_from > 0 else (year_to - 5)
 
         year_rows = await self.pool.fetch(
             "SELECT year, total_num_ratings, book_count FROM genre_year_stats_cache "
