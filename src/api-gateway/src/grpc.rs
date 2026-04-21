@@ -147,6 +147,7 @@ pub struct GenreGrowthModel {
     pub genre: String,
     pub points: Vec<GenreTrendPointModel>,
     pub avg_rating: f64,
+    pub total_num_ratings: i64,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -155,6 +156,7 @@ pub struct GenrePopularityModel {
     pub genre: String,
     pub points: Vec<GenreTrendPointPopularityModel>,
     pub total_num_ratings: i64,
+    pub total_books: i64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default)]
@@ -631,12 +633,16 @@ impl GrpcRegistry {
     pub async fn get_genre_growth(
         &self,
         genre_id: i64,
+        year_from: Option<i32>,
+        year_to: Option<i32>,
     ) -> Result<GenreGrowthModel, String> {
         let genre = self.get_genre(genre_id).await?;
         let mut c = genre_client(self.endpoint(CatalogService::GenreAnalysis)).await?;
         let response = c
             .get_genre_growth(Request::new(GenreGrowthRequest {
                 genre_id,
+                year_from: year_from.unwrap_or(0),
+                year_to: year_to.unwrap_or(0),
             }))
             .await
             .map(|r| r.into_inner())
@@ -647,18 +653,23 @@ impl GrpcRegistry {
             genre: genre.genre_name,
             points: response.points.into_iter().map(genre_trend_point_to_model).collect(),
             avg_rating: response.avg_rating,
+            total_num_ratings: response.total_num_ratings,
         })
     }
 
     pub async fn get_genre_popularity(
         &self,
         genre_id: i64,
+        year_from: Option<i32>,
+        year_to: Option<i32>,
     ) -> Result<GenrePopularityModel, String> {
         let genre = self.get_genre(genre_id).await?;
         let mut c = genre_client(self.endpoint(CatalogService::GenreAnalysis)).await?;
         let response = c
             .get_genre_popularity(Request::new(GenrePopularityRequest {
                 genre_id,
+                year_from: year_from.unwrap_or(0),
+                year_to: year_to.unwrap_or(0),
             }))
             .await
             .map(|r| r.into_inner())
@@ -669,6 +680,7 @@ impl GrpcRegistry {
             genre: genre.genre_name,
             points: response.points.into_iter().map(genre_trend_point_popularity_to_model).collect(),
             total_num_ratings: response.total_num_ratings,
+            total_books: response.total_books,
         })
     }
 

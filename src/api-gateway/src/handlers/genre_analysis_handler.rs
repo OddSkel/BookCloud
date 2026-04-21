@@ -80,10 +80,9 @@ pub async fn get_genre_growth(
     query: web::Query<GenreTrendQuery>,
 ) -> impl Responder {
     let genre_id = path.into_inner();
-    let query = query.into_inner();
-    let _ = (query.year_from, query.year_to);
+    let q = query.into_inner();
 
-    match registry.get_genre_growth(genre_id).await {
+    match registry.get_genre_growth(genre_id, q.year_from, q.year_to).await {
         Ok(payload) => HttpResponse::Ok().json(payload),
         Err(error) => map_genre_error(error),
     }
@@ -95,10 +94,9 @@ pub async fn get_genre_popularity(
     query: web::Query<GenreTrendQuery>,
 ) -> impl Responder {
     let genre_id = path.into_inner();
-    let query = query.into_inner();
-    let _ = (query.year_from, query.year_to);
+    let q = query.into_inner();
 
-    match registry.get_genre_popularity(genre_id).await {
+    match registry.get_genre_popularity(genre_id, q.year_from, q.year_to).await {
         Ok(payload) => HttpResponse::Ok().json(payload),
         Err(error) => map_genre_error(error),
     }
