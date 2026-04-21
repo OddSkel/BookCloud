@@ -358,6 +358,38 @@ impl GrpcRegistry {
         Ok(serde_json::json!({ "books": books }))
     }
 
+    pub async fn get_book_recommendation(
+    &self,
+    filters: crate::handlers::book_recommendation_handler::SearchQuery,
+    ) -> Result<serde_json::Value, String> {
+        let mut client = book_client(self.endpoint(CatalogService::BookRecommendation)).await?;
+
+        let response = client
+            .book_recommendation(Request::new(BookRecommendationQuery {
+                title:    filters.title,
+                author:   filters.author,
+                keywords: filters.keywords,
+            }))
+            .await
+            .map(|r| r.into_inner())
+            .map_err(|e| e.to_string())?;
+
+        let books = response
+            .books
+            .into_iter()
+            .map(|book| {
+                serde_json::json!({
+                    "isbn": book.isbn,
+                    "name": book.name,
+                    "url": book.url,
+                    "pub_year": book.pub_year,
+                })
+            })
+            .collect::<Vec<_>>();
+
+        Ok(serde_json::json!({ "books": books }))
+    }
+
     // Books
 
     pub async fn get_books(

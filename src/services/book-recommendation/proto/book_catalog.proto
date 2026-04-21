@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package gateway.bookcatalog;
+
+import "common.proto";
+
+message Book {
+  int64  isbn          = 1;
+  string name          = 2;
+  string url           = 3;
+  string summary_clean = 4;
+  int32  pub_year      = 5;
+}
+
+message BookAdd {
+  int64  isbn          = 1;
+  string name          = 2;
+  string url           = 3;
+  string summary_clean = 4;
+  int32  pub_year      = 5;
+}
+
+message GetBooksRequest {
+  int32 page_num = 1;
+  int32 page_size = 2;
+}
+
+message GetBooksResponse {
+  repeated Book books = 1;
+  int32 page_num = 2;
+  int32 page_size = 3;
+  int32 total_items = 4;
+  int32 total_pages = 5;
+}
+
+message GetBookRequest   { int64 isbn = 1; }
+message GetBookResponse  { Book book = 1; }
+
+message AddBookRequest   { BookAdd book = 1; }
+message AddBookResponse  { Book book = 1; }
+
+message UpdateBookRequest { int64 isbn = 1; BookAdd book = 2; }
+message UpdateBookResponse { Book book = 1; }
+
+message DeleteBookRequest  { int64 isbn = 1; }
+message DeleteBookResponse {}
+
+service BookCatalogGrpc {
+  rpc HealthCheck(gateway.common.HealthCheckRequest) returns (gateway.common.HealthCheckResponse);
+  rpc GetBooks   (GetBooksRequest)  returns (GetBooksResponse);
+  rpc GetBook    (GetBookRequest)   returns (GetBookResponse);
+  rpc AddBook    (AddBookRequest)   returns (AddBookResponse);
+  rpc UpdateBook (UpdateBookRequest) returns (UpdateBookResponse);
+  rpc DeleteBook (DeleteBookRequest) returns (DeleteBookResponse);
+}
