@@ -1,7 +1,6 @@
 use sqlx::{PgPool, Arguments};
 use sqlx::postgres::PgArguments;
 use crate::models::book::Book as Model_Book;
-// Ensure these imports match your specific recommendation proto contract
 use crate::grpc::contracts::book_recommendation::{Query, BookRecommendationResponse, Book as Proto_Book};
 
 pub async fn book_recommendation(
@@ -26,7 +25,6 @@ pub async fn book_recommendation(
         }
 
     if let Some(popularity) = params.popularity {
-        // We use >= for a numeric popularity recommendation
         conditions.push(format!("popularity >= ${i}"));
         args.add(popularity).map_err(|e| e.to_string())?;
     }
@@ -35,7 +33,6 @@ pub async fn book_recommendation(
     let where_clause = if conditions.is_empty() {
         "TRUE".to_string()
     } else {
-        // Using "OR" as per your logic to broaden recommendations
         conditions.join(" OR ")
     };
 
