@@ -32,6 +32,9 @@ pub mod contracts {
     pub mod book_search {
         tonic::include_proto!("gateway.book_search");
     }
+    pub mod book_recommendation {
+        tonic::include_proto!("gateway.book_recommendation");
+    }
 }
 
 use contracts::{
@@ -244,6 +247,7 @@ impl CatalogService {
             Self::GenreAnalysis => "genreAnalysis",
             Self::AuthorAnalytics => "authorAnalytics",
             Self::BookSearch => "bookSearch",
+            Self::BookRecommendation => "bookRecommendation"
         }
     }
     pub const fn env_var(self) -> &'static str {
@@ -255,6 +259,7 @@ impl CatalogService {
             Self::GenreAnalysis => "GENRE_ANALYSIS_GRPC_URL",
             Self::AuthorAnalytics => "AUTHOR_ANALYTICS_GRPC_URL",
             Self::BookSearch => "BOOK_SEARCH_GRPC_URL",
+            Self::BookRecommendation => "BOOK_RECOMMENDATION_GRPC_URL"
         }
     }
     pub const fn default_uri(self) -> &'static str {
@@ -264,8 +269,9 @@ impl CatalogService {
             Self::RatingCatalog => "http://rating-catalog:50053",
             Self::CompareService => "http://compare-service:50054",
             Self::GenreAnalysis => "http://genre-analysis-service:50055",
-            Self::AuthorAnalytics => "http://author-analytics-service:50056",
-            Self::BookSearch => "http://book-search:50054",
+            Self::AuthorAnalytics => "http://author-analytics-service:50058",
+            Self::BookSearch => "http://book-search:50057",
+            Self::BookRecommendation => "http://book-search:50056",
         }
     }
 }
@@ -287,6 +293,7 @@ impl GrpcRegistry {
             CatalogService::GenreAnalysis,
             CatalogService::AuthorAnalytics,
             CatalogService::BookSearch,
+            CatalogService::BookRecommendation
         ]
         .into_iter()
         .map(|svc| {
