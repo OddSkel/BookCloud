@@ -7,7 +7,7 @@ use crate::grpc::{AuthorAddPayload, GrpcRegistry};
 #[derive(Deserialize)]
 pub struct UpdateAuthorQuery {
     #[serde(alias = "Id", alias = "id", alias = "AuthorId")]
-    pub author_id: i32,
+    pub author_id: i64,
     #[serde(alias = "Name")]
     pub name: Option<String>,
 }
