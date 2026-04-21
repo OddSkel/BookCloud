@@ -1,0 +1,30 @@
+syntax = "proto3";
+import "common.proto";
+
+package gateway.book_search;
+
+service BookSearchGrpc {
+
+  rpc Book_Search(Query) returns (BookSearchResponse);
+
+  rpc HealthCheck (common.HealthCheckRequest) returns (common.HealthCheckResponse);
+}
+
+message Empty{}
+
+message Query {
+  optional string title = 1;
+  optional string author = 2;
+  optional string Keywords = 3;
+}
+
+message Book {
+  int64 isbn = 1;
+  string name = 2;
+  string url = 3;
+  int32 pub_year = 4;
+}
+
+message BookSearchResponse {
+  repeated Book books = 1;
+}
