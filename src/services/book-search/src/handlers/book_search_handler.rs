@@ -1,52 +1,74 @@
-use sqlx::{PgPool};
-use sqlx::Arguments;
-use sqlx::postgres::PgArguments;
-use crate::models::book::Book as Model_Book;
+use tonic::Request;
+
+use crate::grpc::contracts::book_catalog::{
+    book_catalog_grpc_client::BookCatalogGrpcClient, Book as CatalogBook, GetBooksRequest,
+};
 use crate::grpc::contracts::book_search::{Query, BookSearchResponse, Book as Proto_Book};
 
-pub async fn book_search(pool: &PgPool, params: Query) -> Result<BookSearchResponse, sqlx:: Error> {
-
-    let mut conditions = Vec::new();
-    let mut args = PgArguments::default();
-    let mut i = 1;
-
-    if let Some(title) = &params.title {
-        conditions.push(format!("title ILIKE ${i}"));
-        let _ = args.add(format!("%{}%", title));
-        i += 1;
+pub async fn book_search(
+    book_catalog_grpc_url: &str,
+    search_page_size: i32,
+    search_max_pages: i32,
+    params: Query,
+) -> Result<BookSearchResponse, String> {
+    if params.author.as_deref().is_some_and(|author| !author.trim().is_empty()) {
+        return Err("author filtering is not available in book-catalog responses".to_string());
     }
 
-    if let Some(author) = &params.author {
-        conditions.push(format!("author ILIKE ${i}"));
-        let _ = args.add(format!("%{}%", author));
-        i += 1;
-    }
+    let mut client = BookCatalogGrpcClient::connect(book_catalog_grpc_url.to_string())
+        .await
+        .map_err(|e| e.to_string())?;
 
-    if let Some(keywords) = &params.keywords {
-        conditions.push(format!("summary ILIKE ${i}"));
-        let _ = args.add(format!("%{}%", keywords));
-    }
+    let page_size = search_page_size.max(1);
+    let max_pages = search_max_pages.max(1);
+    let mut page_num = 1;
+    let mut books = Vec::new();
 
-    let where_clause = if conditions.is_empty() {
-        "TRUE".to_string()
-    } else {
-        conditions.join(" OR ")
-    };
+    loop {
+        let response = client
+            .get_books(Request::new(GetBooksRequest {
+                page_num,
+                page_size,
+            }))
+            .await
+            .map(|r| r.into_inner())
+            .map_err(|e| e.to_string())?;
 
-    let query = format!("SELECT * FROM books WHERE {}", where_clause);
-
-    let books_searched = sqlx::query_as_with::<_,Model_Book,_>(&query, args)
-    .fetch_all(pool)
-    .await?;
-
-    Ok(BookSearchResponse{
-        books : books_searched.into_iter().map(
-            |b| Proto_Book {
-                isbn: b.isbn,
-                name: b.name,
-                url: b.url,
-                pub_year: b.year_published
+        for book in response.books {
+            if matches_query(&book, &params) {
+                books.push(Proto_Book {
+                    isbn: book.isbn,
+                    name: book.name,
+                    url: book.url,
+                    pub_year: book.pub_year,
+                });
             }
-        ).collect(),
-    })
+        }
+
+        if page_num >= response.total_pages || page_num >= max_pages || response.total_pages == 0 {
+            break;
+        }
+
+        page_num += 1;
+    }
+
+    Ok(BookSearchResponse { books })
+}
+
+fn matches_query(book: &CatalogBook, params: &Query) -> bool {
+    let title_matches = params
+        .title
+        .as_deref()
+        .is_none_or(|title| contains_case_insensitive(&book.name, title));
+
+    let keywords_matches = params
+        .keywords
+        .as_deref()
+        .is_none_or(|keywords| contains_case_insensitive(&book.summary_clean, keywords));
+
+    title_matches && keywords_matches
+}
+
+fn contains_case_insensitive(value: &str, needle: &str) -> bool {
+    value.to_lowercase().contains(&needle.to_lowercase())
 }

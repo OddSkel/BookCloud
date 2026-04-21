@@ -29,6 +29,9 @@ pub mod contracts {
     pub mod author_analytics {
         tonic::include_proto!("gateway.authoranalytics");
     }
+    pub mod book_search {
+        tonic::include_proto!("gateway.book_search");
+    }
 }
 
 use contracts::{
@@ -44,6 +47,7 @@ use contracts::{
         AddBookRequest, BookAdd, DeleteBookRequest, GetBookRequest, GetBooksRequest,
         UpdateBookRequest, book_catalog_grpc_client::BookCatalogGrpcClient,
     },
+    book_search::{Query as BookSearchQuery, book_search_grpc_client::BookSearchGrpcClient},
     common::HealthCheckRequest,
     compare_service::{
         CompareFilters, GetCorrelationRequest, GetErasRequest, GetHiddenGemsRequest,
@@ -226,6 +230,7 @@ pub enum CatalogService {
     CompareService,
     GenreAnalysis,
     AuthorAnalytics,
+    BookSearch,
 }
 
 impl CatalogService {
@@ -237,6 +242,7 @@ impl CatalogService {
             Self::CompareService => "compareService",
             Self::GenreAnalysis => "genreAnalysis",
             Self::AuthorAnalytics => "authorAnalytics",
+            Self::BookSearch => "bookSearch",
         }
     }
     pub const fn env_var(self) -> &'static str {
@@ -247,6 +253,7 @@ impl CatalogService {
             Self::CompareService => "COMPARE_SERVICE_GRPC_URL",
             Self::GenreAnalysis => "GENRE_ANALYSIS_GRPC_URL",
             Self::AuthorAnalytics => "AUTHOR_ANALYTICS_GRPC_URL",
+            Self::BookSearch => "BOOK_SEARCH_GRPC_URL",
         }
     }
     pub const fn default_uri(self) -> &'static str {
@@ -257,6 +264,7 @@ impl CatalogService {
             Self::CompareService => "http://compare-service:50054",
             Self::GenreAnalysis => "http://genre-analysis-service:50055",
             Self::AuthorAnalytics => "http://author-analytics-service:50056",
+            Self::BookSearch => "http://book-search:50054",
         }
     }
 }
@@ -277,6 +285,7 @@ impl GrpcRegistry {
             CatalogService::CompareService,
             CatalogService::GenreAnalysis,
             CatalogService::AuthorAnalytics,
+            CatalogService::BookSearch,
         ]
         .into_iter()
         .map(|svc| {
@@ -316,6 +325,37 @@ impl GrpcRegistry {
                 message: e,
             },
         }
+    }
+
+    pub async fn book_search(
+        &self,
+        query: crate::handlers::book_search_handler::SearchQuery,
+    ) -> Result<serde_json::Value, String> {
+        let mut c = book_search_client(self.endpoint(CatalogService::BookSearch)).await?;
+        let response = c
+            .book_search(Request::new(BookSearchQuery {
+                title: query.title,
+                author: query.author,
+                keywords: query.keywords,
+            }))
+            .await
+            .map(|r| r.into_inner())
+            .map_err(|e| e.to_string())?;
+
+        let books = response
+            .books
+            .into_iter()
+            .map(|book| {
+                serde_json::json!({
+                    "isbn": book.isbn,
+                    "name": book.name,
+                    "url": book.url,
+                    "pub_year": book.pub_year,
+                })
+            })
+            .collect::<Vec<_>>();
+
+        Ok(serde_json::json!({ "books": books }))
     }
 
     // Books
@@ -1007,6 +1047,14 @@ async fn author_analytics_client(
         .map_err(|e| e.to_string())
 }
 
+async fn book_search_client(
+    endpoint: &str,
+) -> Result<BookSearchGrpcClient<tonic::transport::Channel>, String> {
+    BookSearchGrpcClient::connect(endpoint.to_string())
+        .await
+        .map_err(|e| e.to_string())
+}
+
 // Health check helpers
 
 async fn health_check(
@@ -1020,6 +1068,7 @@ async fn health_check(
         CatalogService::CompareService => compare_health(endpoint).await,
         CatalogService::GenreAnalysis => genre_health(endpoint).await,
         CatalogService::AuthorAnalytics => author_analytics_health(endpoint).await,
+        CatalogService::BookSearch => book_search_health(endpoint).await,
     }
 }
 
@@ -1062,6 +1111,17 @@ async fn author_analytics_health(
     endpoint: &str,
 ) -> Result<contracts::common::HealthCheckResponse, String> {
     author_analytics_client(endpoint)
+        .await?
+        .health_check(Request::new(HealthCheckRequest {}))
+        .await
+        .map(|r| r.into_inner())
+        .map_err(|e| e.to_string())
+}
+
+async fn book_search_health(
+    endpoint: &str,
+) -> Result<contracts::common::HealthCheckResponse, String> {
+    book_search_client(endpoint)
         .await?
         .health_check(Request::new(HealthCheckRequest {}))
         .await

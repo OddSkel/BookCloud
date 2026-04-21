@@ -7,4 +7,9 @@ pub mod contracts {
         #![allow(dead_code)]
         tonic::include_proto!("gateway.book_search");
     }
+
+    pub mod book_catalog {
+        #![allow(dead_code)]
+        tonic::include_proto!("gateway.bookcatalog");
+    }
 }
