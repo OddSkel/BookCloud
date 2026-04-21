@@ -45,7 +45,7 @@ pub async fn book_search(pool: &PgPool, params: Query) -> Result<BookSearchRespo
                 isbn: b.isbn,
                 name: b.name,
                 url: b.url,
-                pub_year: b.pub_year
+                pub_year: b.year_published
             }
         ).collect(),
     })
