@@ -42,15 +42,10 @@ pub async fn book_search(pool: &PgPool, params: Query) -> Result<BookSearchRespo
     Ok(BookSearchResponse{
         books : books_searched.into_iter().map(
             |b| Proto_Book {
-                id: b.id,
-                name: b.name,
-                author: b.author,
                 isbn: b.isbn,
-                year_published: b.year_published,
-                editor: b.editor,
-                edition_number: b.edition_number,
-                genre: b.genre,
-                summary: b.summary,
+                name: b.name,
+                url: b.url,
+                pub_year: b.pub_year
             }
         ).collect(),
     })
