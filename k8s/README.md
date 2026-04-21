@@ -103,6 +103,66 @@ Current autoscaling policy:
 - CPU target: 70% average utilization.
 - Memory target: 80% average utilization.
 
+## GKE Deployment
+
+For Google Kubernetes Engine, local Minikube images cannot be used directly. The GKE deployment script builds the service images, pushes them to Artifact Registry, renders a temporary copy of the manifests with the pushed image URLs, and applies that copy to the GKE cluster.
+
+Requirements:
+
+- Google Cloud SDK authenticated with `gcloud auth login`.
+- Docker running locally.
+- A Google Cloud project with billing enabled.
+- IAM permissions to create or use GKE clusters and Artifact Registry repositories.
+
+Deploy to GKE:
+
+```bash
+GCP_PROJECT_ID=<your-gcp-project-id> ./k8s/deploy_gke.sh
+```
+
+Default GKE settings:
+
+- Artifact Registry region: `europe-west1`
+- GKE zone: `europe-west1-b`
+- Cluster name: `bookcloud-gke`
+- Machine type: `e2-standard-2`
+- Nodes: `2`
+- Artifact Registry repository: `bookcloud`
+- Ingress host: `api.bookcloud.local`
+
+Override defaults:
+
+```bash
+GCP_PROJECT_ID=<project> \
+GCP_REGION=europe-west1 \
+GCP_ZONE=europe-west1-b \
+GKE_CLUSTER_NAME=bookcloud-gke \
+GKE_MACHINE_TYPE=e2-standard-2 \
+GKE_NUM_NODES=2 \
+BOOKCLOUD_INGRESS_HOST=api.bookcloud.example.com \
+./k8s/deploy_gke.sh
+```
+
+If you already created the GKE cluster and only want to deploy to it:
+
+```bash
+GCP_PROJECT_ID=<project> GKE_CREATE_CLUSTER=0 ./k8s/deploy_gke.sh
+```
+
+After deployment, check the external IP:
+
+```bash
+kubectl -n bookcloud get ingress api-gateway
+```
+
+If you do not have DNS configured yet, test with `curl --resolve`:
+
+```bash
+curl --resolve api.bookcloud.local:80:<EXTERNAL_IP> http://api.bookcloud.local/health
+```
+
+For a real public hostname, create a DNS `A` record pointing your chosen host to the ingress external IP.
+
 ## API Gateway Access
 
 The ingress is configured for this host:
