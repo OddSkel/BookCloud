@@ -48,6 +48,7 @@ use contracts::{
         UpdateBookRequest, book_catalog_grpc_client::BookCatalogGrpcClient,
     },
     book_search::{Query as BookSearchQuery, book_search_grpc_client::BookSearchGrpcClient},
+    book_recommendation::{Query as BookRecommendationQuery, book_recommendation_grpc_client::BookRecommendationGrpcClient},
     common::HealthCheckRequest,
     compare_service::{
         CompareFilters, GetCorrelationRequest, GetErasRequest, GetHiddenGemsRequest,
