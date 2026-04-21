@@ -31,15 +31,16 @@ The script automatically:
 
 1. Starts Minikube if it is not already running.
 2. Enables the `ingress` addon.
-3. Builds the local images used by the deployments:
+3. Enables the `metrics-server` addon required by Horizontal Pod Autoscalers.
+4. Builds the local images used by the deployments:
    - `bookcloud/api-gateway:latest`
    - `bookcloud/book-catalog:latest`
    - `bookcloud/author-catalog:latest`
    - `bookcloud/rating-catalog:latest`
    - `bookcloud/compare-service:latest`
    - `bookcloud/genre-analysis-service:latest`
-4. Applies all manifests with `kubectl apply -k k8s`.
-5. Waits for the deployments to become available.
+5. Applies all manifests with `kubectl apply -k k8s`.
+6. Waits for the deployments to become available.
 
 By default, Minikube creates a local cluster with one node. To request more nodes during the first cluster startup:
 
@@ -56,6 +57,7 @@ If you prefer to run the steps manually:
 ```bash
 minikube start -p bookcloud
 minikube -p bookcloud addons enable ingress
+minikube -p bookcloud addons enable metrics-server
 ```
 
 Build the images inside Minikube:
@@ -73,9 +75,33 @@ Apply all manifests:
 
 ```bash
 kubectl apply -k k8s
-kubectl -n bookcloud rollout status deployment --all --timeout=300s
-kubectl -n bookcloud get pods,svc,ingress
+for deployment in $(kubectl -n bookcloud get deployments -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}'); do
+  kubectl -n bookcloud rollout status "deployment/$deployment" --timeout=300s
+done
+kubectl -n bookcloud get pods,svc,ingress,hpa
 ```
+
+## Deployment Features
+
+The Kubernetes manifests include these operational features for all six application microservices:
+
+- Deployment and Service YAML files.
+- Environment-variable ConfigMaps.
+- Resource requests and limits.
+- Readiness, liveness, and startup probes.
+- Explicit `RollingUpdate` deployment strategy.
+- Horizontal Pod Autoscalers using CPU and memory utilization.
+
+The database pods use PersistentVolumeClaims for PostgreSQL data persistence.
+
+The HPA manifests require metrics from `metrics-server`. The startup script enables the Minikube addon automatically.
+
+Current autoscaling policy:
+
+- `api-gateway`: 2 to 5 replicas.
+- Other application services: 1 to 4 replicas.
+- CPU target: 70% average utilization.
+- Memory target: 80% average utilization.
 
 ## API Gateway Access
 
@@ -131,6 +157,19 @@ Restart a deployment after rebuilding an image:
 
 ```bash
 kubectl -n bookcloud rollout restart deployment/api-gateway
+```
+
+Rollback all application microservices to their previous rollout revision:
+
+```bash
+./k8s/rollback_service.sh
+```
+
+Check autoscalers:
+
+```bash
+kubectl -n bookcloud get hpa
+kubectl -n bookcloud describe hpa api-gateway
 ```
 
 Remove the application resources:

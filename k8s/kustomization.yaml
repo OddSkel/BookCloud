@@ -6,10 +6,12 @@ resources:
   - api-gateway/configmap.yaml
   - api-gateway/deployment.yaml
   - api-gateway/service.yaml
+  - api-gateway/hpa.yaml
   - api-gateway/ingress.yaml
   - book-catalog/configmap.yaml
   - book-catalog/deployment.yaml
   - book-catalog/service.yaml
+  - book-catalog/hpa.yaml
   - book-catalog/db-configmap.yaml
   - book-catalog/db-deployment.yaml
   - book-catalog/db-pvc.yaml
@@ -17,6 +19,7 @@ resources:
   - author-catalog/configmap.yaml
   - author-catalog/deployment.yaml
   - author-catalog/service.yaml
+  - author-catalog/hpa.yaml
   - author-catalog/db-configmap.yaml
   - author-catalog/db-deployment.yaml
   - author-catalog/db-pvc.yaml
@@ -24,6 +27,7 @@ resources:
   - rating-catalog/configmap.yaml
   - rating-catalog/deployment.yaml
   - rating-catalog/service.yaml
+  - rating-catalog/hpa.yaml
   - rating-catalog/db-configmap.yaml
   - rating-catalog/db-deployment.yaml
   - rating-catalog/db-pvc.yaml
@@ -31,9 +35,11 @@ resources:
   - compare-service/configmap.yaml
   - compare-service/deployment.yaml
   - compare-service/service.yaml
+  - compare-service/hpa.yaml
   - genre-analysis-service/configmap.yaml
   - genre-analysis-service/deployment.yaml
   - genre-analysis-service/service.yaml
+  - genre-analysis-service/hpa.yaml
   - genre-analysis-service/db-configmap.yaml
   - genre-analysis-service/db-deployment.yaml
   - genre-analysis-service/db-pvc.yaml
