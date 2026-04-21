@@ -235,6 +235,7 @@ pub enum CatalogService {
     GenreAnalysis,
     AuthorAnalytics,
     BookSearch,
+    BookRecommendation,
 }
 
 impl CatalogService {
@@ -367,16 +368,16 @@ impl GrpcRegistry {
     }
 
     pub async fn get_book_recommendation(
-    &self,
-    filters: crate::handlers::book_recommendation_handler::SearchQuery,
+        &self,
+        filters: crate::handlers::book_rec_handler::SearchQuery,
     ) -> Result<serde_json::Value, String> {
-        let mut client = book_client(self.endpoint(CatalogService::BookRecommendation)).await?;
+        let mut client = book_recommendation_client(self.endpoint(CatalogService::BookRecommendation)).await?;
 
         let response = client
             .book_recommendation(Request::new(BookRecommendationQuery {
-                title:    filters.title,
-                author:   filters.author,
-                keywords: filters.keywords,
+                genre: filters.genre,
+                rating: filters.rating,
+                popularity: filters.popularity.as_ref().and_then(|s| s.parse().ok()),
             }))
             .await
             .map(|r| r.into_inner())
@@ -1095,6 +1096,14 @@ async fn book_search_client(
         .map_err(|e| e.to_string())
 }
 
+async fn book_recommendation_client(
+    endpoint: &str,
+) -> Result<BookRecommendationGrpcClient<tonic::transport::Channel>, String> {
+    BookRecommendationGrpcClient::connect(endpoint.to_string())
+        .await
+        .map_err(|e| e.to_string())
+}
+
 // Health check helpers
 
 async fn health_check(
@@ -1109,6 +1118,7 @@ async fn health_check(
         CatalogService::GenreAnalysis => genre_health(endpoint).await,
         CatalogService::AuthorAnalytics => author_analytics_health(endpoint).await,
         CatalogService::BookSearch => book_search_health(endpoint).await,
+        CatalogService::BookRecommendation => book_recommendation_health(endpoint).await,
     }
 }
 
@@ -1162,6 +1172,17 @@ async fn book_search_health(
     endpoint: &str,
 ) -> Result<contracts::common::HealthCheckResponse, String> {
     book_search_client(endpoint)
+        .await?
+        .health_check(Request::new(HealthCheckRequest {}))
+        .await
+        .map(|r| r.into_inner())
+        .map_err(|e| e.to_string())
+}
+
+async fn book_recommendation_health(
+    endpoint: &str,
+) -> Result<contracts::common::HealthCheckResponse, String> {
+    book_recommendation_client(endpoint)
         .await?
         .health_check(Request::new(HealthCheckRequest {}))
         .await

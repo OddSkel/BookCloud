@@ -1,6 +1,7 @@
 pub mod author_analytics_handler;
 pub mod author_handler;
 pub mod book_handler;
+pub mod book_rec_handler;
 pub mod book_search_handler;
 pub mod catalog_handler;
 pub mod compare_handler;
