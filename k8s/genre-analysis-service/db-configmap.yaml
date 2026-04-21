@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: genre-db-config
+  namespace: bookcloud
+data:
+  POSTGRES_DB: "genre_analysis"

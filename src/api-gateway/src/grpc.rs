@@ -26,11 +26,18 @@ pub mod contracts {
     pub mod genre_service {
         tonic::include_proto!("gateway.genreservice");
     }
+    pub mod author_analytics {
+        tonic::include_proto!("gateway.authoranalytics");
+    }
 }
 
 use contracts::{
+    author_analytics::{
+        AuthorPerformanceRequest, AuthorsConsistencyRequest, AuthorsGrowthRequest,
+        RankAuthorRequest, author_analytics_grpc_client::AuthorAnalyticsGrpcClient,
+    },
     author_catalog::{
-        AddAuthorRequest, AuthorAdd, DeleteAuthorRequest, GetAuthorRequest, GetAuthorsRequest,
+        AddAuthorRequest, DeleteAuthorRequest, GetAuthorRequest, GetAuthorsRequest,
         UpdateAuthorRequest, author_catalog_grpc_client::AuthorCatalogGrpcClient,
     },
     book_catalog::{
@@ -45,9 +52,8 @@ use contracts::{
     },
     genre_service::{
         AddGenreRequest, DeleteGenreRequest, GenreGrowthRequest, GenrePopularityRequest,
-        GenreSort as ProtoGenreSort, GetGenreRequest as GetGenreAnalysisRequest,
-        GetGenresRequest, UpdateGenreRequest,
-        genre_analysis_grpc_client::GenreAnalysisGrpcClient,
+        GenreSort as ProtoGenreSort, GetGenreRequest as GetGenreAnalysisRequest, GetGenresRequest,
+        UpdateGenreRequest, genre_analysis_grpc_client::GenreAnalysisGrpcClient,
     },
     rating_catalog::{
         AddRatingRequest, DeleteRatingRequest, GetRatingRequest, GetRatingsRequest, RatingAdd,
@@ -78,13 +84,14 @@ pub struct BookAddPayload {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct AuthorModel {
-    pub id: i32,
+    pub author_id: i64,
     pub name: String,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct AuthorAddPayload {
-    pub id: i32,
+    #[serde(alias = "id", alias = "Id", alias = "AuthorId")]
+    pub author_id: i64,
     pub name: String,
 }
 
@@ -181,6 +188,56 @@ pub struct CompareFiltersPayload {
     pub modern_threshold: Option<i32>,
 }
 
+#[derive(Serialize, Deserialize, Clone)]
+pub struct RankedAuthorModel {
+    pub author_name: String,
+    pub average_rating: f64,
+    pub total_number_ratings: i64,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct AuthorEvolutionPointModel {
+    pub year: i32,
+    pub title: String,
+    pub quality_score: f64,
+    pub popularity_score: f64,
+    pub genre: String,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct AuthorPerformanceModel {
+    pub author_id: String,
+    pub author_name: String,
+    pub pub_year_from: i32,
+    pub pub_year_to: i32,
+    pub correlation_coefficient: f64,
+    pub sample_size: i32,
+    pub interpretation: String,
+    pub evolution: Vec<AuthorEvolutionPointModel>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct AuthorConsistencyModel {
+    pub author_id: String,
+    pub author_name: String,
+    pub consistency_score: f64,
+    pub average_rating: f64,
+    pub std_deviation: f64,
+    pub total_books: i32,
+    pub rank: i32,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct AuthorGrowthModel {
+    pub author_id: String,
+    pub author_name: String,
+    pub growth_score: f64,
+    pub first_rating: f64,
+    pub latest_rating: f64,
+    pub total_books: i32,
+    pub rank: i32,
+}
+
 // CatalogService
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -190,6 +247,7 @@ pub enum CatalogService {
     RatingCatalog,
     CompareService,
     GenreAnalysis,
+    AuthorAnalytics,
 }
 
 impl CatalogService {
@@ -200,6 +258,7 @@ impl CatalogService {
             Self::RatingCatalog => "ratingCatalog",
             Self::CompareService => "compareService",
             Self::GenreAnalysis => "genreAnalysis",
+            Self::AuthorAnalytics => "authorAnalytics",
         }
     }
     pub const fn env_var(self) -> &'static str {
@@ -209,6 +268,7 @@ impl CatalogService {
             Self::RatingCatalog => "RATING_CATALOG_GRPC_URL",
             Self::CompareService => "COMPARE_SERVICE_GRPC_URL",
             Self::GenreAnalysis => "GENRE_ANALYSIS_GRPC_URL",
+            Self::AuthorAnalytics => "AUTHOR_ANALYTICS_GRPC_URL",
         }
     }
     pub const fn default_uri(self) -> &'static str {
@@ -218,6 +278,7 @@ impl CatalogService {
             Self::RatingCatalog => "http://rating-catalog:50053",
             Self::CompareService => "http://compare-service:50054",
             Self::GenreAnalysis => "http://genre-analysis-service:50055",
+            Self::AuthorAnalytics => "http://author-analytics-service:50056",
         }
     }
 }
@@ -237,6 +298,7 @@ impl GrpcRegistry {
             CatalogService::RatingCatalog,
             CatalogService::CompareService,
             CatalogService::GenreAnalysis,
+            CatalogService::AuthorAnalytics,
         ]
         .into_iter()
         .map(|svc| {
@@ -387,16 +449,16 @@ impl GrpcRegistry {
     pub async fn get_authors(
         &self,
         page: Option<i64>,
-        page_size: Option<i64>) -> Result<Vec<AuthorModel>, String> {
+        page_size: Option<i64>,
+    ) -> Result<Vec<AuthorModel>, String> {
         let endpoint = self.endpoint(CatalogService::AuthorCatalog);
         println!("DEBUG: Calling get_authors on endpoint: {}", endpoint);
         let mut c = author_client(endpoint).await?;
         let result = c
-            .get_authors(Request::new(GetAuthorsRequest {page, page_size})).await;
+            .get_authors(Request::new(GetAuthorsRequest { page, page_size }))
+            .await;
         println!("DEBUG: get_authors result: {:?}", result);
-        let r = result
-            .map(|r| r.into_inner())
-            .map_err(|e| e.to_string())?;
+        let r = result.map(|r| r.into_inner()).map_err(|e| e.to_string())?;
         Ok(r.authors.into_iter().map(author_to_model).collect())
     }
 
@@ -417,12 +479,11 @@ impl GrpcRegistry {
     pub async fn add_author(&self, p: AuthorAddPayload) -> Result<AuthorModel, String> {
         let mut c = author_client(self.endpoint(CatalogService::AuthorCatalog)).await?;
         let r = c
-            .add_author(
-                Request::new(AddAuthorRequest {
-                    id: p.id,
-                    name: p.name,
-                })
-            ).await
+            .add_author(Request::new(AddAuthorRequest {
+                author_id: p.author_id,
+                name: p.name,
+            }))
+            .await
             .map(|r| r.into_inner())
             .map_err(|e| e.to_string())?;
         r.author
@@ -430,10 +491,15 @@ impl GrpcRegistry {
             .ok_or_else(|| "Failed to create author".to_string())
     }
 
-    pub async fn update_author(&self, id: i32, name: Option<String>) -> Result<Vec<AuthorModel>, String> {
+    pub async fn update_author(
+        &self,
+        author_id: i64,
+        name: Option<String>,
+    ) -> Result<Vec<AuthorModel>, String> {
         let mut c = author_client(self.endpoint(CatalogService::AuthorCatalog)).await?;
         let r = c
-            .update_author(Request::new(UpdateAuthorRequest { id, name })).await
+            .update_author(Request::new(UpdateAuthorRequest { author_id, name }))
+            .await
             .map(|r| r.into_inner())
             .map_err(|e| e.to_string())?;
         Ok(r.authors.into_iter().map(author_to_model).collect())
@@ -765,6 +831,132 @@ impl GrpcRegistry {
 
         compare_json_to_value(response)
     }
+
+    // Author Analytics
+
+    pub async fn rank_authors(
+        &self,
+        average_rating: Option<f64>,
+        total_number_ratings: Option<i64>,
+    ) -> Result<Vec<RankedAuthorModel>, String> {
+        let mut c = author_analytics_client(self.endpoint(CatalogService::AuthorAnalytics)).await?;
+        let r = c
+            .rank_authors(Request::new(RankAuthorRequest {
+                average_rating,
+                total_number_ratings,
+            }))
+            .await
+            .map(|r| r.into_inner())
+            .map_err(|e| e.to_string())?;
+
+        Ok(r.authors
+            .into_iter()
+            .map(|a| RankedAuthorModel {
+                author_name: a.author_name,
+                average_rating: a.average_rating,
+                total_number_ratings: a.total_number_ratings,
+            })
+            .collect())
+    }
+
+    pub async fn author_performance(
+        &self,
+        author_name: Option<String>,
+        author_id: Option<i32>,
+        pub_year_from: Option<i32>,
+        pub_year_to: Option<i32>,
+    ) -> Result<AuthorPerformanceModel, String> {
+        let mut c = author_analytics_client(self.endpoint(CatalogService::AuthorAnalytics)).await?;
+        let r = c
+            .author_performance(Request::new(AuthorPerformanceRequest {
+                author_name,
+                author_id,
+                pub_year_from,
+                pub_year_to,
+            }))
+            .await
+            .map(|r| r.into_inner())
+            .map_err(|e| e.to_string())?;
+
+        Ok(AuthorPerformanceModel {
+            author_id: r.author_id,
+            author_name: r.author_name,
+            pub_year_from: r.pub_year_from,
+            pub_year_to: r.pub_year_to,
+            correlation_coefficient: r.correlation_coefficient,
+            sample_size: r.sample_size,
+            interpretation: r.interpretation,
+            evolution: r
+                .evolution
+                .into_iter()
+                .map(|e| AuthorEvolutionPointModel {
+                    year: e.year,
+                    title: e.title,
+                    quality_score: e.quality_score,
+                    popularity_score: e.popularity_score,
+                    genre: e.genre,
+                })
+                .collect(),
+        })
+    }
+
+    pub async fn authors_consistency(
+        &self,
+        author_name: Option<String>,
+        author_id: Option<i32>,
+    ) -> Result<Vec<AuthorConsistencyModel>, String> {
+        let mut c = author_analytics_client(self.endpoint(CatalogService::AuthorAnalytics)).await?;
+        let r = c
+            .authors_consistency(Request::new(AuthorsConsistencyRequest {
+                author_name,
+                author_id,
+            }))
+            .await
+            .map(|r| r.into_inner())
+            .map_err(|e| e.to_string())?;
+
+        Ok(r.authors
+            .into_iter()
+            .map(|a| AuthorConsistencyModel {
+                author_id: a.author_id,
+                author_name: a.author_name,
+                consistency_score: a.consistency_score,
+                average_rating: a.average_rating,
+                std_deviation: a.std_deviation,
+                total_books: a.total_books,
+                rank: a.rank,
+            })
+            .collect())
+    }
+
+    pub async fn authors_growth(
+        &self,
+        author_name: Option<String>,
+        author_id: Option<i32>,
+    ) -> Result<Vec<AuthorGrowthModel>, String> {
+        let mut c = author_analytics_client(self.endpoint(CatalogService::AuthorAnalytics)).await?;
+        let r = c
+            .authors_growth(Request::new(AuthorsGrowthRequest {
+                author_name,
+                author_id,
+            }))
+            .await
+            .map(|r| r.into_inner())
+            .map_err(|e| e.to_string())?;
+
+        Ok(r.authors
+            .into_iter()
+            .map(|a| AuthorGrowthModel {
+                author_id: a.author_id,
+                author_name: a.author_name,
+                growth_score: a.growth_score,
+                first_rating: a.first_rating,
+                latest_rating: a.latest_rating,
+                total_books: a.total_books,
+                rank: a.rank,
+            })
+            .collect())
+    }
 }
 
 // GrpcServiceStatus
@@ -829,6 +1021,14 @@ async fn genre_client(
         .map_err(|e| e.to_string())
 }
 
+async fn author_analytics_client(
+    endpoint: &str,
+) -> Result<AuthorAnalyticsGrpcClient<tonic::transport::Channel>, String> {
+    AuthorAnalyticsGrpcClient::connect(endpoint.to_string())
+        .await
+        .map_err(|e| e.to_string())
+}
+
 // Health check helpers
 
 async fn health_check(
@@ -841,6 +1041,7 @@ async fn health_check(
         CatalogService::RatingCatalog => rating_health(endpoint).await,
         CatalogService::CompareService => compare_health(endpoint).await,
         CatalogService::GenreAnalysis => genre_health(endpoint).await,
+        CatalogService::AuthorAnalytics => author_analytics_health(endpoint).await,
     }
 }
 
@@ -879,6 +1080,17 @@ async fn genre_health(endpoint: &str) -> Result<contracts::common::HealthCheckRe
         .map_err(|e| e.to_string())
 }
 
+async fn author_analytics_health(
+    endpoint: &str,
+) -> Result<contracts::common::HealthCheckResponse, String> {
+    author_analytics_client(endpoint)
+        .await?
+        .health_check(Request::new(HealthCheckRequest {}))
+        .await
+        .map(|r| r.into_inner())
+        .map_err(|e| e.to_string())
+}
+
 // Proto → Model converters
 
 fn book_to_model(b: contracts::book_catalog::Book) -> BookModel {
@@ -898,7 +1110,7 @@ fn book_to_model(b: contracts::book_catalog::Book) -> BookModel {
 
 fn author_to_model(a: contracts::author_catalog::Author) -> AuthorModel {
     AuthorModel {
-        id: a.id,
+        author_id: a.author_id,
         name: a.name,
     }
 }

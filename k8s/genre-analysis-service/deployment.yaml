@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: genre-analysis-service
+  namespace: bookcloud
+  labels:
+    app: genre-analysis-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: genre-analysis-service
+  template:
+    metadata:
+      labels:
+        app: genre-analysis-service
+    spec:
+      containers:
+        - name: genre-analysis-service
+          image: bookcloud/genre-analysis-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: grpc
+              containerPort: 50055
+          envFrom:
+            - configMapRef:
+                name: genre-analysis-service-config
+            - secretRef:
+                name: postgres-credentials
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "400m"
+              memory: "512Mi"
+          readinessProbe:
+            tcpSocket:
+              port: grpc
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: grpc
+            initialDelaySeconds: 15
+            periodSeconds: 20

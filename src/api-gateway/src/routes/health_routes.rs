@@ -16,6 +16,10 @@ pub fn health_routes(cfg: &mut web::ServiceConfig) {
             web::get().to(catalog_handler::rating_catalog_status),
         )
         .route(
+            "/status/compareService",
+            web::get().to(catalog_handler::compare_service_status),
+        )
+        .route(
             "/status/genreAnalysis",
             web::get().to(catalog_handler::genre_analysis_status),
         );

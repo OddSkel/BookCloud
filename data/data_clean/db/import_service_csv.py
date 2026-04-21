@@ -42,7 +42,7 @@ SERVICE_TABLES = {
             "not_null": {"name"},
             "ddl": """
                 CREATE TABLE IF NOT EXISTS {schema}.author (
-                    author_id INTEGER PRIMARY KEY,
+                    author_id BIGINT PRIMARY KEY,
                     name TEXT NOT NULL
                 );
             """,
@@ -55,7 +55,7 @@ SERVICE_TABLES = {
             "ddl": """
                 CREATE TABLE IF NOT EXISTS {schema}.book_author (
                     book_isbn BIGINT NOT NULL,
-                    author_id INTEGER NOT NULL,
+                    author_id BIGINT NOT NULL,
                     PRIMARY KEY (book_isbn, author_id)
                 );
             """,
@@ -166,7 +166,7 @@ def truncate_tables(conn, schema: str, service: str) -> None:
         for table in tables:
             print(f"Truncating {schema}.{table} ...")
             cur.execute(
-                sql.SQL("TRUNCATE TABLE {}.{}").format(
+                sql.SQL("TRUNCATE TABLE {}.{} CASCADE").format(
                     sql.Identifier(schema), sql.Identifier(table)
                 )
             )

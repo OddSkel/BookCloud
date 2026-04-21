@@ -16,7 +16,7 @@ RUN apt-get update \
   && PROTO_ROOT="." bash generate_proto.sh \
   && cp generated_protos/*.py .
 
-ENV PYTHONPATH="/app/generated_protos:${PYTHONPATH:-}"
+ENV PYTHONPATH=/app
 
 EXPOSE 50055
 

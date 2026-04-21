@@ -1,7 +1,7 @@
 syntax = "proto3";
 import "common.proto";
 
-package author_catalog;
+package gateway.authorcatalog;
 
 service AuthorCatalogGrpc {
   rpc GetAuthors(GetAuthorsRequest) returns (GetAuthorsResponse);
@@ -14,7 +14,7 @@ service AuthorCatalogGrpc {
 
   rpc GetAuthor(GetAuthorRequest) returns (GetAuthorResponse);
 
-  rpc HealthCheck (common.HealthCheckRequest) returns (common.HealthCheckResponse);
+  rpc HealthCheck (gateway.common.HealthCheckRequest) returns (gateway.common.HealthCheckResponse);
 }
 
 message GetAuthorsRequest{
@@ -23,12 +23,12 @@ message GetAuthorsRequest{
 }
 
 message Author {
-  int32 id = 1;
+  int64 author_id = 1;
   string name = 2;
 }
 
 message AddAuthorRequest {
-  int32 id = 1;
+  int64 author_id = 1;
   string name = 2;
 }
 
@@ -37,7 +37,7 @@ message UpdateAuthorResponse {
 }
 
 message UpdateAuthorRequest {
-  int32 id = 1;
+  int64 author_id = 1;
   optional string name = 2;
 }
 

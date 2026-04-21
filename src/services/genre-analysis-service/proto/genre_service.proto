@@ -28,7 +28,7 @@ message GenreWithRating {
 }
 
 message GetGenresRequest {
-  GenreSort sort_by = 1;
+  GenreSort   sort_by = 1;
   bool ascending      = 2;
   int32 page_num      = 3;
   int32 page_size     = 4;
