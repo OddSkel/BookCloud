@@ -13,9 +13,9 @@ pub struct AppConfig {
 impl AppConfig {
     pub fn from_env() -> Self {
         Self {
-            service_name: "book-search".to_string(),
+            service_name: "book-recommendation".to_string(),
             host: env::var("HOST").unwrap_or_else(|_| "0.0.0.0".to_string()),
-            grpc_port: read_port("GRPC_PORT", 50055),
+            grpc_port: read_port("GRPC_PORT", 50056),
             db_url: std::env::var("DATABASE_URL").expect("DATABASE_URL must be set"),
         }
     }
@@ -31,3 +31,4 @@ fn read_port(key: &str, default: u16) -> u16 {
         .and_then(|value| value.parse::<u16>().ok())
         .unwrap_or(default)
 }
+
