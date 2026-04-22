@@ -5,8 +5,7 @@ metadata:
   namespace: bookcloud
 spec:
   rules:
-    - host: api.bookcloud.local
-      http:
+    - http:
         paths:
           - path: /
             pathType: Prefix
