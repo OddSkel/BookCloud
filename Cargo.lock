@@ -166,7 +166,6 @@ dependencies = [
  "prost 0.14.3",
  "prost-types 0.12.6",
  "protoc-bin-vendored",
- "sqlx",
  "tokio",
  "tonic",
  "tonic-prost",

@@ -25,61 +25,57 @@ _sym_db = _symbol_database.Default()
 import common_pb2 as common__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x13genre_service.proto\x12\x14gateway.genreservice\x1a\x0c\x63ommon.proto\"\'\n\x05Genre\x12\x10\n\x08genre_id\x18\x01 \x01(\x03\x12\x0c\n\x04name\x18\x02 \x01(\t\"+\n\tBookGenre\x12\x0c\n\x04isbn\x18\x01 \x01(\x03\x12\x10\n\x08genre_id\x18\x02 \x01(\x03\"t\n\x0fGenreWithRating\x12\x0c\n\x04rank\x18\x01 \x01(\x05\x12\x12\n\ngenre_name\x18\x02 \x01(\t\x12\x10\n\x08genre_id\x18\x03 \x01(\x03\x12\x12\n\navg_rating\x18\x04 \x01(\x01\x12\x19\n\x11total_num_ratings\x18\x05 \x01(\x03\"|\n\x10GetGenresRequest\x12\x30\n\x07sort_by\x18\x01 \x01(\x0e\x32\x1f.gateway.genreservice.GenreSort\x12\x11\n\tascending\x18\x02 \x01(\x08\x12\x10\n\x08page_num\x18\x03 \x01(\x05\x12\x11\n\tpage_size\x18\x04 \x01(\x05\"\x99\x01\n\x11GetGenresResponse\x12\x35\n\x06genres\x18\x01 \x03(\x0b\x32%.gateway.genreservice.GenreWithRating\x12\x10\n\x08page_num\x18\x02 \x01(\x05\x12\x11\n\tpage_size\x18\x03 \x01(\x05\x12\x13\n\x0btotal_items\x18\x04 \x01(\x05\x12\x13\n\x0btotal_pages\x18\x05 \x01(\x05\"#\n\x0fGetGenreRequest\x12\x10\n\x08genre_id\x18\x01 \x01(\x03\"g\n\x10GetGenreResponse\x12\x10\n\x08genre_id\x18\x01 \x01(\x03\x12\x12\n\ngenre_name\x18\x02 \x01(\t\x12\x12\n\navg_rating\x18\x03 \x01(\x01\x12\x19\n\x11total_num_ratings\x18\x04 \x01(\x03\"=\n\x0f\x41\x64\x64GenreRequest\x12*\n\x05genre\x18\x01 \x01(\x0b\x32\x1b.gateway.genreservice.Genre\">\n\x10\x41\x64\x64GenreResponse\x12*\n\x05genre\x18\x01 \x01(\x0b\x32\x1b.gateway.genreservice.Genre\"R\n\x12UpdateGenreRequest\x12\x10\n\x08genre_id\x18\x01 \x01(\x03\x12*\n\x05genre\x18\x02 \x01(\x0b\x32\x1b.gateway.genreservice.Genre\"A\n\x13UpdateGenreResponse\x12*\n\x05genre\x18\x01 \x01(\x0b\x32\x1b.gateway.genreservice.Genre\"&\n\x12\x44\x65leteGenreRequest\x12\x10\n\x08genre_id\x18\x01 \x01(\x03\"\x15\n\x13\x44\x65leteGenreResponse\"K\n\x15\x41\x64\x64GenreToBookRequest\x12\x32\n\tbookGenre\x18\x01 \x01(\x0b\x32\x1f.gateway.genreservice.BookGenre\"L\n\x16\x41\x64\x64GenreToBookResponse\x12\x32\n\tbookGenre\x18\x01 \x01(\x0b\x32\x1f.gateway.genreservice.BookGenre\"P\n\x1aRemoveGenreFromBookRequest\x12\x32\n\tbookGenre\x18\x01 \x01(\x0b\x32\x1f.gateway.genreservice.BookGenre\"\x1d\n\x1bRemoveGenreFromBookResponse\"3\n\x0fGenreTrendPoint\x12\x0c\n\x04year\x18\x01 \x01(\x05\x12\x12\n\navg_rating\x18\x02 \x01(\x01\"D\n\x19GenreTrendPointPopularity\x12\x0c\n\x04year\x18\x01 \x01(\x05\x12\x19\n\x11total_num_ratings\x18\x02 \x01(\x03\"&\n\x12GenreGrowthRequest\x12\x10\n\x08genre_id\x18\x01 \x01(\x03\"`\n\x13GenreGrowthResponse\x12\x35\n\x06points\x18\x01 \x03(\x0b\x32%.gateway.genreservice.GenreTrendPoint\x12\x12\n\navg_rating\x18\x02 \x01(\x01\"*\n\x16GenrePopularityRequest\x12\x10\n\x08genre_id\x18\x01 \x01(\x03\"u\n\x17GenrePopularityResponse\x12?\n\x06points\x18\x01 \x03(\x0b\x32/.gateway.genreservice.GenreTrendPointPopularity\x12\x19\n\x11total_num_ratings\x18\x02 \x01(\x03*\'\n\tGenreSort\x12\n\n\x06RATING\x10\x00\x12\x0e\n\nPOPULARITY\x10\x01\x32\x8a\x08\n\x11GenreAnalysisGrpc\x12V\n\x0bHealthCheck\x12\".gateway.common.HealthCheckRequest\x1a#.gateway.common.HealthCheckResponse\x12\\\n\tGetGenres\x12&.gateway.genreservice.GetGenresRequest\x1a\'.gateway.genreservice.GetGenresResponse\x12Y\n\x08\x41\x64\x64Genre\x12%.gateway.genreservice.AddGenreRequest\x1a&.gateway.genreservice.AddGenreResponse\x12Y\n\x08GetGenre\x12%.gateway.genreservice.GetGenreRequest\x1a&.gateway.genreservice.GetGenreResponse\x12\x62\n\x0bUpdateGenre\x12(.gateway.genreservice.UpdateGenreRequest\x1a).gateway.genreservice.UpdateGenreResponse\x12\x62\n\x0b\x44\x65leteGenre\x12(.gateway.genreservice.DeleteGenreRequest\x1a).gateway.genreservice.DeleteGenreResponse\x12k\n\x0e\x41\x64\x64GenreToBook\x12+.gateway.genreservice.AddGenreToBookRequest\x1a,.gateway.genreservice.AddGenreToBookResponse\x12z\n\x13RemoveGenreFromBook\x12\x30.gateway.genreservice.RemoveGenreFromBookRequest\x1a\x31.gateway.genreservice.RemoveGenreFromBookResponse\x12\x65\n\x0eGetGenreGrowth\x12(.gateway.genreservice.GenreGrowthRequest\x1a).gateway.genreservice.GenreGrowthResponse\x12q\n\x12GetGenrePopularity\x12,.gateway.genreservice.GenrePopularityRequest\x1a-.gateway.genreservice.GenrePopularityResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x13genre_service.proto\x12\x14gateway.genreservice\x1a\x0c\x63ommon.proto\"\'\n\x05Genre\x12\x10\n\x08genre_id\x18\x01 \x01(\x03\x12\x0c\n\x04name\x18\x02 \x01(\t\"+\n\tBookGenre\x12\x0c\n\x04isbn\x18\x01 \x01(\x03\x12\x10\n\x08genre_id\x18\x02 \x01(\x03\"|\n\x10GetGenresRequest\x12\x30\n\x07sort_by\x18\x01 \x01(\x0e\x32\x1f.gateway.genreservice.GenreSort\x12\x11\n\tascending\x18\x02 \x01(\x08\x12\x10\n\x08page_num\x18\x03 \x01(\x05\x12\x11\n\tpage_size\x18\x04 \x01(\x05\"\x8f\x01\n\x11GetGenresResponse\x12+\n\x06genres\x18\x01 \x03(\x0b\x32\x1b.gateway.genreservice.Genre\x12\x10\n\x08page_num\x18\x02 \x01(\x05\x12\x11\n\tpage_size\x18\x03 \x01(\x05\x12\x13\n\x0btotal_items\x18\x04 \x01(\x05\x12\x13\n\x0btotal_pages\x18\x05 \x01(\x05\"#\n\x0fGetGenreRequest\x12\x10\n\x08genre_id\x18\x01 \x01(\x03\">\n\x10GetGenreResponse\x12*\n\x05genre\x18\x01 \x01(\x0b\x32\x1b.gateway.genreservice.Genre\"=\n\x0f\x41\x64\x64GenreRequest\x12*\n\x05genre\x18\x01 \x01(\x0b\x32\x1b.gateway.genreservice.Genre\">\n\x10\x41\x64\x64GenreResponse\x12*\n\x05genre\x18\x01 \x01(\x0b\x32\x1b.gateway.genreservice.Genre\"R\n\x12UpdateGenreRequest\x12\x10\n\x08genre_id\x18\x01 \x01(\x03\x12*\n\x05genre\x18\x02 \x01(\x0b\x32\x1b.gateway.genreservice.Genre\"A\n\x13UpdateGenreResponse\x12*\n\x05genre\x18\x01 \x01(\x0b\x32\x1b.gateway.genreservice.Genre\"&\n\x12\x44\x65leteGenreRequest\x12\x10\n\x08genre_id\x18\x01 \x01(\x03\"\x15\n\x13\x44\x65leteGenreResponse\"K\n\x15\x41\x64\x64GenreToBookRequest\x12\x32\n\tbookGenre\x18\x01 \x01(\x0b\x32\x1f.gateway.genreservice.BookGenre\"L\n\x16\x41\x64\x64GenreToBookResponse\x12\x32\n\tbookGenre\x18\x01 \x01(\x0b\x32\x1f.gateway.genreservice.BookGenre\"P\n\x1aRemoveGenreFromBookRequest\x12\x32\n\tbookGenre\x18\x01 \x01(\x0b\x32\x1f.gateway.genreservice.BookGenre\"\x1d\n\x1bRemoveGenreFromBookResponse\"H\n\x0fGenreTrendPoint\x12\x11\n\ttimestamp\x18\x01 \x01(\t\x12\x0e\n\x06rating\x18\x02 \x01(\x01\x12\x12\n\npopularity\x18\x03 \x01(\x05\":\n\x12GenreGrowthRequest\x12\x10\n\x08genre_id\x18\x01 \x01(\x03\x12\x12\n\nmax_points\x18\x02 \x01(\x05\"q\n\x13GenreGrowthResponse\x12\x35\n\x06points\x18\x01 \x03(\x0b\x32%.gateway.genreservice.GenreTrendPoint\x12\x13\n\x0bgrowth_rate\x18\x02 \x01(\x01\x12\x0e\n\x06metric\x18\x03 \x01(\t\">\n\x16GenrePopularityRequest\x12\x10\n\x08genre_id\x18\x01 \x01(\x03\x12\x12\n\nmax_points\x18\x02 \x01(\x05\"o\n\x17GenrePopularityResponse\x12\x35\n\x06points\x18\x01 \x03(\x0b\x32%.gateway.genreservice.GenreTrendPoint\x12\r\n\x05trend\x18\x02 \x01(\x01\x12\x0e\n\x06metric\x18\x03 \x01(\t*\'\n\tGenreSort\x12\n\n\x06RATING\x10\x00\x12\x0e\n\nPOPULARITY\x10\x01\x32\x8a\x08\n\x11GenreAnalysisGrpc\x12V\n\x0bHealthCheck\x12\".gateway.common.HealthCheckRequest\x1a#.gateway.common.HealthCheckResponse\x12\\\n\tGetGenres\x12&.gateway.genreservice.GetGenresRequest\x1a\'.gateway.genreservice.GetGenresResponse\x12Y\n\x08\x41\x64\x64Genre\x12%.gateway.genreservice.AddGenreRequest\x1a&.gateway.genreservice.AddGenreResponse\x12Y\n\x08GetGenre\x12%.gateway.genreservice.GetGenreRequest\x1a&.gateway.genreservice.GetGenreResponse\x12\x62\n\x0bUpdateGenre\x12(.gateway.genreservice.UpdateGenreRequest\x1a).gateway.genreservice.UpdateGenreResponse\x12\x62\n\x0b\x44\x65leteGenre\x12(.gateway.genreservice.DeleteGenreRequest\x1a).gateway.genreservice.DeleteGenreResponse\x12k\n\x0e\x41\x64\x64GenreToBook\x12+.gateway.genreservice.AddGenreToBookRequest\x1a,.gateway.genreservice.AddGenreToBookResponse\x12z\n\x13RemoveGenreFromBook\x12\x30.gateway.genreservice.RemoveGenreFromBookRequest\x1a\x31.gateway.genreservice.RemoveGenreFromBookResponse\x12\x65\n\x0eGetGenreGrowth\x12(.gateway.genreservice.GenreGrowthRequest\x1a).gateway.genreservice.GenreGrowthResponse\x12q\n\x12GetGenrePopularity\x12,.gateway.genreservice.GenrePopularityRequest\x1a-.gateway.genreservice.GenrePopularityResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'genre_service_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_GENRESORT']._serialized_start=1720
-  _globals['_GENRESORT']._serialized_end=1759
+  _globals['_GENRESORT']._serialized_start=1553
+  _globals['_GENRESORT']._serialized_end=1592
   _globals['_GENRE']._serialized_start=59
   _globals['_GENRE']._serialized_end=98
   _globals['_BOOKGENRE']._serialized_start=100
   _globals['_BOOKGENRE']._serialized_end=143
-  _globals['_GENREWITHRATING']._serialized_start=145
-  _globals['_GENREWITHRATING']._serialized_end=261
-  _globals['_GETGENRESREQUEST']._serialized_start=263
-  _globals['_GETGENRESREQUEST']._serialized_end=387
-  _globals['_GETGENRESRESPONSE']._serialized_start=390
-  _globals['_GETGENRESRESPONSE']._serialized_end=543
-  _globals['_GETGENREREQUEST']._serialized_start=545
-  _globals['_GETGENREREQUEST']._serialized_end=580
-  _globals['_GETGENRERESPONSE']._serialized_start=582
-  _globals['_GETGENRERESPONSE']._serialized_end=685
-  _globals['_ADDGENREREQUEST']._serialized_start=687
-  _globals['_ADDGENREREQUEST']._serialized_end=748
-  _globals['_ADDGENRERESPONSE']._serialized_start=750
-  _globals['_ADDGENRERESPONSE']._serialized_end=812
-  _globals['_UPDATEGENREREQUEST']._serialized_start=814
-  _globals['_UPDATEGENREREQUEST']._serialized_end=896
-  _globals['_UPDATEGENRERESPONSE']._serialized_start=898
-  _globals['_UPDATEGENRERESPONSE']._serialized_end=963
-  _globals['_DELETEGENREREQUEST']._serialized_start=965
-  _globals['_DELETEGENREREQUEST']._serialized_end=1003
-  _globals['_DELETEGENRERESPONSE']._serialized_start=1005
-  _globals['_DELETEGENRERESPONSE']._serialized_end=1026
-  _globals['_ADDGENRETOBOOKREQUEST']._serialized_start=1028
-  _globals['_ADDGENRETOBOOKREQUEST']._serialized_end=1103
-  _globals['_ADDGENRETOBOOKRESPONSE']._serialized_start=1105
-  _globals['_ADDGENRETOBOOKRESPONSE']._serialized_end=1181
-  _globals['_REMOVEGENREFROMBOOKREQUEST']._serialized_start=1183
-  _globals['_REMOVEGENREFROMBOOKREQUEST']._serialized_end=1263
-  _globals['_REMOVEGENREFROMBOOKRESPONSE']._serialized_start=1265
-  _globals['_REMOVEGENREFROMBOOKRESPONSE']._serialized_end=1294
-  _globals['_GENRETRENDPOINT']._serialized_start=1296
-  _globals['_GENRETRENDPOINT']._serialized_end=1347
-  _globals['_GENRETRENDPOINTPOPULARITY']._serialized_start=1349
-  _globals['_GENRETRENDPOINTPOPULARITY']._serialized_end=1417
-  _globals['_GENREGROWTHREQUEST']._serialized_start=1419
-  _globals['_GENREGROWTHREQUEST']._serialized_end=1457
-  _globals['_GENREGROWTHRESPONSE']._serialized_start=1459
-  _globals['_GENREGROWTHRESPONSE']._serialized_end=1555
-  _globals['_GENREPOPULARITYREQUEST']._serialized_start=1557
-  _globals['_GENREPOPULARITYREQUEST']._serialized_end=1599
-  _globals['_GENREPOPULARITYRESPONSE']._serialized_start=1601
-  _globals['_GENREPOPULARITYRESPONSE']._serialized_end=1718
-  _globals['_GENREANALYSISGRPC']._serialized_start=1762
-  _globals['_GENREANALYSISGRPC']._serialized_end=2796
+  _globals['_GETGENRESREQUEST']._serialized_start=145
+  _globals['_GETGENRESREQUEST']._serialized_end=269
+  _globals['_GETGENRESRESPONSE']._serialized_start=272
+  _globals['_GETGENRESRESPONSE']._serialized_end=415
+  _globals['_GETGENREREQUEST']._serialized_start=417
+  _globals['_GETGENREREQUEST']._serialized_end=452
+  _globals['_GETGENRERESPONSE']._serialized_start=454
+  _globals['_GETGENRERESPONSE']._serialized_end=516
+  _globals['_ADDGENREREQUEST']._serialized_start=518
+  _globals['_ADDGENREREQUEST']._serialized_end=579
+  _globals['_ADDGENRERESPONSE']._serialized_start=581
+  _globals['_ADDGENRERESPONSE']._serialized_end=643
+  _globals['_UPDATEGENREREQUEST']._serialized_start=645
+  _globals['_UPDATEGENREREQUEST']._serialized_end=727
+  _globals['_UPDATEGENRERESPONSE']._serialized_start=729
+  _globals['_UPDATEGENRERESPONSE']._serialized_end=794
+  _globals['_DELETEGENREREQUEST']._serialized_start=796
+  _globals['_DELETEGENREREQUEST']._serialized_end=834
+  _globals['_DELETEGENRERESPONSE']._serialized_start=836
+  _globals['_DELETEGENRERESPONSE']._serialized_end=857
+  _globals['_ADDGENRETOBOOKREQUEST']._serialized_start=859
+  _globals['_ADDGENRETOBOOKREQUEST']._serialized_end=934
+  _globals['_ADDGENRETOBOOKRESPONSE']._serialized_start=936
+  _globals['_ADDGENRETOBOOKRESPONSE']._serialized_end=1012
+  _globals['_REMOVEGENREFROMBOOKREQUEST']._serialized_start=1014
+  _globals['_REMOVEGENREFROMBOOKREQUEST']._serialized_end=1094
+  _globals['_REMOVEGENREFROMBOOKRESPONSE']._serialized_start=1096
+  _globals['_REMOVEGENREFROMBOOKRESPONSE']._serialized_end=1125
+  _globals['_GENRETRENDPOINT']._serialized_start=1127
+  _globals['_GENRETRENDPOINT']._serialized_end=1199
+  _globals['_GENREGROWTHREQUEST']._serialized_start=1201
+  _globals['_GENREGROWTHREQUEST']._serialized_end=1259
+  _globals['_GENREGROWTHRESPONSE']._serialized_start=1261
+  _globals['_GENREGROWTHRESPONSE']._serialized_end=1374
+  _globals['_GENREPOPULARITYREQUEST']._serialized_start=1376
+  _globals['_GENREPOPULARITYREQUEST']._serialized_end=1438
+  _globals['_GENREPOPULARITYRESPONSE']._serialized_start=1440
+  _globals['_GENREPOPULARITYRESPONSE']._serialized_end=1551
+  _globals['_GENREANALYSISGRPC']._serialized_start=1595
+  _globals['_GENREANALYSISGRPC']._serialized_end=2629
 # @@protoc_insertion_point(module_scope)

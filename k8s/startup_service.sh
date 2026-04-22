@@ -67,6 +67,7 @@ else
 fi
 
 run minikube -p "$PROFILE" addons enable ingress
+run minikube -p "$PROFILE" addons enable metrics-server
 
 build_image "bookcloud/api-gateway:latest" "$REPO_ROOT/src/api-gateway"
 build_image "bookcloud/book-catalog:latest" "$REPO_ROOT/src/services/book-catalog"
@@ -77,7 +78,7 @@ build_image "bookcloud/genre-analysis-service:latest" "$REPO_ROOT/src/services/g
 
 run kubectl apply -k "$SCRIPT_DIR"
 wait_for_rollouts
-run kubectl -n "$NAMESPACE" get pods,svc,ingress
+run kubectl -n "$NAMESPACE" get pods,svc,ingress,hpa
 
 MINIKUBE_IP="$(minikube -p "$PROFILE" ip)"
 

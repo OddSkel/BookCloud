@@ -1,15 +1,20 @@
-use sqlx::PgPool;
 use tonic::{Request, Response, Status};
 
 use crate::{grpc::contracts::{book_search::{BookSearchResponse, Query}, common::{HealthCheckRequest, HealthCheckResponse}}, handlers::{book_search_handler, health_handler}};
 use crate::grpc::contracts::book_search::book_search_grpc_server::BookSearchGrpc;
 pub struct BookSearchService {
-    pool: PgPool,
+    book_catalog_grpc_url: String,
+    search_page_size: i32,
+    search_max_pages: i32,
 }
 
 impl BookSearchService {
-    pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+    pub fn new(book_catalog_grpc_url: String, search_page_size: i32, search_max_pages: i32) -> Self {
+        Self {
+            book_catalog_grpc_url,
+            search_page_size,
+            search_max_pages,
+        }
     }
 }
 
@@ -32,12 +37,14 @@ impl BookSearchGrpc for BookSearchService {
         let params = _request.into_inner();
 
         let response = book_search_handler::book_search(
-            &self.pool,
+            &self.book_catalog_grpc_url,
+            self.search_page_size,
+            self.search_max_pages,
             params,
         )
         .await
         .map_err(
-        |e| Status::internal(e.to_string()))?;
+        Status::internal)?;
 
         Ok(Response::new(response))
     }
