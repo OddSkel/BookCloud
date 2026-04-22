@@ -12,4 +12,14 @@ pub mod contracts {
         #![allow(dead_code)]
         tonic::include_proto!("gateway.bookcatalog");
     }
+
+    pub mod genre_service {
+        #![allow(dead_code)]
+        tonic::include_proto!("gateway.genreservice");
+    }
+
+    pub mod rating_catalog {
+        #![allow(dead_code)]
+        tonic::include_proto!("gateway.ratingcatalog");
+    }
 }
