@@ -8,13 +8,10 @@ services:
       - .env
     environment:
       RUST_LOG: info
-      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@book-db:5432/${POSTGRES_DB}
     ports:
       - "${HOST_GRPC_PORT}:50055"
     networks:
       - bookcloud-network
-    depends_on:
-      - book-db
 
 networks:
   bookcloud-network:
