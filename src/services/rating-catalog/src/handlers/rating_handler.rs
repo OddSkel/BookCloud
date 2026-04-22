@@ -39,3 +39,39 @@ pub async fn update_rating(
 pub async fn delete_rating(pool: &PgPool, book_isbn: i64) -> Result<bool, sqlx::Error> {
     delete_rating_query(pool, book_isbn).await
 }
+
+pub async fn get_books_by_rating(
+    pool: &PgPool,
+    min_rating: f64,
+    page_num: i32,
+    page_size: i32,
+) -> Result<Vec<Rating>, sqlx::Error> {
+    let offset = (page_num - 1) * page_size;
+    let ratings: Vec<Rating> = sqlx::query_as::<_, Rating>(
+        "SELECT book_isbn, num_ratings, star_rating FROM ratings WHERE star_rating >= $1 ORDER BY star_rating DESC LIMIT $2 OFFSET $3"
+    )
+    .bind(min_rating)
+    .bind(page_size)
+    .bind(offset)
+    .fetch_all(pool)
+    .await?;
+    Ok(ratings)
+}
+
+pub async fn get_books_by_popularity(
+    pool: &PgPool,
+    min_num_ratings: i32,
+    page_num: i32,
+    page_size: i32,
+) -> Result<Vec<Rating>, sqlx::Error> {
+    let offset = (page_num - 1) * page_size;
+    let ratings: Vec<Rating> = sqlx::query_as::<_, Rating>(
+        "SELECT book_isbn, num_ratings, star_rating FROM ratings WHERE num_ratings >= $1 ORDER BY num_ratings DESC LIMIT $2 OFFSET $3"
+    )
+    .bind(min_num_ratings)
+    .bind(page_size)
+    .bind(offset)
+    .fetch_all(pool)
+    .await?;
+    Ok(ratings)
+}

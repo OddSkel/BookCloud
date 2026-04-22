@@ -29,6 +29,7 @@ from generated_protos.genre_service_pb2 import (
     GenreTrendPoint,
     GenreGrowthResponse,
     GenrePopularityResponse,
+    GetBooksByGenreResponse,
 )
 import generated_protos.genre_service_pb2_grpc
 import generated_protos.common_pb2
@@ -221,6 +222,49 @@ class GenreAnalysisService(
         ]
         return GenrePopularityResponse(
             points=points, trend=float(row["book_count"]), metric="book_count"
+        )
+
+    async def GetBooksByGenre(self, request, context):
+        if not request.genre_name:
+            context.set_details("Genre name is required")
+            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+            return GetBooksByGenreResponse()
+
+        page_num = request.page_num if request.page_num > 0 else 1
+        page_size = request.page_size if request.page_size > 0 else 1000
+        offset = (page_num - 1) * page_size
+
+        total_items_row = await self.pool.fetchrow(
+            "SELECT COUNT(*)::int AS cnt FROM book_genre bg JOIN genre g ON g.genre_id = bg.genre_id WHERE g.name ILIKE $1",
+            request.genre_name,
+        )
+        total_items = total_items_row["cnt"] if total_items_row else 0
+        total_pages = (total_items + page_size - 1) // page_size if page_size > 0 else 0
+
+        rows = await self.pool.fetch(
+            "SELECT bg.book_isbn, bg.genre_id, g.name AS genre_name "
+            "FROM book_genre bg "
+            "JOIN genre g ON g.genre_id = bg.genre_id "
+            "WHERE g.name ILIKE $1 "
+            "ORDER BY bg.book_isbn LIMIT $2 OFFSET $3",
+            request.genre_name,
+            page_size,
+            offset,
+        )
+
+        return GetBooksByGenreResponse(
+            items=[
+                BookGenreInfo(
+                    isbn=row["book_isbn"],
+                    genre_id=row["genre_id"],
+                    genre_name=row["genre_name"],
+                )
+                for row in rows
+            ],
+            page_num=page_num,
+            page_size=page_size,
+            total_items=total_items,
+            total_pages=total_pages,
         )
 
 

@@ -9,7 +9,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &[
             "proto/common.proto",
             "proto/book_recommendation.proto",
-            "proto/book_catalog.proto"
+            "proto/book_catalog.proto",
+            "proto/genre_service.proto",
+            "proto/rating_catalog.proto",
             ],
         &[
             "proto",

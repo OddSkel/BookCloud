@@ -4,6 +4,8 @@ use tonic::{Request, Response, Status};
 use crate::grpc::contracts::rating_catalog::{
     AddRatingRequest, AddRatingResponse, DeleteRatingRequest, DeleteRatingResponse,
     GetRatingsRequest, GetRatingsResponse, UpdateRatingRequest, UpdateRatingResponse,
+    GetBooksByRatingRequest, GetBooksByRatingResponse, BookRatingInfo,
+    GetBooksByPopularityRequest, GetBooksByPopularityResponse,
 };
 use crate::handlers::rating_handler;
 use crate::models::rating::Rating;
@@ -147,5 +149,61 @@ impl RatingCatalogGrpc for RatingCatalogService {
         }
 
         Ok(Response::new(DeleteRatingResponse {}))
+    }
+
+    async fn get_books_by_rating(
+        &self,
+        request: Request<GetBooksByRatingRequest>,
+    ) -> Result<Response<GetBooksByRatingResponse>, Status> {
+        let req = request.into_inner();
+        let page_num = req.page_num.max(1);
+        let page_size = req.page_size.max(1).min(1000);
+
+        let ratings = rating_handler::get_books_by_rating(&self.pool, req.min_rating, page_num, page_size)
+            .await
+            .map_err(|err| Status::internal(err.to_string()))?;
+
+        let total_items = ratings.len() as i32;
+        let total_pages = (total_items + page_size - 1) / page_size;
+
+        Ok(Response::new(GetBooksByRatingResponse {
+            items: ratings.into_iter().map(|r| BookRatingInfo {
+                book_isbn: r.book_isbn.to_string(),
+                num_ratings: r.num_ratings,
+                star_rating: r.star_rating,
+            }).collect(),
+            page_num,
+            page_size,
+            total_items,
+            total_pages,
+        }))
+    }
+
+    async fn get_books_by_popularity(
+        &self,
+        request: Request<GetBooksByPopularityRequest>,
+    ) -> Result<Response<GetBooksByPopularityResponse>, Status> {
+        let req = request.into_inner();
+        let page_num = req.page_num.max(1);
+        let page_size = req.page_size.max(1).min(1000);
+
+        let ratings = rating_handler::get_books_by_popularity(&self.pool, req.min_num_ratings, page_num, page_size)
+            .await
+            .map_err(|err| Status::internal(err.to_string()))?;
+
+        let total_items = ratings.len() as i32;
+        let total_pages = (total_items + page_size - 1) / page_size;
+
+        Ok(Response::new(GetBooksByPopularityResponse {
+            items: ratings.into_iter().map(|r| BookRatingInfo {
+                book_isbn: r.book_isbn.to_string(),
+                num_ratings: r.num_ratings,
+                star_rating: r.star_rating,
+            }).collect(),
+            page_num,
+            page_size,
+            total_items,
+            total_pages,
+        }))
     }
 }

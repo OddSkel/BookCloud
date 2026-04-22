@@ -24,7 +24,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("{} gRPC started on {}", config.service_name, address);
 
     Server::builder()
-        .add_service(BookRecommendationGrpcServer::new(BookRecommendationService::new(pool)))
+        .add_service(BookRecommendationGrpcServer::new(BookRecommendationService::new(
+            pool,
+            config.genre_analysis_grpc_url,
+            config.book_catalog_grpc_url,
+            config.rating_catalog_grpc_url,
+        )))
         .serve(address)
         .await?;
 
