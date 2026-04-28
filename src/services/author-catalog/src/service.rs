@@ -4,7 +4,7 @@ use tonic::{Request, Response, Status};
 use crate::grpc::contracts::author_catalog::{
     AddAuthorRequest, AddAuthorResponse, Author as ProtoAuthor, AuthorDeleteResponse,
     DeleteAuthorRequest, GetAuthorRequest, GetAuthorResponse, GetAuthorsRequest,
-    GetAuthorsResponse, UpdateAuthorRequest, UpdateAuthorResponse,
+    GetAuthorsResponse, GetAuthorsByNameRequest, UpdateAuthorRequest, UpdateAuthorResponse,
 };
 use crate::grpc::contracts::{
     author_catalog::author_catalog_grpc_server::AuthorCatalogGrpc,
@@ -91,6 +91,19 @@ impl AuthorCatalogGrpc for AuthorCatalogService {
     ) -> Result<Response<GetAuthorResponse>, Status> {
         let params = _request.into_inner();
         let response = author_handler::get_author(&self.pool, params)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(response))
+    }
+
+    async fn get_authors_by_name(
+        &self,
+        request: tonic::Request<GetAuthorsByNameRequest>,
+    ) -> Result<Response<GetAuthorsResponse>, Status> {
+        let params = request.into_inner();
+
+        let response = author_handler::get_authors_by_name(&self.pool, &params)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 

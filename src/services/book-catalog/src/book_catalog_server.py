@@ -49,18 +49,38 @@ class BookCatalogService(generated_protos.book_catalog_pb2_grpc.BookCatalogGrpcS
     async def GetBooks(self, request, context):
         page_num = request.page_num if request.page_num > 0 else 1
         page_size = request.page_size if request.page_size > 0 else 10
-
         offset = (page_num - 1) * page_size
 
-        total_items_row = await self.pool.fetchrow("SELECT COUNT(*) as cnt FROM book")
-        total_items = total_items_row["cnt"] if total_items_row is not None else 0
-        total_pages = (total_items + page_size - 1) // page_size if page_size > 0 else 0
+        # Check if author_id filter is provided
+        author_id = request.author_id if request.HasField("author_id") else None
 
-        rows = await self.pool.fetch(
-            "SELECT isbn, name, url, summary_clean, pub_year FROM book ORDER BY isbn LIMIT $1 OFFSET $2",
-            page_size,
-            offset,
-        )
+        if author_id is not None:
+            total_items_row = await self.pool.fetchrow(
+                "SELECT COUNT(*) as cnt FROM book JOIN book_author ON book.isbn = book_author.book_isbn WHERE book_author.author_id = $1",
+                author_id,
+            )
+            total_items = total_items_row["cnt"] if total_items_row is not None else 0
+            total_pages = (total_items + page_size - 1) // page_size if page_size > 0 else 0
+
+            rows = await self.pool.fetch(
+                "SELECT book.isbn, book.name, book.url, book.summary_clean, book.pub_year "
+                "FROM book JOIN book_author ON book.isbn = book_author.book_isbn "
+                "WHERE book_author.author_id = $1 "
+                "ORDER BY book.isbn LIMIT $2 OFFSET $3",
+                author_id,
+                page_size,
+                offset,
+            )
+        else:
+            total_items_row = await self.pool.fetchrow("SELECT COUNT(*) as cnt FROM book")
+            total_items = total_items_row["cnt"] if total_items_row is not None else 0
+            total_pages = (total_items + page_size - 1) // page_size if page_size > 0 else 0
+
+            rows = await self.pool.fetch(
+                "SELECT isbn, name, url, summary_clean, pub_year FROM book ORDER BY isbn LIMIT $1 OFFSET $2",
+                page_size,
+                offset,
+            )
 
         return GetBooksResponse(
             books=[book_row_to_pb(r) for r in rows],

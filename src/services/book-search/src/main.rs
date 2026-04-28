@@ -20,6 +20,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Server::builder()
         .add_service(BookSearchGrpcServer::new(BookSearchService::new(
             config.book_catalog_grpc_url,
+            config.author_catalog_grpc_url,
             config.search_page_size,
             config.search_max_pages,
         )))

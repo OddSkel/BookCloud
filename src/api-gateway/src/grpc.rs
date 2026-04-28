@@ -92,14 +92,14 @@ pub struct BookAddPayload {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct AuthorModel {
-    pub author_id: i64,
+    pub author_id: i32,
     pub name: String,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct AuthorAddPayload {
     #[serde(alias = "id", alias = "Id", alias = "AuthorId")]
-    pub author_id: i64,
+    pub author_id: i32,
     pub name: String,
 }
 
@@ -390,8 +390,8 @@ impl GrpcRegistry {
     }
 
     pub async fn get_book_recommendation(
-        &self,
-        filters: crate::handlers::book_rec_handler::SearchQuery,
+    &self,
+    filters: crate::handlers::book_rec_handler::SearchQuery,
     ) -> Result<serde_json::Value, String> {
         let mut client = book_recommendation_client(self.endpoint(CatalogService::BookRecommendation)).await?;
 
@@ -399,7 +399,7 @@ impl GrpcRegistry {
             .book_recommendation(Request::new(BookRecommendationQuery {
                 genre: filters.genre,
                 rating: filters.rating,
-                popularity: filters.popularity.as_ref().and_then(|s| s.parse().ok()),
+                popularity: filters.popularity, // changed: no longer needs .as_ref().and_then(|s| s.parse().ok())
             }))
             .await
             .map(|r| r.into_inner())
@@ -436,6 +436,7 @@ impl GrpcRegistry {
             .get_books(Request::new(GetBooksRequest {
                 page_num,
                 page_size,
+                ..Default::default()
             }))
             .await
             .map(|r| r.into_inner())
@@ -574,7 +575,7 @@ impl GrpcRegistry {
 
     pub async fn update_author(
         &self,
-        author_id: i64,
+        author_id: i32,
         name: Option<String>,
     ) -> Result<Vec<AuthorModel>, String> {
         let mut c = author_client(self.endpoint(CatalogService::AuthorCatalog)).await?;

@@ -1,21 +1,57 @@
 use tonic::Request;
 
-use crate::grpc::contracts::book_catalog::{
-    book_catalog_grpc_client::BookCatalogGrpcClient, Book as CatalogBook, GetBooksRequest,
+use crate::grpc::contracts::author_catalog::{
+    GetAuthorsByNameRequest, author_catalog_grpc_client::AuthorCatalogGrpcClient,
 };
-use crate::grpc::contracts::book_search::{Query, BookSearchResponse, Book as Proto_Book};
+use crate::grpc::contracts::book_catalog::{
+    Book as CatalogBook, GetBooksRequest, book_catalog_grpc_client::BookCatalogGrpcClient,
+};
+use crate::grpc::contracts::book_search::{Book as Proto_Book, BookSearchResponse, Query};
 
 pub async fn book_search(
     book_catalog_grpc_url: &str,
+    author_catalog_grpc_url: &str,
     search_page_size: i32,
     search_max_pages: i32,
     params: Query,
 ) -> Result<BookSearchResponse, String> {
-    if params.author.as_deref().is_some_and(|author| !author.trim().is_empty()) {
-        return Err("author filtering is not available in book-catalog responses".to_string());
-    }
+    let author_id: Option<i32> = if let Some(author_name) = params.author.as_deref() {
+        if author_name.trim().is_empty() {
+            None
+        } else {
+            let channel =
+                tonic::transport::Channel::from_shared(author_catalog_grpc_url.to_string())
+                    .map_err(|e| e.to_string())?
+                    .connect()
+                    .await
+                    .map_err(|e| e.to_string())?;
 
-    let mut client = BookCatalogGrpcClient::connect(book_catalog_grpc_url.to_string())
+            let mut author_client =
+                AuthorCatalogGrpcClient::new(channel).max_decoding_message_size(usize::MAX);
+
+            let response = author_client
+                .get_authors_by_name(Request::new(GetAuthorsByNameRequest {
+                    name: author_name.to_string(),
+                }))
+                .await
+                .map(|r| r.into_inner())
+                .map_err(|e| e.to_string())?;
+
+            let matched = response
+                .authors
+                .into_iter()
+                .find(|a| contains_case_insensitive(&a.name, author_name));
+
+            match matched {
+                Some(a) => Some(a.author_id),
+                None => return Ok(BookSearchResponse { books: vec![] }),
+            }
+        }
+    } else {
+        None
+    };
+
+    let mut book_client = BookCatalogGrpcClient::connect(book_catalog_grpc_url.to_string())
         .await
         .map_err(|e| e.to_string())?;
 
@@ -25,11 +61,14 @@ pub async fn book_search(
     let mut books = Vec::new();
 
     loop {
-        let response = client
-            .get_books(Request::new(GetBooksRequest {
-                page_num,
-                page_size,
-            }))
+        let request = GetBooksRequest {
+            page_num,
+            page_size,
+            author_id,
+        };
+
+        let response = book_client
+            .get_books(Request::new(request))
             .await
             .map(|r| r.into_inner())
             .map_err(|e| e.to_string())?;

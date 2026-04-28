@@ -5,12 +5,12 @@ package gateway.authorcatalog;
 import "common.proto";
 
 message Author {
-  int64 author_id        = 1;
+  int32 author_id        = 1;
   string name             = 2;
 }
 
 message AuthorAdd {
-  int64 author_id        = 1;
+  int32 author_id        = 1;
   string name             = 2;
 }
 
@@ -24,11 +24,11 @@ message GetAuthorsResponse { repeated Author authors = 1; }
 message GetAuthorRequest   { string author_id = 1; }
 message GetAuthorResponse  { Author author = 1; }
 
-message AddAuthorRequest   { int64 author_id = 1; string name = 2; }
+message AddAuthorRequest   { int32 author_id = 1; string name = 2; }
 message AddAuthorResponse  { Author author = 1; }
 
 message UpdateAuthorRequest  {
-  int64 author_id = 1;
+  int32 author_id = 1;
   optional string name = 2;
 }
 message UpdateAuthorResponse { repeated Author authors = 1; }
@@ -39,6 +39,10 @@ message DeleteAuthorResponse {
   string message = 2;
 }
 
+message GetAuthorsByNameRequest {
+  string name = 1;
+}
+
 service AuthorCatalogGrpc {
   rpc HealthCheck  (gateway.common.HealthCheckRequest) returns (gateway.common.HealthCheckResponse);
   rpc GetAuthors   (GetAuthorsRequest)   returns (GetAuthorsResponse);
@@ -46,4 +50,5 @@ service AuthorCatalogGrpc {
   rpc AddAuthor    (AddAuthorRequest)    returns (AddAuthorResponse);
   rpc UpdateAuthor (UpdateAuthorRequest) returns (UpdateAuthorResponse);
   rpc DeleteAuthor (DeleteAuthorRequest) returns (DeleteAuthorResponse);
+  rpc GetAuthorsByName(GetAuthorsByNameRequest) returns (GetAuthorsResponse);
 }

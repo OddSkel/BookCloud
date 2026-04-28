@@ -23,6 +23,7 @@ message BookAdd {
 message GetBooksRequest {
   int32 page_num = 1;
   int32 page_size = 2;
+  optional int32 author_id = 3;
 }
 
 message GetBooksResponse {
@@ -45,6 +46,7 @@ message UpdateBookResponse { Book book = 1; }
 message DeleteBookRequest  { int64 isbn = 1; }
 message DeleteBookResponse {}
 
+
 service BookCatalogGrpc {
   rpc HealthCheck(gateway.common.HealthCheckRequest) returns (gateway.common.HealthCheckResponse);
   rpc GetBooks   (GetBooksRequest)  returns (GetBooksResponse);
@@ -52,4 +54,5 @@ service BookCatalogGrpc {
   rpc AddBook    (AddBookRequest)   returns (AddBookResponse);
   rpc UpdateBook (UpdateBookRequest) returns (UpdateBookResponse);
   rpc DeleteBook (DeleteBookRequest) returns (DeleteBookResponse);
+  
 }

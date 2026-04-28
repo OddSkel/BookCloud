@@ -26,10 +26,6 @@ impl AppConfig {
     pub fn grpc_address_string(&self) -> String {
         format!("{}:{}", self.host, self.grpc_port)
     }
-
-    pub fn grpc_address(&self) -> Result<SocketAddr, AddrParseError> {
-        format!("{}:{}", self.host, self.grpc_port).parse()
-    }
 }
 
 fn read_port(key: &str, default: u16) -> u16 {
