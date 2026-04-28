@@ -7,7 +7,7 @@ use crate::grpc::GrpcRegistry;
 pub struct SearchQuery {
     pub genre:   Option<String>,
     pub rating:     Option<f64>,
-    pub popularity: Option<String>,
+    pub popularity: Option<f64>,
 }
 
 pub async fn book_recommendation(

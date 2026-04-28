@@ -23,6 +23,7 @@ message BookAdd {
 message GetBooksRequest {
   int32 page_num = 1;
   int32 page_size = 2;
+  optional int64 author_id = 3;
 }
 
 message GetBooksResponse {
