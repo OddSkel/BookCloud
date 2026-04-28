@@ -78,6 +78,7 @@ enable_services() {
     container.googleapis.com \
     artifactregistry.googleapis.com \
     compute.googleapis.com \
+    cloudbuild.googleapis.com \
     --project "$PROJECT_ID"
 }
 
@@ -123,8 +124,9 @@ build_and_push() {
   local context="$2"
   local image="${IMAGE_PREFIX}/${service}:${IMAGE_TAG}"
 
-  run docker build -t "$image" "$context"
-  run docker push "$image"
+  run gcloud builds submit "$context" \
+    --tag "$image" \
+    --project "$PROJECT_ID"
 }
 
 replace_image() {
@@ -200,7 +202,6 @@ EOF
 }
 
 require_command gcloud
-require_command docker
 require_command kubectl
 
 resolve_from_gcloud
@@ -214,7 +215,6 @@ cd "$REPO_ROOT"
 run gcloud config set project "$PROJECT_ID"
 enable_services
 ensure_artifact_registry
-run gcloud auth configure-docker "$REGISTRY_HOST" --quiet
 ensure_cluster
 
 build_and_push api-gateway "$REPO_ROOT/src/api-gateway"
