@@ -1,8 +1,8 @@
 services:
   book-search:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ../../..
+      dockerfile: src/services/book-search/Dockerfile
     restart: unless-stopped
     env_file:
       - .env
