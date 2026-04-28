@@ -5,6 +5,7 @@ __pycache__
 *.csv
 *.pyc
 *.zip
+*.tar.gz
 
 .env
 .env.*
