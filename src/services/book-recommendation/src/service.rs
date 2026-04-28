@@ -11,15 +11,14 @@ use crate::{
 use crate::grpc::contracts::book_recommendation::book_recommendation_grpc_server::BookRecommendationGrpc;
 
 pub struct BookRecommendationService {
-    pool: PgPool,
     genre_analysis_grpc_url: String,
     book_catalog_grpc_url: String,
     rating_catalog_grpc_url: String,
 }
 
 impl BookRecommendationService {
-    pub fn new(pool: PgPool, genre_analysis_grpc_url: String, book_catalog_grpc_url: String, rating_catalog_grpc_url: String) -> Self {
-        Self { pool, genre_analysis_grpc_url, book_catalog_grpc_url, rating_catalog_grpc_url }
+    pub fn new(genre_analysis_grpc_url: String, book_catalog_grpc_url: String, rating_catalog_grpc_url: String) -> Self {
+        Self {genre_analysis_grpc_url, book_catalog_grpc_url, rating_catalog_grpc_url }
     }
 }
 
@@ -42,7 +41,6 @@ impl BookRecommendationGrpc for BookRecommendationService {
         let params = _request.into_inner();
 
         let response = book_recommendation_handler::book_recommendation(
-            &self.pool,
             params,
             &self.genre_analysis_grpc_url,
             &self.book_catalog_grpc_url,

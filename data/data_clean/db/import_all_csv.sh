@@ -5,12 +5,12 @@ echo "=== BookCloud Database Setup ==="
 echo ""
 
 echo "[1/4] Populating rating-db..."
-./import_rating.sh -D user password 5435 db 10000
+./import_rating.sh -D user password 5434 db 10000
 echo "✔ rating-db done"
 
 echo ""
 echo "[2/4] Populating genre-db..."
-./import_genre.sh -D user password 5434 db 10000
+./import_genre.sh -D user password 5433 db 10000
 echo "✔ genre-db done"
 
 echo ""
