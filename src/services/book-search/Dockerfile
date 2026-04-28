@@ -7,7 +7,8 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
-COPY . .
+COPY src/services/book-search/ .
+COPY src/services/author-catalog/proto/ ../author-catalog/proto/
 
 RUN cargo build --release
 
