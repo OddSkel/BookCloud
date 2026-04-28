@@ -1,6 +1,7 @@
 use crate::grpc::contracts::author_catalog::{
     AddAuthorResponse, Author as ProtoAuthor, AuthorDeleteResponse, DeleteAuthorRequest,
     GetAuthorRequest, GetAuthorResponse, GetAuthorsRequest, GetAuthorsResponse,
+    GetAuthorsByNameRequest,
     UpdateAuthorRequest, UpdateAuthorResponse,
 };
 use crate::models::author::Author as Model_Author;
@@ -57,7 +58,7 @@ pub async fn register_author(
 
 pub async fn edit_author(
     pool: &PgPool,
-    author_id: i64,
+    author_id: i32,
     params: UpdateAuthorRequest,
 ) -> Result<UpdateAuthorResponse, sqlx::Error> {
     let mut set_clauses = vec![];
@@ -153,6 +154,31 @@ pub async fn get_author(
         }),
         None => Err(sqlx::Error::Protocol("No author found".to_string())),
     }
+}
+
+pub async fn get_authors_by_name(
+    pool: &PgPool,
+    params: &GetAuthorsByNameRequest,
+) -> Result<GetAuthorsResponse, sqlx::Error> {
+    let name_pattern = format!("%{}%", params.name.to_lowercase());
+
+    let all_authors: Vec<Model_Author> =
+        sqlx::query_as::<_, Model_Author>(
+            "SELECT * FROM author WHERE LOWER(name) LIKE $1"
+        )
+        .bind(&name_pattern)
+        .fetch_all(pool)
+        .await?;
+
+    Ok(GetAuthorsResponse {
+        authors: all_authors
+            .into_iter()
+            .map(|a| ProtoAuthor {
+                author_id: a.author_id,
+                name: a.name,
+            })
+            .collect(),
+    })
 }
 
 fn normalize_pagination(page_number: Option<i64>, page_size: Option<i64>) -> (i64, i64) {

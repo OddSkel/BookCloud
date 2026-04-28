@@ -1,12 +1,12 @@
 use tonic::Request;
 
 use crate::grpc::contracts::author_catalog::{
-    author_catalog_grpc_client::AuthorCatalogGrpcClient, GetAuthorsRequest,
+    GetAuthorsByNameRequest, author_catalog_grpc_client::AuthorCatalogGrpcClient,
 };
 use crate::grpc::contracts::book_catalog::{
-    book_catalog_grpc_client::BookCatalogGrpcClient, Book as CatalogBook, GetBooksRequest,
+    Book as CatalogBook, GetBooksRequest, book_catalog_grpc_client::BookCatalogGrpcClient,
 };
-use crate::grpc::contracts::book_search::{Query, BookSearchResponse, Book as Proto_Book};
+use crate::grpc::contracts::book_search::{Book as Proto_Book, BookSearchResponse, Query};
 
 pub async fn book_search(
     book_catalog_grpc_url: &str,
@@ -15,19 +15,23 @@ pub async fn book_search(
     search_max_pages: i32,
     params: Query,
 ) -> Result<BookSearchResponse, String> {
-    let author_id: Option<i64> = if let Some(author_name) = params.author.as_deref() {
+    let author_id: Option<i32> = if let Some(author_name) = params.author.as_deref() {
         if author_name.trim().is_empty() {
             None
         } else {
-            let mut author_client =
-                AuthorCatalogGrpcClient::connect(author_catalog_grpc_url.to_string())
+            let channel =
+                tonic::transport::Channel::from_shared(author_catalog_grpc_url.to_string())
+                    .map_err(|e| e.to_string())?
+                    .connect()
                     .await
                     .map_err(|e| e.to_string())?;
 
+            let mut author_client =
+                AuthorCatalogGrpcClient::new(channel).max_decoding_message_size(usize::MAX);
+
             let response = author_client
-                .get_authors(Request::new(GetAuthorsRequest {
-                    page: None,
-                    page_size: None,
+                .get_authors_by_name(Request::new(GetAuthorsByNameRequest {
+                    name: author_name.to_string(),
                 }))
                 .await
                 .map(|r| r.into_inner())
