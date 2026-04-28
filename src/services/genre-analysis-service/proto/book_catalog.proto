@@ -45,7 +45,7 @@ message DeleteBookRequest  { int64 isbn = 1; }
 message DeleteBookResponse {}
 
 service BookCatalogGrpc {
-  rpc HealthCheck(gateway.common.HealthCheckRequest) returns (gateway.common.HealthCheckResponse);
+  //rpc HealthCheck(gateway.common.HealthCheckRequest) returns (gateway.common.HealthCheckResponse);
   rpc GetBooks   (GetBooksRequest)  returns (GetBooksResponse);
   rpc GetBook    (GetBookRequest)   returns (GetBookResponse);
   rpc AddBook    (AddBookRequest)   returns (AddBookResponse);

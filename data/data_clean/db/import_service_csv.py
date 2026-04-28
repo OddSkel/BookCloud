@@ -166,7 +166,7 @@ def truncate_tables(conn, schema: str, service: str) -> None:
         for table in tables:
             print(f"Truncating {schema}.{table} ...")
             cur.execute(
-                sql.SQL("TRUNCATE TABLE {}.{}").format(
+                sql.SQL("TRUNCATE TABLE {}.{} CASCADE").format(
                     sql.Identifier(schema), sql.Identifier(table)
                 )
             )

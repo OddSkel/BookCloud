@@ -6,14 +6,14 @@ use crate::grpc::{GenreAddPayload, GrpcRegistry};
 
 #[derive(Deserialize)]
 pub struct GetGenresQuery {
-    pub rank_sort: Option<String>,
+    pub sort_by: Option<i32>,
+    pub ascending: Option<bool>,
     pub page_num: Option<i32>,
     pub page_size: Option<i32>,
 }
 
 #[derive(Deserialize)]
 pub struct GenreTrendQuery {
-    pub max_points: Option<i32>,
     pub year_from: Option<i32>,
     pub year_to: Option<i32>,
 }
@@ -24,7 +24,7 @@ pub async fn get_genres(
 ) -> impl Responder {
     let q = query.into_inner();
 
-    match registry.get_genres(q.rank_sort, q.page_num, q.page_size).await {
+    match registry.get_genres(q.sort_by, q.ascending, q.page_num, q.page_size).await {
         Ok(genres) => HttpResponse::Ok().json(genres),
         Err(error) => map_genre_error(error),
     }
@@ -80,10 +80,9 @@ pub async fn get_genre_growth(
     query: web::Query<GenreTrendQuery>,
 ) -> impl Responder {
     let genre_id = path.into_inner();
-    let query = query.into_inner();
-    let _ = (query.year_from, query.year_to);
+    let q = query.into_inner();
 
-    match registry.get_genre_growth(genre_id, query.max_points).await {
+    match registry.get_genre_growth(genre_id, q.year_from, q.year_to).await {
         Ok(payload) => HttpResponse::Ok().json(payload),
         Err(error) => map_genre_error(error),
     }
@@ -95,13 +94,9 @@ pub async fn get_genre_popularity(
     query: web::Query<GenreTrendQuery>,
 ) -> impl Responder {
     let genre_id = path.into_inner();
-    let query = query.into_inner();
-    let _ = (query.year_from, query.year_to);
+    let q = query.into_inner();
 
-    match registry
-        .get_genre_popularity(genre_id, query.max_points)
-        .await
-    {
+    match registry.get_genre_popularity(genre_id, q.year_from, q.year_to).await {
         Ok(payload) => HttpResponse::Ok().json(payload),
         Err(error) => map_genre_error(error),
     }

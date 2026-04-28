@@ -32,11 +32,11 @@ spec:
                 name: compare-service-config
           resources:
             requests:
-              cpu: "100m"
-              memory: "128Mi"
-            limits:
-              cpu: "400m"
+              cpu: "500m"
               memory: "512Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
           readinessProbe:
             tcpSocket:
               port: grpc

@@ -123,15 +123,37 @@ pub struct GenreModel {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+pub struct GenreWithRatingModel {
+    pub rank: i32,
+    pub genre_id: i64,
+    pub genre_name: String,
+    pub avg_rating: f64,
+    pub total_num_ratings: i64,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct GenreDetailModel {
+    pub genre_id: i64,
+    pub genre_name: String,
+    pub avg_rating: f64,
+    pub total_num_ratings: i64,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
 pub struct GenreAddPayload {
     pub name: String,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct GenreTrendPointModel {
-    pub timestamp: String,
-    pub rating: f64,
-    pub popularity: i32,
+    pub year: i32,
+    pub avg_rating: f64,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct GenreTrendPointPopularityModel {
+    pub year: i32,
+    pub total_num_ratings: i64,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -139,17 +161,17 @@ pub struct GenreGrowthModel {
     pub genre_id: i64,
     pub genre: String,
     pub points: Vec<GenreTrendPointModel>,
-    pub growth_rate: f64,
-    pub metric: String,
+    pub avg_rating: f64,
+    pub total_num_ratings: i64,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct GenrePopularityModel {
     pub genre_id: i64,
     pub genre: String,
-    pub points: Vec<GenreTrendPointModel>,
-    pub trend: f64,
-    pub metric: String,
+    pub points: Vec<GenreTrendPointPopularityModel>,
+    pub total_num_ratings: i64,
+    pub total_books: i64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default)]
@@ -666,12 +688,14 @@ impl GrpcRegistry {
 
     pub async fn get_genres(
         &self,
-        rank_sort: Option<String>,
+        sort_by: Option<i32>,
+        ascending: Option<bool>,
         page_num: Option<i32>,
         page_size: Option<i32>,
-    ) -> Result<Vec<GenreModel>, String> {
+    ) -> Result<Vec<GenreWithRatingModel>, String> {
         let mut c = genre_client(self.endpoint(CatalogService::GenreAnalysis)).await?;
-        let (sort_by, ascending) = genre_sort_from_query(rank_sort.as_deref());
+        let sort_by = sort_by.unwrap_or(0);
+        let ascending = ascending.unwrap_or(false);
         let response = c
             .get_genres(Request::new(GetGenresRequest {
                 sort_by,
@@ -683,10 +707,10 @@ impl GrpcRegistry {
             .map(|r| r.into_inner())
             .map_err(|e| e.to_string())?;
 
-        Ok(response.genres.into_iter().map(genre_to_model).collect())
+        Ok(response.genres.into_iter().map(genre_with_rating_to_model).collect())
     }
 
-    pub async fn get_genre(&self, genre_id: i64) -> Result<GenreModel, String> {
+    pub async fn get_genre(&self, genre_id: i64) -> Result<GenreDetailModel, String> {
         let mut c = genre_client(self.endpoint(CatalogService::GenreAnalysis)).await?;
         let response = c
             .get_genre(Request::new(GetGenreAnalysisRequest { genre_id }))
@@ -694,10 +718,12 @@ impl GrpcRegistry {
             .map(|r| r.into_inner())
             .map_err(|e| e.to_string())?;
 
-        response
-            .genre
-            .map(genre_to_model)
-            .ok_or_else(|| "Genre not found".to_string())
+        Ok(GenreDetailModel {
+            genre_id: response.genre_id,
+            genre_name: response.genre_name,
+            avg_rating: response.avg_rating,
+            total_num_ratings: response.total_num_ratings,
+        })
     }
 
     pub async fn add_genre(&self, payload: GenreAddPayload) -> Result<GenreModel, String> {
@@ -754,14 +780,16 @@ impl GrpcRegistry {
     pub async fn get_genre_growth(
         &self,
         genre_id: i64,
-        max_points: Option<i32>,
+        year_from: Option<i32>,
+        year_to: Option<i32>,
     ) -> Result<GenreGrowthModel, String> {
         let genre = self.get_genre(genre_id).await?;
         let mut c = genre_client(self.endpoint(CatalogService::GenreAnalysis)).await?;
         let response = c
             .get_genre_growth(Request::new(GenreGrowthRequest {
                 genre_id,
-                max_points: max_points.unwrap_or(50).max(1),
+                year_from: year_from.unwrap_or(0),
+                year_to: year_to.unwrap_or(0),
             }))
             .await
             .map(|r| r.into_inner())
@@ -769,28 +797,26 @@ impl GrpcRegistry {
 
         Ok(GenreGrowthModel {
             genre_id,
-            genre: genre.name,
-            points: response
-                .points
-                .into_iter()
-                .map(genre_trend_point_to_model)
-                .collect(),
-            growth_rate: response.growth_rate,
-            metric: response.metric,
+            genre: genre.genre_name,
+            points: response.points.into_iter().map(genre_trend_point_to_model).collect(),
+            avg_rating: response.avg_rating,
+            total_num_ratings: response.total_num_ratings,
         })
     }
 
     pub async fn get_genre_popularity(
         &self,
         genre_id: i64,
-        max_points: Option<i32>,
+        year_from: Option<i32>,
+        year_to: Option<i32>,
     ) -> Result<GenrePopularityModel, String> {
         let genre = self.get_genre(genre_id).await?;
         let mut c = genre_client(self.endpoint(CatalogService::GenreAnalysis)).await?;
         let response = c
             .get_genre_popularity(Request::new(GenrePopularityRequest {
                 genre_id,
-                max_points: max_points.unwrap_or(50).max(1),
+                year_from: year_from.unwrap_or(0),
+                year_to: year_to.unwrap_or(0),
             }))
             .await
             .map(|r| r.into_inner())
@@ -798,14 +824,10 @@ impl GrpcRegistry {
 
         Ok(GenrePopularityModel {
             genre_id,
-            genre: genre.name,
-            points: response
-                .points
-                .into_iter()
-                .map(genre_trend_point_to_model)
-                .collect(),
-            trend: response.trend,
-            metric: response.metric,
+            genre: genre.genre_name,
+            points: response.points.into_iter().map(genre_trend_point_popularity_to_model).collect(),
+            total_num_ratings: response.total_num_ratings,
+            total_books: response.total_books,
         })
     }
 
@@ -1229,23 +1251,33 @@ fn genre_to_model(g: contracts::genre_service::Genre) -> GenreModel {
     }
 }
 
+fn genre_with_rating_to_model(
+    g: contracts::genre_service::GenreWithRating,
+) -> GenreWithRatingModel {
+    GenreWithRatingModel {
+        rank: g.rank,
+        genre_id: g.genre_id,
+        genre_name: g.genre_name,
+        avg_rating: g.avg_rating,
+        total_num_ratings: g.total_num_ratings,
+    }
+}
+
 fn genre_trend_point_to_model(
     point: contracts::genre_service::GenreTrendPoint,
 ) -> GenreTrendPointModel {
     GenreTrendPointModel {
-        timestamp: point.timestamp,
-        rating: point.rating,
-        popularity: point.popularity,
+        year: point.year,
+        avg_rating: point.avg_rating,
     }
 }
 
-fn genre_sort_from_query(rank_sort: Option<&str>) -> (i32, bool) {
-    match rank_sort.unwrap_or("rate_desc") {
-        "rate_asc" => (ProtoGenreSort::Rating as i32, true),
-        "rate_desc" => (ProtoGenreSort::Rating as i32, false),
-        "pop_asc" => (ProtoGenreSort::Popularity as i32, true),
-        "pop_desc" => (ProtoGenreSort::Popularity as i32, false),
-        _ => (ProtoGenreSort::Rating as i32, false),
+fn genre_trend_point_popularity_to_model(
+    point: contracts::genre_service::GenreTrendPointPopularity,
+) -> GenreTrendPointPopularityModel {
+    GenreTrendPointPopularityModel {
+        year: point.year,
+        total_num_ratings: point.total_num_ratings,
     }
 }
 
