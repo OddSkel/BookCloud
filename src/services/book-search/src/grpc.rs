@@ -12,4 +12,8 @@ pub mod contracts {
         #![allow(dead_code)]
         tonic::include_proto!("gateway.bookcatalog");
     }
+
+    pub mod author_catalog {
+        tonic::include_proto!("gateway.authorcatalog");
+    }
 }

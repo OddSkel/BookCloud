@@ -8,6 +8,7 @@ pub struct AppConfig {
     pub host: String,
     pub grpc_port: u16,
     pub book_catalog_grpc_url: String,
+    pub author_catalog_grpc_url: String,
     pub search_page_size: i32,
     pub search_max_pages: i32,
 }
@@ -20,6 +21,8 @@ impl AppConfig {
             grpc_port: read_port("GRPC_PORT", 50054),
             book_catalog_grpc_url: env::var("BOOK_CATALOG_GRPC_URL")
                 .unwrap_or_else(|_| "http://book-catalog:50051".to_string()),
+            author_catalog_grpc_url: env::var("AUTHOR_CATALOG_GRPC_URL")
+                .unwrap_or_else(|_| "http://author-catalog:50052".to_string()),
             search_page_size: read_i32("BOOK_SEARCH_PAGE_SIZE", 1000),
             search_max_pages: read_i32("BOOK_SEARCH_MAX_PAGES", 100),
         }

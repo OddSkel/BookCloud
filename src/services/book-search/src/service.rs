@@ -4,14 +4,16 @@ use crate::{grpc::contracts::{book_search::{BookSearchResponse, Query}, common::
 use crate::grpc::contracts::book_search::book_search_grpc_server::BookSearchGrpc;
 pub struct BookSearchService {
     book_catalog_grpc_url: String,
+    author_catalog_grpc_url: String,
     search_page_size: i32,
     search_max_pages: i32,
 }
 
 impl BookSearchService {
-    pub fn new(book_catalog_grpc_url: String, search_page_size: i32, search_max_pages: i32) -> Self {
+    pub fn new(book_catalog_grpc_url: String, author_catalog_grpc_url: String, search_page_size: i32, search_max_pages: i32) -> Self {
         Self {
             book_catalog_grpc_url,
+            author_catalog_grpc_url,
             search_page_size,
             search_max_pages,
         }
@@ -38,6 +40,7 @@ impl BookSearchGrpc for BookSearchService {
 
         let response = book_search_handler::book_search(
             &self.book_catalog_grpc_url,
+            &self.author_catalog_grpc_url,
             self.search_page_size,
             self.search_max_pages,
             params,
