@@ -107,18 +107,10 @@ message GetBooksByGenreRequest {
   int32 page_size = 3;
 }
 
-message GetBooksByGenreResponse {
-  repeated BookGenreInfo items = 1;
-  int32 page_num = 2;
-  int32 page_size = 3;
-  int32 total_items = 4;
-  int32 total_pages = 5;
-}
-
-message GetBooksByGenreRequest {
-  string genre_name = 1;
-  int32 page_num = 2;
-  int32 page_size = 3;
+message BookGenreInfo {
+  int64 isbn = 1;
+  int64 genre_id = 2;
+  string genre_name = 3;
 }
 
 message GetBooksByGenreResponse {
@@ -130,7 +122,7 @@ message GetBooksByGenreResponse {
 }
 
 service GenreAnalysisGrpc {
-  //rpc HealthCheck(gateway.common.HealthCheckRequest) returns (gateway.common.HealthCheckResponse);
+  rpc HealthCheck(gateway.common.HealthCheckRequest) returns (gateway.common.HealthCheckResponse);
   rpc GetGenres(GetGenresRequest) returns (GetGenresResponse);
   rpc AddGenre(AddGenreRequest) returns (AddGenreResponse);
   rpc GetGenre(GetGenreRequest) returns (GetGenreResponse);
