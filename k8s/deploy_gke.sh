@@ -12,7 +12,6 @@ REPOSITORY="${ARTIFACT_REGISTRY_REPOSITORY:-bookcloud}"
 IMAGE_TAG="${BOOKCLOUD_IMAGE_TAG:-$(git -C "$REPO_ROOT" rev-parse --short HEAD 2>/dev/null || date +%Y%m%d%H%M%S)}"
 MACHINE_TYPE="${GKE_MACHINE_TYPE:-e2-standard-2}"
 NUM_NODES="${GKE_NUM_NODES:-2}"
-INGRESS_HOST="${BOOKCLOUD_INGRESS_HOST:-api.bookcloud.local}"
 NAMESPACE="${BOOKCLOUD_NAMESPACE:-bookcloud}"
 CREATE_CLUSTER="${GKE_CREATE_CLUSTER:-1}"
 
@@ -150,8 +149,6 @@ render_manifests() {
   find "$RENDER_DIR" -name deployment.yaml -print0 |
     xargs -0 sed -i 's/imagePullPolicy: IfNotPresent/imagePullPolicy: Always/g'
 
-  sed -i "s/host: api.bookcloud.local/host: ${INGRESS_HOST}/g" \
-    "$RENDER_DIR/api-gateway/ingress.yaml"
 }
 
 wait_for_rollouts() {
@@ -163,42 +160,6 @@ wait_for_rollouts() {
   for deployment in $deployments; do
     run kubectl -n "$NAMESPACE" rollout status "deployment/$deployment" --timeout=600s
   done
-}
-
-print_ingress_info() {
-  local address
-
-  address="$(kubectl -n "$NAMESPACE" get ingress api-gateway -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || true)"
-
-  cat <<EOF
-
-BookCloud was deployed to GKE.
-
-Project:      $PROJECT_ID
-Region:       $REGION
-Zone:         $ZONE
-Cluster:      $CLUSTER_NAME
-Repository:   $REPOSITORY
-Image tag:    $IMAGE_TAG
-Namespace:    $NAMESPACE
-Ingress host: $INGRESS_HOST
-
-Ingress external IP may take a few minutes to appear.
-Check it with:
-  kubectl -n $NAMESPACE get ingress api-gateway
-
-EOF
-
-  if [[ -n "$address" ]]; then
-    cat <<EOF
-Current ingress IP:
-  $address
-
-Test with:
-  curl --resolve ${INGRESS_HOST}:80:${address} http://${INGRESS_HOST}/health
-
-EOF
-  fi
 }
 
 require_command gcloud
@@ -228,5 +189,4 @@ render_manifests
 
 run kubectl apply -k "$RENDER_DIR"
 wait_for_rollouts
-run kubectl -n "$NAMESPACE" get pods,svc,ingress,hpa
-print_ingress_info
+run kubectl -n "$NAMESPACE" get pods,svc,hpa
