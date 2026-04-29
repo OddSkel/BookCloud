@@ -703,9 +703,9 @@ async def serve():
     grpc_port = int(os.getenv("GRPC_PORT", "50055"))
     service_name = os.getenv("SERVICE_NAME", "genre-analysis")
     rating_catalog_host = os.getenv("RATING_CATALOG_HOST", "localhost")
-    rating_catalog_port = int(os.getenv("RATING_CATALOG_PORT", "50053"))
+    rating_catalog_port = int(os.getenv("RATING_CATALOG_GRPC_PORT", "50053"))
+    book_catalog_port = int(os.getenv("BOOK_CATALOG_GRPC_PORT", "50051"))
     book_catalog_host = os.getenv("BOOK_CATALOG_HOST", "localhost")
-    book_catalog_port = int(os.getenv("BOOK_CATALOG_PORT", "50051"))
 
     pool = await create_pool()
 
