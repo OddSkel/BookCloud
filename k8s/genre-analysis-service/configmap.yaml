@@ -10,3 +10,5 @@ data:
   POSTGRES_HOST: "genre-db"
   POSTGRES_DB: "genre_analysis"
   POSTGRES_PORT: "5432"
+  RATING_CATALOG_PORT: "50053"
+  RATING_CATALOG_HOST: "rating-catalog"
