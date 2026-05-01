@@ -1,6 +1,7 @@
 use actix_web::web;
 
 use self::{
+    author_analytics_routes::author_analytics_routes,
     author_catalog_routes::author_routes,
     book_catalog_routes::book_routes,
     book_recommendation_route::book_recommendation_routes,
@@ -9,7 +10,6 @@ use self::{
     health_routes::health_routes,
     genre_analysis_routes::genre_analysis_routes,
     rating_catalog_routes::rating_routes,
-    author_analytics_routes::author_analytics_routes, 
 };
 
 pub mod author_analytics_routes;
@@ -23,13 +23,16 @@ pub mod health_routes;
 pub mod rating_catalog_routes;
 
 pub fn init_routes(cfg: &mut web::ServiceConfig) {
-    health_routes(cfg);
-    author_routes(cfg);
-    book_routes(cfg);
-    book_recommendation_routes(cfg);
-    book_search_routes(cfg);
-    rating_routes(cfg);
-    compare_routes(cfg);
-    genre_analysis_routes(cfg);
-    author_analytics_routes(cfg);
+    cfg.service(
+        web::scope("/api")
+            .configure(health_routes)
+            .configure(author_routes)
+            .configure(book_routes)
+            .configure(book_recommendation_routes)
+            .configure(book_search_routes)
+            .configure(rating_routes)
+            .configure(compare_routes)
+            .configure(genre_analysis_routes)
+            .configure(author_analytics_routes),
+    );
 }
