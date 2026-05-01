@@ -37,9 +37,7 @@ pub async fn rank_authors(
 
     match registry.rank_authors(avg_rating, total_ratings).await {
         Ok(authors) => HttpResponse::Ok().json(authors),
-        Err(e)      => HttpResponse::InternalServerError().json(
-            serde_json::json!({ "error": e })
-        ),
+        Err(e)      => crate::utils::map_error(e),
     }
 }
 
@@ -54,12 +52,7 @@ pub async fn author_performance(
         query.pub_year_to,
     ).await {
         Ok(result) => HttpResponse::Ok().json(result),
-        Err(e) if e.contains("not found") => HttpResponse::NotFound().json(
-            serde_json::json!({ "error": e })
-        ),
-        Err(e) => HttpResponse::InternalServerError().json(
-            serde_json::json!({ "error": e })
-        ),
+        Err(e)      => crate::utils::map_error(e),
     }
 }
 
@@ -72,9 +65,7 @@ pub async fn authors_consistency(
         query.author_id,
     ).await {
         Ok(authors) => HttpResponse::Ok().json(authors),
-        Err(e)      => HttpResponse::InternalServerError().json(
-            serde_json::json!({ "error": e })
-        ),
+        Err(e)      => crate::utils::map_error(e),
     }
 }
 
@@ -87,8 +78,6 @@ pub async fn authors_growth(
         query.author_id,
     ).await {
         Ok(authors) => HttpResponse::Ok().json(authors),
-        Err(e)      => HttpResponse::InternalServerError().json(
-            serde_json::json!({ "error": e })
-        ),
+        Err(e)      => crate::utils::map_error(e),
     }
 }
