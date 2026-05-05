@@ -7,7 +7,6 @@ resources:
   - api-gateway/deployment.yaml
   - api-gateway/service.yaml
   - api-gateway/hpa.yaml
-  - api-gateway/ingress.yaml
   - book-catalog/configmap.yaml
   - book-catalog/deployment.yaml
   - book-catalog/service.yaml

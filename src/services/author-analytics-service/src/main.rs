@@ -1,6 +1,6 @@
 use actix_web::{App, HttpServer};
 use dotenv::dotenv;
-use sqlx::PgPool;
+use sqlx::postgres::PgPoolOptions;
 use tonic::transport::Server;
 
 mod config;
@@ -21,27 +21,44 @@ use service::AuthorAnalyticsService;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
-    let config    = AppConfig::from_env();
+
+    let config = AppConfig::from_env();
     let grpc_addr = config.grpc_address().parse()?;
     let http_addr = config.http_address();
 
     println!("[{}] gRPC on {}", config.service_name, grpc_addr);
     println!("[{}] HTTP on {}", config.service_name, http_addr);
 
-    let pool = PgPool::connect(&config.database_url).await
-        .expect("Failed to connect to PostgreSQL");
-    let db  = AuthorAnalyticsDb::new(pool);
+    let book_pool = PgPoolOptions::new()
+        .max_connections(5)
+        .connect(&config.book_db_url)
+        .await
+        .expect("Failed to connect to book-db");
+
+    let rating_pool = PgPoolOptions::new()
+        .max_connections(5)
+        .connect(&config.rating_db_url)
+        .await
+        .expect("Failed to connect to rating-db");
+
+    let db = AuthorAnalyticsDb::new(book_pool, rating_pool);
     let svc = AuthorAnalyticsService::new(db);
 
     let http_addr_clone = http_addr.clone();
     tokio::spawn(async move {
         HttpServer::new(|| App::new().configure(init_routes))
-            .bind(http_addr_clone).expect("Failed to bind HTTP")
-            .run().await.expect("HTTP server failed");
+            .bind(http_addr_clone)
+            .expect("Failed to bind HTTP")
+            .run()
+            .await
+            .expect("HTTP server failed");
     });
 
     Server::builder()
-        .add_service(AuthorAnalyticsGrpcServer::new(svc))
+        .add_service(
+            AuthorAnalyticsGrpcServer::new(svc)
+                .max_encoding_message_size(64 * 1024 * 1024)  // 64 MB
+        )
         .serve(grpc_addr)
         .await?;
 

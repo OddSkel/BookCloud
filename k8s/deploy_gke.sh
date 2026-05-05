@@ -12,7 +12,6 @@ REPOSITORY="${ARTIFACT_REGISTRY_REPOSITORY:-bookcloud}"
 IMAGE_TAG="${BOOKCLOUD_IMAGE_TAG:-$(git -C "$REPO_ROOT" rev-parse --short HEAD 2>/dev/null || date +%Y%m%d%H%M%S)}"
 MACHINE_TYPE="${GKE_MACHINE_TYPE:-e2-standard-2}"
 NUM_NODES="${GKE_NUM_NODES:-2}"
-INGRESS_HOST="${BOOKCLOUD_INGRESS_HOST:-api.bookcloud.local}"
 NAMESPACE="${BOOKCLOUD_NAMESPACE:-bookcloud}"
 CREATE_CLUSTER="${GKE_CREATE_CLUSTER:-1}"
 
@@ -78,6 +77,7 @@ enable_services() {
     container.googleapis.com \
     artifactregistry.googleapis.com \
     compute.googleapis.com \
+    cloudbuild.googleapis.com \
     --project "$PROJECT_ID"
 }
 
@@ -123,8 +123,9 @@ build_and_push() {
   local context="$2"
   local image="${IMAGE_PREFIX}/${service}:${IMAGE_TAG}"
 
-  run docker build -t "$image" "$context"
-  run docker push "$image"
+  run gcloud builds submit "$context" \
+    --tag "$image" \
+    --project "$PROJECT_ID"
 }
 
 replace_image() {
@@ -148,8 +149,6 @@ render_manifests() {
   find "$RENDER_DIR" -name deployment.yaml -print0 |
     xargs -0 sed -i 's/imagePullPolicy: IfNotPresent/imagePullPolicy: Always/g'
 
-  sed -i "s/host: api.bookcloud.local/host: ${INGRESS_HOST}/g" \
-    "$RENDER_DIR/api-gateway/ingress.yaml"
 }
 
 wait_for_rollouts() {
@@ -163,44 +162,7 @@ wait_for_rollouts() {
   done
 }
 
-print_ingress_info() {
-  local address
-
-  address="$(kubectl -n "$NAMESPACE" get ingress api-gateway -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || true)"
-
-  cat <<EOF
-
-BookCloud was deployed to GKE.
-
-Project:      $PROJECT_ID
-Region:       $REGION
-Zone:         $ZONE
-Cluster:      $CLUSTER_NAME
-Repository:   $REPOSITORY
-Image tag:    $IMAGE_TAG
-Namespace:    $NAMESPACE
-Ingress host: $INGRESS_HOST
-
-Ingress external IP may take a few minutes to appear.
-Check it with:
-  kubectl -n $NAMESPACE get ingress api-gateway
-
-EOF
-
-  if [[ -n "$address" ]]; then
-    cat <<EOF
-Current ingress IP:
-  $address
-
-Test with:
-  curl --resolve ${INGRESS_HOST}:80:${address} http://${INGRESS_HOST}/health
-
-EOF
-  fi
-}
-
 require_command gcloud
-require_command docker
 require_command kubectl
 
 resolve_from_gcloud
@@ -214,7 +176,6 @@ cd "$REPO_ROOT"
 run gcloud config set project "$PROJECT_ID"
 enable_services
 ensure_artifact_registry
-run gcloud auth configure-docker "$REGISTRY_HOST" --quiet
 ensure_cluster
 
 build_and_push api-gateway "$REPO_ROOT/src/api-gateway"
@@ -228,5 +189,4 @@ render_manifests
 
 run kubectl apply -k "$RENDER_DIR"
 wait_for_rollouts
-run kubectl -n "$NAMESPACE" get pods,svc,ingress,hpa
-print_ingress_info
+run kubectl -n "$NAMESPACE" get pods,svc,hpa

@@ -4,10 +4,10 @@ metadata:
   name: api-gateway
   namespace: bookcloud
 spec:
+  type: LoadBalancer
   selector:
     app: api-gateway
   ports:
     - name: http
       port: 80
       targetPort: http
-  type: ClusterIP

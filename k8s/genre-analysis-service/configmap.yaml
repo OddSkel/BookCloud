@@ -10,3 +10,9 @@ data:
   POSTGRES_HOST: "genre-db"
   POSTGRES_DB: "genre_analysis"
   POSTGRES_PORT: "5432"
+
+  RATING_CATALOG_HOST: "rating-catalog"
+  RATING_CATALOG_GRPC_PORT: "50053"
+
+  BOOK_CATALOG_HOST: "book-catalog"
+  BOOK_CATALOG_GRPC_PORT: "50051"
