@@ -56,41 +56,29 @@ pub async fn book_search(
         .map_err(|e| e.to_string())?;
 
     let page_size = search_page_size.max(1);
-    let max_pages = search_max_pages.max(1);
-    let mut page_num = 1;
-    let mut books = Vec::new();
 
-    loop {
-        let request = GetBooksRequest {
-            page_num,
-            page_size,
-            author_id,
-        };
+    let request = GetBooksRequest {
+        page_num: 1,
+        page_size,
+        author_id,
+    };
 
-        let response = book_client
-            .get_books(Request::new(request))
-            .await
-            .map(|r| r.into_inner())
-            .map_err(|e| e.to_string())?;
+    let response = book_client
+        .get_books(Request::new(request))
+        .await
+        .map(|r| r.into_inner())
+        .map_err(|e| e.to_string())?;
 
-        for book in response.books {
-            if matches_query(&book, &params) {
-                books.push(Proto_Book {
-                    isbn: book.isbn,
-                    name: book.name,
-                    url: book.url,
-                    pub_year: book.pub_year,
-                });
-            }
-        }
-
-        if page_num >= response.total_pages || page_num >= max_pages || response.total_pages == 0 {
-            break;
-        }
-
-        page_num += 1;
-    }
-
+    let books = response.books.into_iter()
+    .filter(|book| matches_query(&book, &params))
+    .map(|book| Proto_Book {
+        isbn: book.isbn,
+        name: book.name,
+        url: book.url,
+        pub_year: book.pub_year,
+    })
+    .collect();
+    
     Ok(BookSearchResponse { books })
 }
 
