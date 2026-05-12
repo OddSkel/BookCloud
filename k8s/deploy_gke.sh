@@ -14,6 +14,9 @@ MACHINE_TYPE="${GKE_MACHINE_TYPE:-e2-standard-2}"
 NUM_NODES="${GKE_NUM_NODES:-2}"
 NAMESPACE="${BOOKCLOUD_NAMESPACE:-bookcloud}"
 CREATE_CLUSTER="${GKE_CREATE_CLUSTER:-1}"
+INSTALL_MONITORING="${INSTALL_MONITORING:-1}"
+MONITORING_NAMESPACE="${MONITORING_NAMESPACE:-monitoring}"
+MONITORING_VALUES_FILE="${MONITORING_VALUES_FILE:-$SCRIPT_DIR/monitoring/values-gke.yaml}"
 
 RENDER_DIR="$(mktemp -d)"
 
@@ -116,6 +119,34 @@ ensure_cluster() {
   run gcloud container clusters get-credentials "$CLUSTER_NAME" \
     --zone "$ZONE" \
     --project "$PROJECT_ID"
+}
+
+install_helm_if_missing() {
+  if command -v helm >/dev/null 2>&1; then
+    echo "Helm already installed."
+    return 0
+  fi
+
+  echo "Installing Helm..."
+  curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+}
+
+install_monitoring() {
+  if [[ "${INSTALL_MONITORING}" != "1" ]]; then
+    echo "Skipping monitoring installation because INSTALL_MONITORING=${INSTALL_MONITORING}."
+    return 0
+  fi
+
+  install_helm_if_missing
+
+  kubectl create namespace "$MONITORING_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+
+  run helm repo add prometheus-community https://prometheus-community.github.io/helm-charts || true
+  run helm repo update
+
+  run helm upgrade --install monitoring prometheus-community/kube-prometheus-stack \
+    --namespace "$MONITORING_NAMESPACE" \
+    --values "$MONITORING_VALUES_FILE"
 }
 
 build_and_push() {
@@ -237,8 +268,24 @@ print_kong_access() {
   fi
 }
 
+print_monitoring_access() {
+  echo
+  echo "Monitoring services:"
+  kubectl -n "$MONITORING_NAMESPACE" get svc
+
+  echo
+  echo "Grafana external access:"
+  kubectl -n "$MONITORING_NAMESPACE" get svc monitoring-grafana || true
+
+  echo
+  echo "Prometheus local access:"
+  echo "  kubectl -n $MONITORING_NAMESPACE port-forward service/monitoring-kube-prometheus-prometheus 9090:9090"
+  echo "  http://localhost:9090"
+}
+
 require_command gcloud
 require_command kubectl
+require_command curl
 
 resolve_from_gcloud
 require_project
@@ -252,6 +299,7 @@ run gcloud config set project "$PROJECT_ID"
 enable_services
 ensure_artifact_registry
 ensure_cluster
+install_monitoring
 
 build_and_push api-gateway "$REPO_ROOT/src/api-gateway"
 build_and_push book-catalog "$REPO_ROOT/src/services/book-catalog"
@@ -266,3 +314,4 @@ run kubectl apply -k "$RENDER_DIR"
 wait_for_rollouts
 run kubectl -n "$NAMESPACE" get pods,svc,hpa
 print_kong_access
+print_monitoring_access
