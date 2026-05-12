@@ -4,7 +4,7 @@ metadata:
   name: api-gateway
   namespace: bookcloud
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   selector:
     app: api-gateway
   ports:

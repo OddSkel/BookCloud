@@ -131,9 +131,38 @@ build_and_push() {
 replace_image() {
   local service="$1"
   local image="${IMAGE_PREFIX}/${service}:${IMAGE_TAG}"
+  local deployment_file="$RENDER_DIR/${service}/deployment.yaml"
 
-  sed -i "s#image: bookcloud/${service}:latest#image: ${image}#g" \
-    "$RENDER_DIR/${service}/deployment.yaml"
+  if [[ ! -f "$deployment_file" ]]; then
+    echo "Warning: deployment file not found for service '$service': $deployment_file" >&2
+    return 0
+  fi
+
+  sed -i "s#image: bookcloud/${service}:latest#image: ${image}#g" "$deployment_file"
+}
+
+force_api_gateway_cluster_ip() {
+  local service_file="$RENDER_DIR/api-gateway/service.yaml"
+
+  if [[ ! -f "$service_file" ]]; then
+    echo "Warning: api-gateway service file not found: $service_file" >&2
+    return 0
+  fi
+
+  sed -i 's/type: LoadBalancer/type: ClusterIP/g' "$service_file"
+  sed -i 's/type: NodePort/type: ClusterIP/g' "$service_file"
+}
+
+force_kong_load_balancer() {
+  local service_file="$RENDER_DIR/kong/service.yaml"
+
+  if [[ ! -f "$service_file" ]]; then
+    echo "Warning: kong service file not found: $service_file" >&2
+    return 0
+  fi
+
+  sed -i 's/type: ClusterIP/type: LoadBalancer/g' "$service_file"
+  sed -i 's/type: NodePort/type: LoadBalancer/g' "$service_file"
 }
 
 render_manifests() {
@@ -146,9 +175,11 @@ render_manifests() {
   replace_image compare-service
   replace_image genre-analysis-service
 
+  force_api_gateway_cluster_ip
+  force_kong_load_balancer
+
   find "$RENDER_DIR" -name deployment.yaml -print0 |
     xargs -0 sed -i 's/imagePullPolicy: IfNotPresent/imagePullPolicy: Always/g'
-
 }
 
 wait_for_rollouts() {
@@ -160,6 +191,50 @@ wait_for_rollouts() {
   for deployment in $deployments; do
     run kubectl -n "$NAMESPACE" rollout status "deployment/$deployment" --timeout=600s
   done
+}
+
+print_kong_access() {
+  echo
+  echo "Waiting for Kong external IP..."
+
+  run kubectl -n "$NAMESPACE" get svc kong
+
+  local external_ip=""
+
+  for _ in {1..60}; do
+    external_ip="$(kubectl -n "$NAMESPACE" get svc kong -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || true)"
+
+    if [[ -z "$external_ip" ]]; then
+      external_ip="$(kubectl -n "$NAMESPACE" get svc kong -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || true)"
+    fi
+
+    if [[ -n "$external_ip" ]]; then
+      break
+    fi
+
+    sleep 5
+  done
+
+  echo
+
+  if [[ -n "$external_ip" ]]; then
+    echo "Kong is exposed externally at:"
+    echo "  http://${external_ip}"
+    echo
+    echo "Example:"
+    echo "  curl http://${external_ip}/api/health"
+    echo "  curl http://${external_ip}/api/books"
+  else
+    echo "Kong LoadBalancer external IP is still pending."
+    echo
+    echo "Check with:"
+    echo "  kubectl -n ${NAMESPACE} get svc kong -w"
+    echo
+    echo "Temporary local access:"
+    echo "  kubectl -n ${NAMESPACE} port-forward service/kong 9000:80"
+    echo "  curl http://localhost:9000/api/health"
+    echo "  curl http://localhost:9000/api/books"
+  fi
 }
 
 require_command gcloud
@@ -190,3 +265,4 @@ render_manifests
 run kubectl apply -k "$RENDER_DIR"
 wait_for_rollouts
 run kubectl -n "$NAMESPACE" get pods,svc,hpa
+print_kong_access
