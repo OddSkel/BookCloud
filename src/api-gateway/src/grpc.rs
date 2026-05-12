@@ -399,17 +399,12 @@ impl GrpcRegistry {
         let response = client
             .book_recommendation(Request::new(BookRecommendationQuery {
                 genre: filters.genre,
-<<<<<<< HEAD
-                rating: filters.rating,
-                popularity: filters.popularity, // changed: no longer needs .as_ref().and_then(|s| s.parse().ok())
-=======
                 rating: filters.rating
                     .as_deref()
                     .and_then(|s| s.parse::<f64>().ok()),
                 popularity: filters.popularity
                     .as_deref()
                     .and_then(|s| s.parse::<f64>().ok()),
->>>>>>> main
             }))
             .await
             .map(|r| r.into_inner())

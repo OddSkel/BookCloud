@@ -4,15 +4,9 @@ use crate::grpc::GrpcRegistry;
 
 #[derive(Deserialize)]
 pub struct SearchQuery {
-<<<<<<< HEAD
-    pub genre:   Option<String>,
-    pub rating:     Option<f64>,
-    pub popularity: Option<f64>,
-=======
     pub genre: Option<String>,
     pub rating: Option<String>,
     pub popularity: Option<String>,
->>>>>>> main
 }
 
 pub async fn book_recommendation(
