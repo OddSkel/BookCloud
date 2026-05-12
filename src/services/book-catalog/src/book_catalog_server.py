@@ -2,6 +2,7 @@ import os
 import sys
 import logging
 import asyncio
+import redis.asyncio as aioredis
 
 # Ensure generated_protos directory is on sys.path to support generated files
 # that use unqualified imports like `import common_pb2`.
@@ -36,9 +37,10 @@ def book_row_to_pb(row) -> Book:
 
 
 class BookCatalogService(generated_protos.book_catalog_pb2_grpc.BookCatalogGrpcServicer):
-    def __init__(self, pool: asyncpg.pool.Pool, service_name: str):
+    def __init__(self, pool: asyncpg.pool.Pool, service_name: str, redis):
         self.pool = pool
         self.service_name = service_name
+        self.redis = redis
 
     async def HealthCheck(self, request, context):
         return generated_protos.common_pb2.HealthCheckResponse(
@@ -50,7 +52,22 @@ class BookCatalogService(generated_protos.book_catalog_pb2_grpc.BookCatalogGrpcS
         page_num = request.page_num if request.page_num > 0 else 1
         page_size = request.page_size if request.page_size > 0 else 10
         offset = (page_num - 1) * page_size
+        
+        cache_key = f"books:page:{page_num}:page_size:{page_size}"
+        
+        cached = await self.redis.get(cache_key)
+        if cached:
+            import json
+            books_data = json.loads(cached)
+            return GetBooksResponse(
+                books=[Book(**b) for b in books_data["books"]],
+                page_num=books_data["page_num"],
+                page_size=books_data["page_size"],
+                total_items=books_data["total_items"],
+                total_pages=books_data["total_pages"],
+            )
 
+        
         # Check if author_id filter is provided
         author_id = request.author_id if request.HasField("author_id") else None
 
@@ -81,14 +98,29 @@ class BookCatalogService(generated_protos.book_catalog_pb2_grpc.BookCatalogGrpcS
                 page_size,
                 offset,
             )
-
-        return GetBooksResponse(
-            books=[book_row_to_pb(r) for r in rows],
+        
+        books = [book_row_to_pb(r) for r in rows]
+        response = GetBooksResponse(
+            books=books,
             page_num=page_num,
             page_size=page_size,
             total_items=total_items,
             total_pages=total_pages,
         )
+
+        import json
+        serialized = json.dumps({
+            "books": [{"isbn": b.isbn, "name": b.name, "url": b.url,
+                    "summary_clean": b.summary_clean, "pub_year": b.pub_year}
+                    for b in books],
+            "page_num": page_num,
+            "page_size": page_size,
+            "total_items": total_items,
+            "total_pages": total_pages,
+        })
+        await self.redis.setex(cache_key, 604800, serialized)
+        
+        return response
 
     async def GetBook(self, request, context):
         row = await self.pool.fetchrow(
@@ -181,10 +213,14 @@ async def serve():
     service_name = os.getenv("SERVICE_NAME", "book-catalog")
 
     pool = await create_pool()
+    
+    redis_url = os.getenv("REDIS_URL", "redis://localhost:6377")
+    print(f"DEBUG: Connecting to Redis at {redis_url}")
+    redis_client = aioredis.from_url(redis_url)
 
     server = grpc.aio.server()
     generated_protos.book_catalog_pb2_grpc.add_BookCatalogGrpcServicer_to_server(
-        BookCatalogService(pool=pool, service_name=service_name),
+        BookCatalogService(pool=pool, service_name=service_name, redis=redis_client),
         server,
     )
 

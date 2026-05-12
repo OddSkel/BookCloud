@@ -2,6 +2,7 @@ use config::AppConfig;
 use grpc::contracts::author_catalog::author_catalog_grpc_server::AuthorCatalogGrpcServer;
 use service::AuthorCatalogService;
 use tonic::transport::Server;
+use redis::Client;
 
 mod config;
 mod grpc;
@@ -27,10 +28,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     .await
     .expect("Failed to connect to PostgreSQL");
 
+    let redis_client = Client::open(config.redis_url.as_str())
+        .expect("Failed to create Redis client");
+    let redis_conn = redis_client
+        .get_connection_manager()
+        .await
+        .expect("Failed to connect to Redis");
 
     Server::builder()
         .add_service(AuthorCatalogGrpcServer::new(AuthorCatalogService::new(
             pool,
+            redis_conn,
         )))
         .serve(address)
         .await

@@ -1,5 +1,6 @@
 use sqlx::PgPool;
 use tonic::{Request, Response, Status};
+use redis::aio::ConnectionManager;
 
 use crate::grpc::contracts::author_catalog::{
     AddAuthorRequest, AddAuthorResponse, Author as ProtoAuthor, AuthorDeleteResponse,
@@ -14,11 +15,12 @@ use crate::handlers::{author_handler, health_handler};
 
 pub struct AuthorCatalogService {
     pool: PgPool,
+    redis: ConnectionManager
 }
 
 impl AuthorCatalogService {
-    pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+    pub fn new(pool: PgPool, redis: ConnectionManager) -> Self {
+        Self { pool, redis }
     }
 }
 
@@ -38,7 +40,7 @@ impl AuthorCatalogGrpc for AuthorCatalogService {
     ) -> Result<Response<GetAuthorsResponse>, Status> {
         let params = _request.into_inner();
 
-        let response = author_handler::get_authors(&self.pool, &params)
+        let response = author_handler::get_authors(&self.pool, &self.redis, &params)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 

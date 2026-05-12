@@ -6,6 +6,8 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    environment:
+      REDIS_URL: ${REDIS_URL}
     ports:
       - "${HOST_GRPC_PORT}:50051"
     networks:
@@ -23,6 +25,15 @@ services:
       - "${POSTGRES_PORT}:5432"
     volumes:
       - book-db-data:/var/lib/postgresql/data
+    networks:
+      - bookcloud-network
+
+  book-redis:
+    image: redis:7
+    container_name: book-redis
+    restart: unless-stopped
+    ports:
+      - "6377:6379"
     networks:
       - bookcloud-network
 
