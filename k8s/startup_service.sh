@@ -66,7 +66,6 @@ else
   run minikube start -p "$PROFILE" --nodes "$MINIKUBE_NODES"
 fi
 
-run minikube -p "$PROFILE" addons enable ingress
 run minikube -p "$PROFILE" addons enable metrics-server
 
 build_image "bookcloud/api-gateway:latest" "$REPO_ROOT/src/api-gateway"
@@ -77,22 +76,20 @@ build_image "bookcloud/compare-service:latest" "$REPO_ROOT/src/services/compare-
 build_image "bookcloud/genre-analysis-service:latest" "$REPO_ROOT/src/services/genre-analysis-service"
 
 run kubectl apply -k "$SCRIPT_DIR"
-wait_for_rollouts
-run kubectl -n "$NAMESPACE" get pods,svc,ingress,hpa
 
-MINIKUBE_IP="$(minikube -p "$PROFILE" ip)"
+wait_for_rollouts
+
+run kubectl -n "$NAMESPACE" get pods,svc,hpa
 
 cat <<EOF
 
 BookCloud esta aplicado no namespace '$NAMESPACE'.
 
-Ingress:
-  http://api.bookcloud.local
+Kong Gateway:
+  kubectl -n $NAMESPACE port-forward svc/kong 8000:80
+  curl http://localhost:8000/health
 
-Se ainda nao tiveres a entrada no /etc/hosts, adiciona:
-  $MINIKUBE_IP api.bookcloud.local
-
-Alternativa sem /etc/hosts:
+Acesso direto ao api-gateway, se precisares testar sem o Kong:
   kubectl -n $NAMESPACE port-forward svc/api-gateway 8080:80
   curl http://localhost:8080/health
 
