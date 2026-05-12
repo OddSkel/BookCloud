@@ -39,7 +39,7 @@ services:
     container_name: rating-redis
     restart: unless-stopped
     ports:
-      - "6378:6378"
+      - "6378:6379"
     networks:
       - bookcloud-network
 
