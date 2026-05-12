@@ -10,10 +10,12 @@ services:
     environment:
       RUST_LOG: info
       DATABASE_URL: postgres://postgres:postgres@rating-db:5432/ratings
+      REDIS_URL: "redis://author-redis:6379"
     ports:
       - "${HOST_GRPC_PORT}:50053"
     depends_on:
       - rating-db
+      - rating-redis
     networks:
       - bookcloud-network
 
@@ -29,6 +31,15 @@ services:
       - "${POSTGRES_PORT}:5432"
     volumes:
       - rating-db-data:/var/lib/postgresql/data
+    networks:
+      - bookcloud-network
+
+  rating-redis:
+    image: redis:7
+    container_name: rating-redis
+    restart: unless-stopped
+    ports:
+      - "6378:6378"
     networks:
       - bookcloud-network
 

@@ -1,5 +1,6 @@
 use sqlx::PgPool;
 use tonic::{Request, Response, Status};
+use redis::aio::ConnectionManager;
 
 use crate::grpc::contracts::rating_catalog::{
     AddRatingRequest, AddRatingResponse, DeleteRatingRequest, DeleteRatingResponse,
@@ -18,11 +19,12 @@ use crate::grpc::contracts::{
 pub struct RatingCatalogService {
     service_name: String,
     pool: PgPool,
+    redis: ConnectionManager,
 }
 
 impl RatingCatalogService {
-    pub fn new(service_name: String, pool: PgPool) -> Self {
-        Self { service_name, pool }
+    pub fn new(service_name: String, pool: PgPool, redis: ConnectionManager) -> Self {
+        Self { service_name, pool, redis }
     }
 }
 
@@ -80,7 +82,7 @@ impl RatingCatalogGrpc for RatingCatalogService {
     ) -> Result<Response<GetRatingsResponse>, Status> {
         let req = request.into_inner();
 
-        let ratings = rating_handler::get_ratings(&self.pool, req.page_number, req.page_size)
+        let ratings: Vec<Rating> = rating_handler::get_ratings(&self.pool, &self.redis, req.page_number, req.page_size)
             .await
             .map_err(|err| Status::internal(err.to_string()))?;
 

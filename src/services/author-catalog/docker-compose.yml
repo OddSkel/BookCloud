@@ -47,7 +47,6 @@ services:
 volumes:
   author-db-data:
 
-
 networks:
   bookcloud-network:
     external: true
