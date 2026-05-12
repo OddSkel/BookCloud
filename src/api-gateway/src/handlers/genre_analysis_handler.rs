@@ -1,6 +1,5 @@
 use actix_web::{HttpResponse, Responder, web};
 use serde::Deserialize;
-use serde_json::json;
 
 use crate::grpc::{GenreAddPayload, GrpcRegistry};
 
@@ -26,7 +25,7 @@ pub async fn get_genres(
 
     match registry.get_genres(q.sort_by, q.ascending, q.page_num, q.page_size).await {
         Ok(genres) => HttpResponse::Ok().json(genres),
-        Err(error) => map_genre_error(error),
+        Err(error) => crate::utils::map_genre_error(error),
     }
 }
 
@@ -36,7 +35,7 @@ pub async fn add_genre(
 ) -> impl Responder {
     match registry.add_genre(body.into_inner()).await {
         Ok(genre) => HttpResponse::Ok().json(genre),
-        Err(error) => map_genre_error(error),
+        Err(error) => crate::utils::map_genre_error(error),
     }
 }
 
@@ -46,7 +45,7 @@ pub async fn get_genre(
 ) -> impl Responder {
     match registry.get_genre(path.into_inner()).await {
         Ok(genre) => HttpResponse::Ok().json(genre),
-        Err(error) => map_genre_error(error),
+        Err(error) => crate::utils::map_genre_error(error),
     }
 }
 
@@ -60,7 +59,7 @@ pub async fn update_genre(
         .await
     {
         Ok(genre) => HttpResponse::Ok().json(genre),
-        Err(error) => map_genre_error(error),
+        Err(error) => crate::utils::map_genre_error(error),
     }
 }
 
@@ -70,7 +69,7 @@ pub async fn delete_genre(
 ) -> impl Responder {
     match registry.delete_genre(path.into_inner()).await {
         Ok(_) => HttpResponse::NoContent().finish(),
-        Err(error) => map_genre_error(error),
+        Err(error) => crate::utils::map_genre_error(error),
     }
 }
 
@@ -84,7 +83,7 @@ pub async fn get_genre_growth(
 
     match registry.get_genre_growth(genre_id, q.year_from, q.year_to).await {
         Ok(payload) => HttpResponse::Ok().json(payload),
-        Err(error) => map_genre_error(error),
+        Err(error) => crate::utils::map_genre_error(error),
     }
 }
 
@@ -98,20 +97,7 @@ pub async fn get_genre_popularity(
 
     match registry.get_genre_popularity(genre_id, q.year_from, q.year_to).await {
         Ok(payload) => HttpResponse::Ok().json(payload),
-        Err(error) => map_genre_error(error),
+        Err(error) => crate::utils::map_genre_error(error),
     }
 }
 
-fn map_genre_error(error: String) -> HttpResponse {
-    let status = if error.to_ascii_lowercase().contains("not found") {
-        actix_web::http::StatusCode::NOT_FOUND
-    } else if error.to_ascii_lowercase().contains("invalid")
-        || error.to_ascii_lowercase().contains("required")
-    {
-        actix_web::http::StatusCode::UNPROCESSABLE_ENTITY
-    } else {
-        actix_web::http::StatusCode::BAD_GATEWAY
-    };
-
-    HttpResponse::build(status).json(json!({ "error": error }))
-}

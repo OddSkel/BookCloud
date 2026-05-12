@@ -42,3 +42,16 @@ if [ -f "$BASE_DIR/api-gateway/docker-compose.yml" ]; then
         docker compose up --build -d
     )
 fi
+
+# =========================
+# KONG GATEWAY
+# =========================
+if [ -f "$BASE_DIR/kong/docker-compose.yml" ]; then
+    printf 'Starting kong...\n'
+    (
+        cd "$BASE_DIR/kong"
+        docker compose up --build -d
+    )
+fi
+
+printf 'All services started.\n'

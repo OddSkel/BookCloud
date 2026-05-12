@@ -31,4 +31,15 @@ if [ -f "$BASE_DIR/api-gateway/docker-compose.yml" ]; then
     )
 fi
 
+# =========================
+# KONG GATEWAY
+# =========================
+if [ -f "$BASE_DIR/kong/docker-compose.yml" ]; then
+    printf 'Stopping kong...\n'
+    (
+        cd "$BASE_DIR/kong"
+        docker compose down
+    )
+fi
+
 printf 'All services stopped.\n'

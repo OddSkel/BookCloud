@@ -3,6 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    container_name: author-analytics-service
     restart: unless-stopped
     env_file:
       - .env
@@ -11,38 +12,10 @@ services:
       HOST: "0.0.0.0"
       GRPC_PORT: "50056"
       HTTP_PORT: "8086"
-      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@analytics-db:5432/${POSTGRES_DB}"
     ports:
-      - "${HOST_GRPC_PORT}:50056"
+      - "50058:50056"
     networks:
       - bookcloud-network
-    depends_on:
-      analytics-db:
-        condition: service_healthy
-
-  analytics-db:
-    image: postgres:15
-    container_name: analytics-db
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-    ports:
-      - "${POSTGRES_PORT}:5432"
-    volumes:
-      - analytics-db-data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql  # schema + seed
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    networks:
-      - bookcloud-network
-
-volumes:
-  analytics-db-data:
 
 networks:
   bookcloud-network:

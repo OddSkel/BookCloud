@@ -5,7 +5,7 @@ use crate::handlers::author_analytics_handler::{
 
 pub fn author_analytics_routes(cfg: &mut web::ServiceConfig) {
     cfg.service(
-        web::scope("/authors")
+        web::scope("/author-analytics")
             .route("/rank",        web::get().to(rank_authors))
             .route("/performance", web::get().to(author_performance))
             .route("/consistency", web::get().to(authors_consistency))

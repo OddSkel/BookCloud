@@ -4,7 +4,8 @@ pub struct AppConfig {
     pub service_name: String,
     pub grpc_port:    u16,
     pub http_port:    u16,
-    pub database_url: String,
+    pub book_db_url: String,
+    pub rating_db_url: String,
 }
 
 impl AppConfig {
@@ -18,8 +19,10 @@ impl AppConfig {
             http_port: env::var("HTTP_PORT")
                 .unwrap_or_else(|_| "8086".to_string())
                 .parse().expect("HTTP_PORT must be a number"),
-            database_url: env::var("DATABASE_URL")
-                .expect("DATABASE_URL must be set"),
+            book_db_url: std::env::var("BOOK_DATABASE_URL")
+                .expect("BOOK_DATABASE_URL must be set"),
+            rating_db_url: std::env::var("RATING_DATABASE_URL")
+                .expect("RATING_DATABASE_URL must be set"),
         }
     }
 

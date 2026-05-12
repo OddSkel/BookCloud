@@ -1,6 +1,5 @@
 use actix_web::{HttpResponse, Responder, web};
 use serde::Deserialize;
-use serde_json::json;
 
 use crate::grpc::{AuthorAddPayload, GrpcRegistry};
 
@@ -25,7 +24,7 @@ pub async fn get_authors(
     let q = page.into_inner();
     match registry.get_authors(q.page, q.page_size).await {
         Ok(authors) => HttpResponse::Ok().json(authors),
-        Err(e) => HttpResponse::InternalServerError().json(json!({ "error": e })),
+        Err(e)      => crate::utils::map_error(e),
     }
 }
 
@@ -35,7 +34,7 @@ pub async fn get_author(
 ) -> impl Responder {
     match registry.get_author(&path.into_inner()).await {
         Ok(author) => HttpResponse::Ok().json(author),
-        Err(e) => HttpResponse::NotFound().json(json!({ "error": e })),
+        Err(e)     => crate::utils::map_error(e),
     }
 }
 
@@ -45,7 +44,7 @@ pub async fn add_author(
 ) -> impl Responder {
     match registry.add_author(body.into_inner()).await {
         Ok(author) => HttpResponse::Created().json(author),
-        Err(e) => HttpResponse::UnprocessableEntity().json(json!({ "error": e })),
+        Err(e)     => crate::utils::map_error(e),
     }
 }
 
@@ -54,9 +53,16 @@ pub async fn update_author(
     query: web::Query<UpdateAuthorQuery>,
 ) -> impl Responder {
     let q = query.into_inner();
+
+    if q.name.is_none() {
+        return HttpResponse::BadRequest().json(
+            serde_json::json!({ "error": "At least one field (name) must be provided" })
+        );
+    }
+
     match registry.update_author(q.author_id, q.name).await {
         Ok(authors) => HttpResponse::Ok().json(authors),
-        Err(e) => HttpResponse::UnprocessableEntity().json(json!({ "error": e })),
+        Err(e)      => crate::utils::map_error(e),
     }
 }
 
@@ -65,7 +71,7 @@ pub async fn delete_author(
     path: web::Path<String>,
 ) -> impl Responder {
     match registry.delete_author(&path.into_inner()).await {
-        Ok(_) => HttpResponse::NoContent().finish(),
-        Err(e) => HttpResponse::NotFound().json(json!({ "error": e })),
+        Ok(_)  => HttpResponse::NoContent().finish(),
+        Err(e) => crate::utils::map_error(e),
     }
 }

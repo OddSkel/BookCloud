@@ -1,6 +1,5 @@
 use actix_web::{HttpResponse, Responder, web};
 use serde::Deserialize;
-use serde_json::json;
 
 use crate::grpc::{CompareFiltersPayload, GrpcRegistry};
 
@@ -62,7 +61,10 @@ pub async fn popular_low_rated(
         .await
     {
         Ok(payload) => HttpResponse::Ok().json(payload),
-        Err(error) => HttpResponse::BadGateway().json(json!({ "error": error })),
+        Err(e) => {
+            let safe = if e.len() > 200 { "Upstream service error".to_string() } else { e };
+            crate::utils::map_error(safe)
+        }
     }
 }
 
@@ -72,7 +74,10 @@ pub async fn hidden_gems(
 ) -> impl Responder {
     match registry.get_hidden_gems(query.into_inner().into()).await {
         Ok(payload) => HttpResponse::Ok().json(payload),
-        Err(error) => HttpResponse::BadGateway().json(json!({ "error": error })),
+        Err(e) => {
+            let safe = if e.len() > 200 { "Upstream service error".to_string() } else { e };
+            crate::utils::map_error(safe)
+        }
     }
 }
 
@@ -82,7 +87,10 @@ pub async fn correlation(
 ) -> impl Responder {
     match registry.get_correlation(query.into_inner().into()).await {
         Ok(payload) => HttpResponse::Ok().json(payload),
-        Err(error) => HttpResponse::BadGateway().json(json!({ "error": error })),
+        Err(e) => {
+            let safe = if e.len() > 200 { "Upstream service error".to_string() } else { e };
+            crate::utils::map_error(safe)
+        }
     }
 }
 
@@ -95,7 +103,10 @@ pub async fn publishing_growth(
         .await
     {
         Ok(payload) => HttpResponse::Ok().json(payload),
-        Err(error) => HttpResponse::BadGateway().json(json!({ "error": error })),
+        Err(e) => {
+            let safe = if e.len() > 200 { "Upstream service error".to_string() } else { e };
+            crate::utils::map_error(safe)
+        }
     }
 }
 
@@ -105,6 +116,9 @@ pub async fn eras(
 ) -> impl Responder {
     match registry.get_eras(query.into_inner().into()).await {
         Ok(payload) => HttpResponse::Ok().json(payload),
-        Err(error) => HttpResponse::BadGateway().json(json!({ "error": error })),
+        Err(e) => {
+            let safe = if e.len() > 200 { "Upstream service error".to_string() } else { e };
+            crate::utils::map_error(safe)
+        }
     }
 }

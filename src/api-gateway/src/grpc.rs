@@ -4,6 +4,7 @@ use tonic::Request;
 
 const COMPARE_GRPC_MESSAGE_SIZE_LIMIT: usize = 128 * 1024 * 1024;
 const RATING_GRPC_MESSAGE_SIZE_LIMIT: usize = 128 * 1024 * 1024;
+const BOOK_SEARCH_GRPC_MESSAGE_SIZE_LIMIT: usize = 128 * 1024 * 1024;
 
 // Generated proto contracts
 
@@ -292,9 +293,9 @@ impl CatalogService {
             Self::RatingCatalog => "http://rating-catalog:50053",
             Self::CompareService => "http://compare-service:50054",
             Self::GenreAnalysis => "http://genre-analysis-service:50055",
-            Self::AuthorAnalytics => "http://author-analytics-service:50058",
-            Self::BookSearch => "http://book-search:50057",
-            Self::BookRecommendation => "http://book-recommendation:50056",
+            Self::AuthorAnalytics => "http://author-analytics-service:50056",
+            Self::BookSearch => "http://book-search:50054",
+            Self::BookRecommendation => "http://book-recommendation:50055",
         }
     }
 }
@@ -398,8 +399,17 @@ impl GrpcRegistry {
         let response = client
             .book_recommendation(Request::new(BookRecommendationQuery {
                 genre: filters.genre,
+<<<<<<< HEAD
                 rating: filters.rating,
                 popularity: filters.popularity, // changed: no longer needs .as_ref().and_then(|s| s.parse().ok())
+=======
+                rating: filters.rating
+                    .as_deref()
+                    .and_then(|s| s.parse::<f64>().ok()),
+                popularity: filters.popularity
+                    .as_deref()
+                    .and_then(|s| s.parse::<f64>().ok()),
+>>>>>>> main
             }))
             .await
             .map(|r| r.into_inner())
@@ -1116,6 +1126,7 @@ async fn book_search_client(
 ) -> Result<BookSearchGrpcClient<tonic::transport::Channel>, String> {
     BookSearchGrpcClient::connect(endpoint.to_string())
         .await
+        .map(|c| c.max_decoding_message_size(BOOK_SEARCH_GRPC_MESSAGE_SIZE_LIMIT))
         .map_err(|e| e.to_string())
 }
 
