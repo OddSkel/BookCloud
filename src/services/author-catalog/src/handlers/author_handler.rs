@@ -76,7 +76,7 @@ pub async fn register_author(
 
 pub async fn edit_author(
     pool: &PgPool,
-    author_id: i32,
+    author_id: i64,
     params: UpdateAuthorRequest,
 ) -> Result<UpdateAuthorResponse, sqlx::Error> {
     let mut set_clauses = vec![];
