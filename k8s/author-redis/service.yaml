@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: author-redis
+  namespace: bookcloud
+  labels:
+    app: author-redis
+spec:
+  type: ClusterIP
+  selector:
+    app: author-redis
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379

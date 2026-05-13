@@ -9,3 +9,4 @@ data:
   POSTGRES_HOST: "author-db"
   POSTGRES_DB: "author_catalog"
   POSTGRES_PORT: "5432"
+  REDIS_URL: "redis://author-redis:6379"

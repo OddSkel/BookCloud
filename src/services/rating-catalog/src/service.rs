@@ -45,17 +45,6 @@ fn map_rating(rating: Rating) -> GrpcRating {
 
 #[tonic::async_trait]
 impl RatingCatalogGrpc for RatingCatalogService {
-    // async fn health_check(
-    //     &self,
-    //     _request: Request<HealthCheckRequest>,
-    // ) -> Result<Response<HealthCheckResponse>, Status> {
-    //     let (service, status) = health_handler::health(&self.service_name);
-
-    //     Ok(Response::new(HealthCheckResponse {
-    //         service,
-    //         status,
-    //     }))
-    // }
 
     async fn get_rating(
         &self,
@@ -95,7 +84,6 @@ impl RatingCatalogGrpc for RatingCatalogService {
             }
         }
     }
-
     async fn get_ratings(
         &self,
         request: Request<GetRatingsRequest>,
@@ -103,12 +91,17 @@ impl RatingCatalogGrpc for RatingCatalogService {
         let operation = "list_ratings";
         let timer = metrics::start_timer("rating-catalog", operation);
 
-        let ratings: Vec<Rating> = rating_handler::get_ratings(&self.pool, &self.redis, req.page_number, req.page_size)
-            .await
-            .map_err(|err| Status::internal(err.to_string()))?;
-        
         let result = async {
             let req = request.into_inner();
+
+            let ratings: Vec<Rating> = rating_handler::get_ratings(
+                &self.pool,
+                &self.redis,
+                req.page_number,
+                req.page_size,
+            )
+            .await
+            .map_err(|err| Status::internal(err.to_string()))?;
 
             let response = GetRatingsResponse {
                 ratings: ratings.into_iter().map(map_rating).collect(),

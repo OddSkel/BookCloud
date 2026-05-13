@@ -35,6 +35,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .get_connection_manager()
         .await
         .expect("Failed to connect to Redis");
+    let pool = db::create_pool()
+        .await
+        .expect("Failed to connect to PostgreSQL");
 
     Server::builder()
         .add_service(AuthorCatalogGrpcServer::new(AuthorCatalogService::new(

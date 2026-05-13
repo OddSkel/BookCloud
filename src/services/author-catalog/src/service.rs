@@ -35,17 +35,24 @@ impl AuthorCatalogGrpc for AuthorCatalogService {
 
         Ok(Response::new(response))
     }
+    
     async fn get_authors(
         &self,
-        _request: tonic::Request<GetAuthorsRequest>,
+        request: tonic::Request<GetAuthorsRequest>,
     ) -> Result<Response<GetAuthorsResponse>, Status> {
         let operation = "list_authors";
         let timer = metrics::start_timer("author-catalog", operation);
 
-        let response = author_handler::get_authors(&self.pool, &self.redis, &params)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let result = async {
+            let params = request.into_inner();
 
+            let response = author_handler::get_authors(&self.pool, &self.redis, &params)
+                .await
+                .map_err(|e| Status::internal(e.to_string()))?;
+
+            Ok(Response::new(response))
+        }
+        .await;
 
         match result {
             Ok(response) => {

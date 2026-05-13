@@ -10,3 +10,4 @@ data:
   POSTGRES_HOST: "book-db"
   POSTGRES_DB: "book_catalog"
   POSTGRES_PORT: "5432"
+  REDIS_URL: "redis://book-redis:6379"
