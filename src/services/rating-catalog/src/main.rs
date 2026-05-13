@@ -10,6 +10,7 @@ mod config;
 mod db;
 mod grpc;
 mod handlers;
+mod metrics;
 mod models;
 mod service;
 
@@ -21,6 +22,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let address = config.grpc_address()?;
 
     println!("{} gRPC started on {}", config.service_name, address);
+
+    tokio::spawn(async {
+        metrics::start_metrics_server("rating-catalog").await;
+    });
 
     let pool = db::create_pool()
         .await

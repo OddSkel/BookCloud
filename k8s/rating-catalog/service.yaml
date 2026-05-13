@@ -3,11 +3,16 @@ kind: Service
 metadata:
   name: rating-catalog
   namespace: bookcloud
+  labels:
+    app: rating-catalog
 spec:
+  type: ClusterIP
   selector:
     app: rating-catalog
   ports:
     - name: grpc
       port: 50053
-      targetPort: grpc
-  type: ClusterIP
+      targetPort: 50053
+    - name: metrics
+      port: 9100
+      targetPort: 9100

@@ -32,6 +32,10 @@ resources:
   - rating-catalog/service.yaml
   - rating-catalog/hpa.yaml
 
+  - observability/servicemonitor-author-catalog.yaml
+  - observability/servicemonitor-book-catalog.yaml
+  - observability/servicemonitor-rating-catalog.yaml
+
   - compare-service/configmap.yaml
   - compare-service/deployment.yaml
   - compare-service/service.yaml
