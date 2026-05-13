@@ -9,6 +9,9 @@ NAMESPACE="${BOOKCLOUD_NAMESPACE:-bookcloud}"
 MINIKUBE_NODES="${BOOKCLOUD_MINIKUBE_NODES:-1}"
 ROLLOUT_TIMEOUT="${BOOKCLOUD_ROLLOUT_TIMEOUT:-300s}"
 
+MINIKUBE_MEMORY="${BOOKCLOUD_MINIKUBE_MEMORY:-6144}"
+MINIKUBE_CPUS="${BOOKCLOUD_MINIKUBE_CPUS:-4}"
+
 require_command() {
   if ! command -v "$1" >/dev/null 2>&1; then
     echo "Erro: comando '$1' nao encontrado." >&2
@@ -84,11 +87,21 @@ install_monitoring_local() {
 
 cd "$REPO_ROOT"
 
-if minikube -p "$PROFILE" status >/dev/null 2>&1; then
+if minikube -p "$PROFILE" status | grep -q "host: Running"; then
   echo "Minikube profile '$PROFILE' ja esta ativo."
 else
-  run minikube start -p "$PROFILE" --nodes "$MINIKUBE_NODES"
+  run minikube start -p "$PROFILE" \
+  --nodes "$MINIKUBE_NODES" \
+  --memory "$MINIKUBE_MEMORY" \
+  --cpus "$MINIKUBE_CPUS"
 fi
+
+# Wait for API server to be fully ready before enabling addons
+echo "Waiting for API server to be ready..."
+until kubectl --context "$PROFILE" cluster-info >/dev/null 2>&1; do
+  sleep 3
+done
+echo "API server is ready."
 
 run minikube -p "$PROFILE" addons enable metrics-server
 
