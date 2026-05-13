@@ -9,43 +9,46 @@ data:
     _transform: true
 
     services:
-      - name: bookcloud-api-gateway
-        url: http://api-gateway:80
-        routes:
-          - name: all-routes
-            paths:
-              - /
-            strip_path: false
+    - name: bookcloud-api-gateway
+      url: http://api-gateway:80
+      routes:
+      - name: public-routes
+        paths:
+          - /health
+        strip_path: false
+      - name: protected-routes
+        paths:
+          - /
+        strip_path: false
+        plugins:
+          - name: jwt
 
     plugins:
-      - name: rate-limiting
-        config:
-          minute: 100
-          hour: 1000
-          policy: local
-
-      - name: cors
-        config:
-          origins:
-            - "*"
-          methods:
-            - GET
-            - POST
-            - PUT
-            - DELETE
-            - OPTIONS
+    - name: rate-limiting
+      config:
+        minute: 100
+        hour: 1000
+        policy: local
+    - name: cors
+      config:
+        origins:
+          - "*"
+        methods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+        headers:
+          - Content-Type
+          - Authorization
+        max_age: 3600
+    - name: request-size-limiting
+      config:
+        allowed_payload_size: 10
+        size_unit: megabytes
+    - name: response-transformer
+      config:
+        add:
           headers:
-            - Content-Type
-            - Authorization
-          max_age: 3600
-
-      - name: request-size-limiting
-        config:
-          allowed_payload_size: 10
-          size_unit: megabytes
-
-      - name: response-transformer
-        config:
-          add:
-            headers:
-              - "X-Powered-By: BookCloud"
+            - "X-Powered-By: BookCloud"

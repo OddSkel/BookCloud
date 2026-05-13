@@ -54,3 +54,11 @@ resources:
   - kong/configmap.yaml
   - kong/deployment.yaml
   - kong/service.yaml
+
+  - keycloak/db-configmap.yaml
+  - keycloak/db-pvc.yaml
+  - keycloak/db-deployment.yaml
+  - keycloak/db-service.yaml
+  - keycloak/configmap.yaml
+  - keycloak/deployment.yaml
+  - keycloak/service.yaml
