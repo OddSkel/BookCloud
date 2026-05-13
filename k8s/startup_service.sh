@@ -134,12 +134,18 @@ Grafana:
   user: admin
   password: admin
 
+Keycloak:
+  kubectl -n bookcloud port-forward service/keycloak 8080:80
+  http://localhost:8080
+  user: admin
+  password: bookcloud-pass
+
 BookCloud via Kong:
   kubectl -n $NAMESPACE port-forward service/kong 9000:80
   http://localhost:9000
 
 Acesso direto ao api-gateway, se precisares testar sem o Kong:
-  kubectl -n $NAMESPACE port-forward svc/api-gateway 8080:80
+  kubectl -n $NAMESPACE port-forward service/api-gateway 8080:80
   curl http://localhost:8080/health
 
 EOF

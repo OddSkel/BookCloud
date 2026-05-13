@@ -9,11 +9,11 @@ Keycloak is deployed as the Identity Provider (IdP) for BookCloud, handling all 
 ```
 Client
   │
-  ├─► Keycloak (port-forward 8080) ──► issues JWT token
+  ├─> Keycloak (port-forward 8080) ──> issues JWT token
   │
-  └─► Kong (port-forward 9000)
+  └─> Kong (port-forward 9000)
         │  validates JWT signature using Keycloak's public key
-        └─► api-gateway ──► microservices
+        └─> api-gateway ──> microservices
 ```
 
 ---
