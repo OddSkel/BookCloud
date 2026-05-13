@@ -10,7 +10,7 @@ services:
     environment:
       RUST_LOG: info
       DATABASE_URL: postgres://postgres:postgres@rating-db:5432/ratings
-      REDIS_URL: "redis://author-redis:6379"
+      REDIS_URL: "redis://rating-redis:6379"
     ports:
       - "${HOST_GRPC_PORT}:50053"
     depends_on:

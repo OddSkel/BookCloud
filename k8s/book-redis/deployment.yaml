@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: book-redis
+  namespace: bookcloud
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: book-redis
+  template:
+    metadata:
+      labels:
+        app: book-redis
+    spec:
+      containers:
+        - name: book-redis
+          image: redis:7
+          ports:
+            - name: redis
+              containerPort: 6379
+          readinessProbe:
+            tcpSocket:
+              port: 6379
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 6379
+            initialDelaySeconds: 15
+            periodSeconds: 20

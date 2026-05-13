@@ -57,6 +57,24 @@ delete_minikube_profile() {
   fi
 }
 
+drop_monitoring() {
+  if ! command_exists kubectl; then
+    echo "kubectl not found; skipping monitoring resources."
+    return 0
+  fi
+
+  if ! kubectl cluster-info >/dev/null 2>&1; then
+    echo "No reachable Kubernetes cluster; skipping monitoring resources."
+    return 0
+  fi
+
+  if command_exists helm; then
+    helm uninstall monitoring --namespace monitoring || true
+  fi
+
+  kubectl delete namespace monitoring --ignore-not-found=true
+}
+
 docker_compose_down() {
   local compose_file
 
@@ -97,6 +115,7 @@ remove_bookcloud_images() {
 cd "$REPO_ROOT"
 
 delete_kubernetes_resources
+drop_monitoring
 delete_minikube_profile
 docker_compose_down
 remove_bookcloud_images
@@ -107,6 +126,7 @@ BookCloud local services have been dropped.
 
 Removed:
   - Kubernetes resources from namespace '$NAMESPACE'
+  - Prometheus and Grafana from namespace 'monitoring'
   - Minikube profile '$PROFILE', if present
   - Docker Compose containers from this repository
 

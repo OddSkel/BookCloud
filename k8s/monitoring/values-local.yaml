@@ -1,0 +1,30 @@
+grafana:
+  enabled: true
+  adminUser: admin
+  adminPassword: admin
+
+  service:
+    type: NodePort
+
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      searchNamespace: ALL
+
+alertmanager:
+  enabled: true
+
+prometheus:
+  enabled: true
+  prometheusSpec:
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    retention: 7d
+    scrapeInterval: 15s
+
+kubeStateMetrics:
+  enabled: true
+
+nodeExporter:
+  enabled: true
