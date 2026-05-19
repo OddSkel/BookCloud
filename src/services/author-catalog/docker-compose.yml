@@ -11,12 +11,14 @@ services:
       HOST: "0.0.0.0"
       GRPC_PORT: "50052"
       POSTGRES_PORT: "5432"
+      REDIS_URL: "redis://author-redis:6379"
     ports:
       - "${HOST_GRPC_PORT}:50052"
     networks:
       - bookcloud-network
     depends_on:
       - author-db
+      - author-redis
 
   author-db:
     image: postgres:15
@@ -32,10 +34,18 @@ services:
       - author-db-data:/var/lib/postgresql/data
     networks:
       - bookcloud-network
+    
+  author-redis:
+    image: redis:7
+    container_name: author-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - bookcloud-network
 
 volumes:
   author-db-data:
-
 
 networks:
   bookcloud-network:

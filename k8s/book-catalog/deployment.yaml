@@ -27,6 +27,8 @@ spec:
           ports:
             - name: grpc
               containerPort: 50051
+            - name: metrics
+              containerPort: 9100
           envFrom:
             - configMapRef:
                 name: book-catalog-config

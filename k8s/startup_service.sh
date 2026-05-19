@@ -57,6 +57,30 @@ wait_for_rollouts() {
 require_command docker
 require_command minikube
 require_command kubectl
+require_command curl
+
+install_helm_if_missing() {
+  if command -v helm >/dev/null 2>&1; then
+    echo "Helm already installed."
+    return 0
+  fi
+
+  echo "Installing Helm..."
+  curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+}
+
+install_monitoring_local() {
+  install_helm_if_missing
+
+  kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f -
+
+  helm repo add prometheus-community https://prometheus-community.github.io/helm-charts || true
+  helm repo update
+
+  helm upgrade --install monitoring prometheus-community/kube-prometheus-stack \
+    --namespace monitoring \
+    --values k8s/monitoring/values-local.yaml
+}
 
 cd "$REPO_ROOT"
 
@@ -66,7 +90,6 @@ else
   run minikube start -p "$PROFILE" --nodes "$MINIKUBE_NODES"
 fi
 
-run minikube -p "$PROFILE" addons enable ingress
 run minikube -p "$PROFILE" addons enable metrics-server
 
 build_image "bookcloud/api-gateway:latest" "$REPO_ROOT/src/api-gateway"
@@ -76,23 +99,33 @@ build_image "bookcloud/rating-catalog:latest" "$REPO_ROOT/src/services/rating-ca
 build_image "bookcloud/compare-service:latest" "$REPO_ROOT/src/services/compare-service"
 build_image "bookcloud/genre-analysis-service:latest" "$REPO_ROOT/src/services/genre-analysis-service"
 
-run kubectl apply -k "$SCRIPT_DIR"
-wait_for_rollouts
-run kubectl -n "$NAMESPACE" get pods,svc,ingress,hpa
+install_monitoring_local
 
-MINIKUBE_IP="$(minikube -p "$PROFILE" ip)"
+run kubectl apply -k "$SCRIPT_DIR"
+
+wait_for_rollouts
+
+run kubectl -n "$NAMESPACE" get pods,svc,hpa
 
 cat <<EOF
 
 BookCloud esta aplicado no namespace '$NAMESPACE'.
 
-Ingress:
-  http://api.bookcloud.local
+Prometheus:
+  kubectl -n monitoring port-forward service/monitoring-kube-prometheus-prometheus 9090:9090
+  http://localhost:9090
 
-Se ainda nao tiveres a entrada no /etc/hosts, adiciona:
-  $MINIKUBE_IP api.bookcloud.local
+Grafana:
+  kubectl -n monitoring port-forward service/monitoring-grafana 3000:80
+  http://localhost:3000
+  user: admin
+  password: admin
 
-Alternativa sem /etc/hosts:
+BookCloud via Kong:
+  kubectl -n $NAMESPACE port-forward service/kong 9000:80
+  http://localhost:9000
+
+Acesso direto ao api-gateway, se precisares testar sem o Kong:
   kubectl -n $NAMESPACE port-forward svc/api-gateway 8080:80
   curl http://localhost:8080/health
 

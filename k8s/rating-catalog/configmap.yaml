@@ -9,3 +9,4 @@ data:
   POSTGRES_HOST: "rating-db"
   POSTGRES_DB: "rating_catalog"
   POSTGRES_PORT: "5432"
+  REDIS_URL: "redis://rating-redis:6379"

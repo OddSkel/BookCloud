@@ -27,6 +27,8 @@ spec:
           ports:
             - name: grpc
               containerPort: 50053
+            - name: metrics
+              containerPort: 9100
           envFrom:
             - configMapRef:
                 name: rating-catalog-config

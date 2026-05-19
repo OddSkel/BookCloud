@@ -2,44 +2,65 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - namespace.yaml
+
   - shared/postgres-credentials.yaml
-  - api-gateway/configmap.yaml
-  - api-gateway/deployment.yaml
-  - api-gateway/service.yaml
-  - api-gateway/hpa.yaml
+
+  - book-catalog/db-configmap.yaml
+  - book-catalog/db-pvc.yaml
+  - book-catalog/db-deployment.yaml
+  - book-catalog/db-service.yaml
   - book-catalog/configmap.yaml
   - book-catalog/deployment.yaml
   - book-catalog/service.yaml
   - book-catalog/hpa.yaml
-  - book-catalog/db-configmap.yaml
-  - book-catalog/db-deployment.yaml
-  - book-catalog/db-pvc.yaml
-  - book-catalog/db-service.yaml
+  - book-redis/deployment.yaml
+  - book-redis/service.yaml
+
+  - author-catalog/db-configmap.yaml
+  - author-catalog/db-pvc.yaml
+  - author-catalog/db-deployment.yaml
+  - author-catalog/db-service.yaml
   - author-catalog/configmap.yaml
   - author-catalog/deployment.yaml
   - author-catalog/service.yaml
   - author-catalog/hpa.yaml
-  - author-catalog/db-configmap.yaml
-  - author-catalog/db-deployment.yaml
-  - author-catalog/db-pvc.yaml
-  - author-catalog/db-service.yaml
+  - author-redis/deployment.yaml
+  - author-redis/service.yaml
+
+  - rating-catalog/db-configmap.yaml
+  - rating-catalog/db-pvc.yaml
+  - rating-catalog/db-deployment.yaml
+  - rating-catalog/db-service.yaml
   - rating-catalog/configmap.yaml
   - rating-catalog/deployment.yaml
   - rating-catalog/service.yaml
   - rating-catalog/hpa.yaml
-  - rating-catalog/db-configmap.yaml
-  - rating-catalog/db-deployment.yaml
-  - rating-catalog/db-pvc.yaml
-  - rating-catalog/db-service.yaml
+  - rating-redis/deployment.yaml
+  - rating-redis/service.yaml
+
+  - observability/servicemonitor-author-catalog.yaml
+  - observability/servicemonitor-book-catalog.yaml
+  - observability/servicemonitor-rating-catalog.yaml
+
   - compare-service/configmap.yaml
   - compare-service/deployment.yaml
   - compare-service/service.yaml
   - compare-service/hpa.yaml
+
+  - genre-analysis-service/db-configmap.yaml
+  - genre-analysis-service/db-pvc.yaml
+  - genre-analysis-service/db-deployment.yaml
+  - genre-analysis-service/db-service.yaml
   - genre-analysis-service/configmap.yaml
   - genre-analysis-service/deployment.yaml
   - genre-analysis-service/service.yaml
   - genre-analysis-service/hpa.yaml
-  - genre-analysis-service/db-configmap.yaml
-  - genre-analysis-service/db-deployment.yaml
-  - genre-analysis-service/db-pvc.yaml
-  - genre-analysis-service/db-service.yaml
+
+  - api-gateway/configmap.yaml
+  - api-gateway/deployment.yaml
+  - api-gateway/service.yaml
+  - api-gateway/hpa.yaml
+
+  - kong/configmap.yaml
+  - kong/deployment.yaml
+  - kong/service.yaml
