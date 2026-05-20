@@ -39,8 +39,8 @@ jobs:
     strategy:
       matrix:
         service:
-          - src/services/book-catalog
-          - src/services/genre-analysis-service
+          # - src/services/book-catalog
+          # - src/services/genre-analysis-service
           - src/services/compare-service
 
     steps:

@@ -317,6 +317,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "author-catalog"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axum 0.7.9",
+ "dotenv",
+ "lazy_static",
+ "prometheus",
+ "prost 0.14.3",
+ "prost-types 0.12.6",
+ "protoc-bin-vendored",
+ "redis",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tokio",
+ "tonic 0.14.6",
+ "tonic-prost",
+ "tonic-prost-build",
+]
+
+[[package]]
 name = "autocfg"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
