@@ -59,8 +59,8 @@ class AppConfig:
                 "http://genre-analysis-service:50055",
             ),
 
-            book_page_size=int(os.getenv("BOOK_PAGE_SIZE", "2000")),
-            rating_page_size=int(os.getenv("RATING_PAGE_SIZE", "2000")),
+            book_page_size=int(os.getenv("BOOK_PAGE_SIZE", "10000")),
+            rating_page_size=int(os.getenv("RATING_PAGE_SIZE", "10000")),
             genre_page_size=int(os.getenv("GENRE_PAGE_SIZE", "4000")),
             parallel_requests=int(os.getenv("PARALLEL_REQUESTS", "4")),
 

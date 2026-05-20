@@ -1,4 +1,5 @@
 import logging
+import time
 from typing import Awaitable, Callable
 
 import grpc
@@ -93,7 +94,15 @@ class CompareService(compare_service_pb2_grpc.CompareServiceGrpcServicer):
 
         LOGGER.info("Redis response cache MISS operation=%s", operation)
 
+        start = time.monotonic()
         response = await compute()
+        compute_elapsed = time.monotonic() - start
+        LOGGER.info(
+            "Computed %s in %.2fs",
+            operation,
+            compute_elapsed,
+        )
+
         response_json = response.to_json()
 
         await self.response_cache.set_json(key, response_json)

@@ -15,6 +15,7 @@ message Book {
 message GetBooksRequest {
   int32 page_num = 1;
   int32 page_size = 2;
+  optional bool include_details = 5;
 }
 
 message GetBooksResponse {

@@ -11,6 +11,9 @@ data:
     services:
       - name: bookcloud-api-gateway
         url: http://api-gateway:80
+        connect_timeout: 60000
+        write_timeout: 60000
+        read_timeout: 300000
         routes:
           - name: all-routes
             paths:

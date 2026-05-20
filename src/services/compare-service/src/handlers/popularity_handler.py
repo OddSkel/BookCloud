@@ -73,26 +73,16 @@ async def get_popular_low_rated(
     ranking_filters = _with_ranking_defaults(filters)
 
     ratings_by_isbn = await _load_ratings_by_isbn(catalog_cache)
-    (
-        total,
-        min_popularity,
-        max_popularity,
-        matching_records,
-    ) = await _collect_ranking_records(
+    total, ranking_stats = await _summarize_ranking_records(
         catalog_cache,
         ratings_by_isbn,
         ranking_filters,
         include_genres=_needs_genre_data(ranking_filters),
     )
 
-    ranking_stats = _build_ranking_stats(
-        matching_records,
-        min_popularity,
-        max_popularity,
-    )
-
-    items = _collect_ranked_items(
-        matching_records,
+    items = await _collect_ranked_items(
+        catalog_cache,
+        ratings_by_isbn,
         ranking_filters,
         ranking_stats,
         "popular",
@@ -117,26 +107,16 @@ async def get_hidden_gems(
     ranking_filters = _with_ranking_defaults(filters)
 
     ratings_by_isbn = await _load_ratings_by_isbn(catalog_cache)
-    (
-        total,
-        min_popularity,
-        max_popularity,
-        matching_records,
-    ) = await _collect_ranking_records(
+    total, ranking_stats = await _summarize_ranking_records(
         catalog_cache,
         ratings_by_isbn,
         ranking_filters,
         include_genres=_needs_genre_data(ranking_filters),
     )
 
-    ranking_stats = _build_ranking_stats(
-        matching_records,
-        min_popularity,
-        max_popularity,
-    )
-
-    items = _collect_ranked_items(
-        matching_records,
+    items = await _collect_ranked_items(
+        catalog_cache,
+        ratings_by_isbn,
         ranking_filters,
         ranking_stats,
         "hidden",
@@ -324,16 +304,16 @@ async def _iter_catalog_records(
         )
 
 
-async def _collect_ranking_records(
+async def _summarize_ranking_records(
     catalog_cache: CatalogDataCache,
     ratings_by_isbn: dict[int, tuple[int, float]],
     filters: PopularityFilters,
     include_genres: bool = False,
-) -> tuple[int, int, int, list[CatalogBookRecord]]:
+) -> tuple[int, RankingStats]:
     total = 0
     min_popularity: int | None = None
     max_popularity: int | None = None
-    matching_records: list[CatalogBookRecord] = []
+    star_sum = 0.0
 
     async for record in _iter_catalog_records(
         catalog_cache,
@@ -344,8 +324,8 @@ async def _collect_ranking_records(
             continue
 
         popularity = record.num_ratings or 0
-        matching_records.append(record)
         total += 1
+        star_sum += record.star_rating or 0.0
         min_popularity = (
             popularity if min_popularity is None else min(min_popularity, popularity)
         )
@@ -353,11 +333,17 @@ async def _collect_ranking_records(
             popularity if max_popularity is None else max(max_popularity, popularity)
         )
 
-    return total, min_popularity or 0, max_popularity or 0, matching_records
+    return total, RankingStats(
+        min_popularity=min_popularity or 0,
+        max_popularity=max_popularity or 0,
+        global_mean_rating=star_sum / total if total else 0.0,
+        bayesian_prior_weight=BAYESIAN_PRIOR_WEIGHT,
+    )
 
 
-def _collect_ranked_items(
-    matching_records: list[CatalogBookRecord],
+async def _collect_ranked_items(
+    catalog_cache: CatalogDataCache,
+    ratings_by_isbn: dict[int, tuple[int, float]],
     filters: PopularityFilters,
     ranking_stats: RankingStats,
     mode: str,
@@ -368,7 +354,14 @@ def _collect_ranked_items(
     ranked_heap: list[tuple[tuple[float, float, float], int, BookPQItem]] = []
     serial = count()
 
-    for record in matching_records:
+    async for record in _iter_catalog_records(
+        catalog_cache,
+        ratings_by_isbn,
+        include_genres=_needs_genre_data(filters),
+    ):
+        if not _matches_listing_filters(record, filters):
+            continue
+
         item = _record_to_book_item(
             record,
             discrepancy_score=_compute_discrepancy_score(
