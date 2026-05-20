@@ -1,3 +1,4 @@
+use redis::aio::ConnectionManager;
 use sqlx::PgPool;
 use tonic::{Request, Response, Status};
 
@@ -15,11 +16,13 @@ use crate::metrics;
 
 pub struct AuthorCatalogService {
     pool: PgPool,
+    redis: ConnectionManager,
+    cache_ttl_seconds: u64,
 }
 
 impl AuthorCatalogService {
-    pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+    pub fn new(pool: PgPool, redis: ConnectionManager, cache_ttl_seconds: u64) -> Self {
+        Self { pool, redis, cache_ttl_seconds }
     }
 }
 
@@ -33,19 +36,22 @@ impl AuthorCatalogGrpc for AuthorCatalogService {
 
         Ok(Response::new(response))
     }
+
     async fn get_authors(
         &self,
-        _request: tonic::Request<GetAuthorsRequest>,
+        request: tonic::Request<GetAuthorsRequest>,
     ) -> Result<Response<GetAuthorsResponse>, Status> {
         let operation = "list_authors";
         let timer = metrics::start_timer("author-catalog", operation);
 
         let result = async {
-            let params = _request.into_inner();
+            let params = request.into_inner();
 
-            let response = author_handler::get_authors(&self.pool, &params)
-                .await
-                .map_err(|e| Status::internal(e.to_string()))?;
+            let response = author_handler::get_authors(
+                &self.pool, &self.redis, &params, self.cache_ttl_seconds,
+            )
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
             Ok(Response::new(response))
         }

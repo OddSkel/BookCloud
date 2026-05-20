@@ -1,4 +1,7 @@
 use sqlx::PgPool;
+use redis::aio::ConnectionManager;
+use anyhow::Result;
+
 
 use crate::db::rating::{
     add_rating_query, delete_rating_query, get_rating_by_id_query, get_ratings_query,
@@ -12,10 +15,12 @@ pub async fn get_rating(pool: &PgPool, book_isbn: i64) -> Result<Option<Rating>,
 
 pub async fn get_ratings(
     pool: &PgPool,
+    redis: &ConnectionManager,
     page_number: Option<i64>,
     page_size: Option<i64>,
-) -> Result<Vec<Rating>, sqlx::Error> {
-    get_ratings_query(pool, page_number, page_size).await
+    cache_ttl_seconds: u64,
+) -> Result<Vec<Rating>> {
+    get_ratings_query(pool, redis, page_number, page_size, cache_ttl_seconds).await
 }
 
 pub async fn add_rating(

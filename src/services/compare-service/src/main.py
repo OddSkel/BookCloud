@@ -16,13 +16,14 @@ async def serve() -> None:
     config = AppConfig.from_env()
     server = grpc.aio.server()
     compare_service = CompareService(config)
+
     add_compare_service_to_server(compare_service, server)
     server.add_insecure_port(config.bind_address)
 
-    logging.info("%s gRPC started on %s", config.service_name, config.bind_address)
-
     try:
         await server.start()
+        logging.info("%s gRPC started on %s", config.service_name, config.bind_address)
+
         await server.wait_for_termination()
     finally:
         await compare_service.close()

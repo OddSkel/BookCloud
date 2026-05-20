@@ -1,4 +1,5 @@
 import logging
+from typing import Awaitable, Callable
 
 import grpc
 
@@ -11,11 +12,13 @@ from src.handlers.popularity_handler import (
     get_popular_low_rated,
     get_publishing_growth,
 )
+from src.models.popularity import PopularityFilters
 from src.grpc import (
     compare_filters_from_proto,
     compare_service_pb2,
     compare_service_pb2_grpc,
 )
+from src.response_cache import ResponseCache
 
 
 LOGGER = logging.getLogger(__name__)
@@ -25,9 +28,15 @@ class CompareService(compare_service_pb2_grpc.CompareServiceGrpcServicer):
     def __init__(self, config) -> None:
         self.config = config
         self.catalog_cache = CatalogDataCache(config)
+        self.response_cache = ResponseCache(
+            redis_url=config.redis_url,
+            ttl_seconds=config.response_cache_ttl_seconds,
+            enabled=config.response_cache_enabled,
+        )
 
     async def close(self) -> None:
         await self.catalog_cache.close()
+        await self.response_cache.close()
 
     async def GetPopularLowRated(self, request, context):
         return await self._handle_json_rpc(
@@ -69,15 +78,41 @@ class CompareService(compare_service_pb2_grpc.CompareServiceGrpcServicer):
             "eras",
         )
 
+    async def _cached_json_response(
+        self,
+        operation: str,
+        filters: PopularityFilters,
+        compute: Callable[[], Awaitable],
+    ) -> str:
+        key = self.response_cache.build_key(operation, filters)
+
+        cached_json = await self.response_cache.get_json(key)
+        if cached_json is not None:
+            LOGGER.info("Redis response cache HIT operation=%s", operation)
+            return cached_json
+
+        LOGGER.info("Redis response cache MISS operation=%s", operation)
+
+        response = await compute()
+        response_json = response.to_json()
+
+        await self.response_cache.set_json(key, response_json)
+
+        return response_json
+
     async def _handle_json_rpc(self, context, request, handler, operation_name: str):
         filters = request.filters if request.HasField("filters") else None
-        response = None
+        proto_filters = compare_filters_from_proto(filters)
 
         try:
-            response = await handler(
-                self.catalog_cache,
-                compare_filters_from_proto(filters),
-                self.config,
+            response_json = await self._cached_json_response(
+                operation_name,
+                proto_filters,
+                lambda: handler(
+                    self.catalog_cache,
+                    proto_filters,
+                    self.config,
+                ),
             )
         except UnsupportedFilterError as exc:
             await context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(exc))
@@ -95,4 +130,4 @@ class CompareService(compare_service_pb2_grpc.CompareServiceGrpcServicer):
             await context.abort(grpc.StatusCode.INTERNAL, str(exc))
             raise AssertionError("context.abort should terminate the RPC")
 
-        return compare_service_pb2.JsonPayloadResponse(json_payload=response.to_json())
+        return compare_service_pb2.JsonPayloadResponse(json_payload=response_json)

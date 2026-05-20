@@ -20,6 +20,7 @@ spec:
       labels:
         app: compare-service
     spec:
+      terminationGracePeriodSeconds: 30
       containers:
         - name: compare-service
           image: bookcloud/compare-service:latest
@@ -32,23 +33,27 @@ spec:
                 name: compare-service-config
           resources:
             requests:
-              cpu: "500m"
-              memory: "512Mi"
+              cpu: "100m"
+              memory: "384Mi"
             limits:
               cpu: "1000m"
-              memory: "1Gi"
-          readinessProbe:
-            tcpSocket:
-              port: grpc
-            initialDelaySeconds: 5
-            periodSeconds: 10
+              memory: "768Mi"
           startupProbe:
             tcpSocket:
               port: grpc
             failureThreshold: 30
             periodSeconds: 5
+            timeoutSeconds: 2
+          readinessProbe:
+            tcpSocket:
+              port: grpc
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 6
           livenessProbe:
             tcpSocket:
               port: grpc
-            initialDelaySeconds: 15
+            initialDelaySeconds: 20
             periodSeconds: 20
+            timeoutSeconds: 2

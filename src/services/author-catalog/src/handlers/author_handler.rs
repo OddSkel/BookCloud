@@ -1,9 +1,11 @@
 use crate::grpc::contracts::author_catalog::{
     AddAuthorResponse, Author as ProtoAuthor, AuthorDeleteResponse, DeleteAuthorRequest,
-    GetAuthorRequest, GetAuthorResponse, GetAuthorsRequest, GetAuthorsResponse,
-    GetAuthorsByNameRequest,
-    UpdateAuthorRequest, UpdateAuthorResponse,
+    GetAuthorRequest, GetAuthorResponse, GetAuthorsByNameRequest, GetAuthorsRequest,
+    GetAuthorsResponse, UpdateAuthorRequest, UpdateAuthorResponse,
 };
+use redis::aio::ConnectionManager;
+use redis::AsyncCommands;
+use anyhow::Result;
 use crate::models::author::Author as Model_Author;
 use sqlx::PgPool;
 
@@ -12,9 +14,21 @@ const DEFAULT_PAGE_NUMBER: i64 = 1;
 
 pub async fn get_authors(
     pool: &PgPool,
+    redis: &ConnectionManager,
     params: &GetAuthorsRequest,
-) -> Result<GetAuthorsResponse, sqlx::Error> {
+    cache_ttl_seconds: u64,
+) -> Result<GetAuthorsResponse> {
+    let mut redis = redis.clone();
     let (pages, pages_size) = normalize_pagination(params.page, params.page_size);
+
+    let authors_cache = format!("authors: page:{}:page_size:{}", pages, pages_size);
+
+    if let Some(cache) = redis.get::<_, Option<String>>(authors_cache.clone()).await? {
+        let cached_authors: Vec<ProtoAuthor> = serde_json::from_str(&cache)?;
+        return Ok(GetAuthorsResponse {
+            authors: cached_authors,
+        });
+    }
 
     let all_authors: Vec<Model_Author> =
         sqlx::query_as::<_, Model_Author>("SELECT * FROM author LIMIT $1 OFFSET $2")
@@ -23,14 +37,19 @@ pub async fn get_authors(
             .fetch_all(pool)
             .await?;
 
+    let proto_authors: Vec<ProtoAuthor> = all_authors
+    .into_iter()
+    .map(|a| ProtoAuthor {
+        author_id: a.author_id,
+        name: a.name,
+    })
+    .collect();
+
+    let serialized = serde_json::to_string(&proto_authors)?;
+    let _: () = redis.set_ex(authors_cache.clone(), serialized, cache_ttl_seconds).await?;
+
     Ok(GetAuthorsResponse {
-        authors: all_authors
-            .into_iter()
-            .map(|a| ProtoAuthor {
-                author_id: a.author_id,
-                name: a.name,
-            })
-            .collect(),
+        authors: proto_authors
     })
 }
 
@@ -58,7 +77,7 @@ pub async fn register_author(
 
 pub async fn edit_author(
     pool: &PgPool,
-    author_id: i32,
+    author_id: i64,
     params: UpdateAuthorRequest,
 ) -> Result<UpdateAuthorResponse, sqlx::Error> {
     let mut set_clauses = vec![];
@@ -163,12 +182,10 @@ pub async fn get_authors_by_name(
     let name_pattern = format!("%{}%", params.name.to_lowercase());
 
     let all_authors: Vec<Model_Author> =
-        sqlx::query_as::<_, Model_Author>(
-            "SELECT * FROM author WHERE LOWER(name) LIKE $1"
-        )
-        .bind(&name_pattern)
-        .fetch_all(pool)
-        .await?;
+        sqlx::query_as::<_, Model_Author>("SELECT * FROM author WHERE LOWER(name) LIKE $1")
+            .bind(&name_pattern)
+            .fetch_all(pool)
+            .await?;
 
     Ok(GetAuthorsResponse {
         authors: all_authors

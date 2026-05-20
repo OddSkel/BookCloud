@@ -13,6 +13,8 @@ resources:
   - book-catalog/deployment.yaml
   - book-catalog/service.yaml
   - book-catalog/hpa.yaml
+  - book-redis/deployment.yaml
+  - book-redis/service.yaml
 
   - author-catalog/db-configmap.yaml
   - author-catalog/db-pvc.yaml
@@ -22,6 +24,8 @@ resources:
   - author-catalog/deployment.yaml
   - author-catalog/service.yaml
   - author-catalog/hpa.yaml
+  - author-redis/deployment.yaml
+  - author-redis/service.yaml
 
   - rating-catalog/db-configmap.yaml
   - rating-catalog/db-pvc.yaml
@@ -31,11 +35,15 @@ resources:
   - rating-catalog/deployment.yaml
   - rating-catalog/service.yaml
   - rating-catalog/hpa.yaml
+  - rating-redis/deployment.yaml
+  - rating-redis/service.yaml
 
   - observability/servicemonitor-author-catalog.yaml
   - observability/servicemonitor-book-catalog.yaml
   - observability/servicemonitor-rating-catalog.yaml
 
+  - compare-redis/deployment.yaml
+  - compare-redis/service.yaml
   - compare-service/configmap.yaml
   - compare-service/deployment.yaml
   - compare-service/service.yaml

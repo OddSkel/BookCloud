@@ -5,7 +5,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         std::env::set_var("PROTOC", protoc);
     }
 
-    tonic_prost_build::configure().compile_protos(
+    tonic_prost_build::configure()
+    .type_attribute("Rating", "#[derive(serde::Serialize, serde::Deserialize)]")
+    .compile_protos(
         &["proto/common.proto", "proto/rating_catalog.proto"],
         &["proto"],
     )?;

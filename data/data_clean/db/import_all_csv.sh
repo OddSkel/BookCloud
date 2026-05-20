@@ -10,12 +10,12 @@ echo "✔ rating-db done"
 
 echo ""
 echo "[2/4] Populating genre-db..."
-./import_genre.sh -D user password 5433 db 10000
+./import_genre.sh -D user password 5450 db 10000
 echo "✔ genre-db done"
 
 echo ""
 echo "[3/4] Populating book-db..."
-./import_book.sh -D user password 5432 db 10000
+./import_book.sh -D user password 5433 db 10000
 echo "✔ book-db done"
 
 echo ""

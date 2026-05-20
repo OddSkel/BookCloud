@@ -1,3 +1,6 @@
+use redis::aio::ConnectionManager;
+use redis::AsyncCommands;
+use anyhow::Result;
 use sqlx::PgPool;
 
 use crate::models::rating::Rating;
@@ -7,10 +10,20 @@ const DEFAULT_PAGE_NUMBER: i64 = 1;
 
 pub async fn get_ratings_query(
     pool: &PgPool,
+    redis: &ConnectionManager,
     page_number: Option<i64>,
     page_size: Option<i64>,
-) -> Result<Vec<Rating>, sqlx::Error> {
+    cache_ttl_seconds: u64,
+) -> Result<Vec<Rating>> {
+    let mut redis = redis.clone();
     let (limit, offset) = normalize_pagination(page_number, page_size);
+
+    let ratings_cache = format!("ratings: page:{}:page_size:{}", limit, offset);
+
+    if let Some(cache) = redis.get::<_, Option<String>>(ratings_cache.clone()).await? {
+        let cached_ratings: Vec<Rating> = serde_json::from_str(&cache)?;
+        return Ok(cached_ratings);
+    }
 
     let ratings = sqlx::query_as::<_, Rating>(
         r#"
@@ -28,6 +41,9 @@ pub async fn get_ratings_query(
     .bind(offset)
     .fetch_all(pool)
     .await?;
+
+    let serialized = serde_json::to_string(&ratings)?;
+    let _: () = redis.set_ex(ratings_cache.clone(), serialized, cache_ttl_seconds).await?;
 
     Ok(ratings)
 }

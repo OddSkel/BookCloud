@@ -1,5 +1,6 @@
 use sqlx::PgPool;
 use tonic::{Request, Response, Status};
+use redis::aio::ConnectionManager;
 
 use crate::grpc::contracts::rating_catalog::{
     AddRatingRequest, AddRatingResponse, BookRatingInfo, DeleteRatingRequest, DeleteRatingResponse,
@@ -19,11 +20,13 @@ use crate::grpc::contracts::{
 pub struct RatingCatalogService {
     service_name: String,
     pool: PgPool,
+    redis: ConnectionManager,
+    cache_ttl_seconds: u64,
 }
 
 impl RatingCatalogService {
-    pub fn new(service_name: String, pool: PgPool) -> Self {
-        Self { service_name, pool }
+    pub fn new(service_name: String, pool: PgPool, redis: ConnectionManager, cache_ttl_seconds: u64) -> Self {
+        Self { service_name, pool, redis, cache_ttl_seconds }
     }
 }
 
@@ -43,17 +46,6 @@ fn map_rating(rating: Rating) -> GrpcRating {
 
 #[tonic::async_trait]
 impl RatingCatalogGrpc for RatingCatalogService {
-    // async fn health_check(
-    //     &self,
-    //     _request: Request<HealthCheckRequest>,
-    // ) -> Result<Response<HealthCheckResponse>, Status> {
-    //     let (service, status) = health_handler::health(&self.service_name);
-
-    //     Ok(Response::new(HealthCheckResponse {
-    //         service,
-    //         status,
-    //     }))
-    // }
 
     async fn get_rating(
         &self,
@@ -93,7 +85,6 @@ impl RatingCatalogGrpc for RatingCatalogService {
             }
         }
     }
-
     async fn get_ratings(
         &self,
         request: Request<GetRatingsRequest>,
@@ -104,9 +95,15 @@ impl RatingCatalogGrpc for RatingCatalogService {
         let result = async {
             let req = request.into_inner();
 
-            let ratings = rating_handler::get_ratings(&self.pool, req.page_number, req.page_size)
-                .await
-                .map_err(|err| Status::internal(err.to_string()))?;
+            let ratings: Vec<Rating> = rating_handler::get_ratings(
+                &self.pool,
+                &self.redis,
+                req.page_number,
+                req.page_size,
+                self.cache_ttl_seconds,
+            )
+            .await
+            .map_err(|err| Status::internal(err.to_string()))?;
 
             let response = GetRatingsResponse {
                 ratings: ratings.into_iter().map(map_rating).collect(),
