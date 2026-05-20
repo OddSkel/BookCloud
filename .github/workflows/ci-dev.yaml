@@ -14,7 +14,6 @@ jobs:
       matrix:
         package:
           - api-gateway
-          - book-catalog
           - book-search
           - rating-catalog
           - author-analytics-service
@@ -40,6 +39,7 @@ jobs:
     strategy:
       matrix:
         service:
+          - src/services/book-catalog
           - src/services/genre-analysis-service
           - src/services/compare-service
 

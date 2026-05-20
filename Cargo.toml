@@ -2,9 +2,9 @@
 members = [
     "src/api-gateway",
     "src/services/author-analytics-service",
-    "src/services/book-catalog",
     "src/services/book-recommendation",
     "src/services/book-search",
     "src/services/rating-catalog"
+    "src/services/author-catalog"
 ]
 resolver = "2"
