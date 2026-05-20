@@ -180,7 +180,7 @@ fn map_rating(rating: Rating) -> GrpcRating {
 }
 
 fn normalize_ranked_books_pagination(page_num: i32, page_size: i32) -> (i32, i32) {
-    (page_num.max(1), page_size.max(1).min(1000))
+    (page_num.max(1), page_size.clamp(1, 1000))
 }
 
 #[tonic::async_trait]

@@ -25,6 +25,11 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Lint Rust service with Clippy
+        run: cargo clippy -p ${{ matrix.package }} --all-targets -- -D warnings -A dead_code
 
       - name: Build Rust service
         run: cargo build -p ${{ matrix.package }} --verbose
@@ -57,7 +62,13 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          pip install pytest
+          pip install flake8 pytest
+
+      - name: Lint Python service with flake8
+        working-directory: ${{ matrix.service }}
+        run: |
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=generated,generated_protos
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics --exclude=generated,generated_protos
 
       - name: Run Python unit tests
         working-directory: ${{ matrix.service }}
