@@ -13,13 +13,13 @@ jobs:
     strategy:
       matrix:
         service:
-          - api-gateway
-          - services/book-catalog
-          - services/book-search
-          - services/rating-catalog
-          - services/author-analytics-service
-          - services/book-recommendation
-          - services/book-search
+          - src/api-gateway
+          - src/services/book-catalog
+          - src/services/book-search
+          - src/services/rating-catalog
+          - src/services/author-analytics-service
+          - src/services/book-recommendation
+          - src/services/book-search
 
     steps:
       - name: Checkout repository
@@ -43,8 +43,8 @@ jobs:
     strategy:
       matrix:
         service:
-          - services/genre-analysis-service
-          - services/compare-service
+          - src/services/genre-analysis-service
+          - src/services/compare-service
 
     steps:
       - name: Checkout repository
