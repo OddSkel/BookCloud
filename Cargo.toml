@@ -1,8 +1,10 @@
 [workspace]
 members = [
-    "src/services/author-catalog",
-    "src/services/rating-catalog",
-    "src/services/book-search",
+    "src/api-gateway",
+    "src/services/author-analytics-service",
+    "src/services/book-catalog",
     "src/services/book-recommendation",
+    "src/services/book-search",
+    "src/services/rating-catalog"
 ]
 resolver = "2"

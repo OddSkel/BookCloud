@@ -12,14 +12,13 @@ jobs:
 
     strategy:
       matrix:
-        service:
-          - src/api-gateway
-          - src/services/book-catalog
-          - src/services/book-search
-          - src/services/rating-catalog
-          - src/services/author-analytics-service
-          - src/services/book-recommendation
-          - src/services/book-search
+        package:
+          - api-gateway
+          - book-catalog
+          - book-search
+          - rating-catalog
+          - author-analytics-service
+          - book-recommendation
 
     steps:
       - name: Checkout repository
@@ -29,12 +28,10 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Build Rust service
-        working-directory: ${{ matrix.service }}
-        run: cargo build --verbose
+        run: cargo build -p ${{ matrix.package }} --verbose
 
       - name: Run Rust unit tests
-        working-directory: ${{ matrix.service }}
-        run: cargo test --verbose
+        run: cargo test -p ${{ matrix.package }} --verbose
 
   python-unit-tests:
     name: Python services - unit tests
