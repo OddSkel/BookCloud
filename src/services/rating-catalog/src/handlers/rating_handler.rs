@@ -1,13 +1,15 @@
-use sqlx::PgPool;
-use redis::aio::ConnectionManager;
 use anyhow::Result;
-
+use redis::aio::ConnectionManager;
+use sqlx::PgPool;
 
 use crate::db::rating::{
     add_rating_query, delete_rating_query, get_rating_by_id_query, get_ratings_query,
     update_rating_query,
 };
 use crate::models::rating::Rating;
+
+const BOOKS_BY_RATING_QUERY: &str = "SELECT book_isbn, num_ratings, star_rating FROM rating WHERE star_rating >= $1 ORDER BY star_rating DESC LIMIT $2 OFFSET $3";
+const BOOKS_BY_POPULARITY_QUERY: &str = "SELECT book_isbn, num_ratings, star_rating FROM rating WHERE num_ratings >= $1 ORDER BY num_ratings DESC LIMIT $2 OFFSET $3";
 
 pub async fn get_rating(pool: &PgPool, book_isbn: i64) -> Result<Option<Rating>, sqlx::Error> {
     get_rating_by_id_query(pool, book_isbn).await
@@ -52,14 +54,12 @@ pub async fn get_books_by_rating(
     page_size: i32,
 ) -> Result<Vec<Rating>, sqlx::Error> {
     let offset = (page_num - 1) * page_size;
-    let ratings: Vec<Rating> = sqlx::query_as::<_, Rating>(
-        "SELECT book_isbn, num_ratings, star_rating FROM ratings WHERE star_rating >= $1 ORDER BY star_rating DESC LIMIT $2 OFFSET $3"
-    )
-    .bind(min_rating)
-    .bind(page_size)
-    .bind(offset)
-    .fetch_all(pool)
-    .await?;
+    let ratings: Vec<Rating> = sqlx::query_as::<_, Rating>(BOOKS_BY_RATING_QUERY)
+        .bind(min_rating)
+        .bind(page_size)
+        .bind(offset)
+        .fetch_all(pool)
+        .await?;
     Ok(ratings)
 }
 
@@ -70,13 +70,11 @@ pub async fn get_books_by_popularity(
     page_size: i32,
 ) -> Result<Vec<Rating>, sqlx::Error> {
     let offset = (page_num - 1) * page_size;
-    let ratings: Vec<Rating> = sqlx::query_as::<_, Rating>(
-        "SELECT book_isbn, num_ratings, star_rating FROM ratings WHERE num_ratings >= $1 ORDER BY num_ratings DESC LIMIT $2 OFFSET $3"
-    )
-    .bind(min_num_ratings)
-    .bind(page_size)
-    .bind(offset)
-    .fetch_all(pool)
-    .await?;
+    let ratings: Vec<Rating> = sqlx::query_as::<_, Rating>(BOOKS_BY_POPULARITY_QUERY)
+        .bind(min_num_ratings)
+        .bind(page_size)
+        .bind(offset)
+        .fetch_all(pool)
+        .await?;
     Ok(ratings)
 }
