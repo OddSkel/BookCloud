@@ -13,6 +13,7 @@ pub async fn get_ratings_query(
     redis: &ConnectionManager,
     page_number: Option<i64>,
     page_size: Option<i64>,
+    cache_ttl_seconds: u64,
 ) -> Result<Vec<Rating>> {
     let mut redis = redis.clone();
     let (limit, offset) = normalize_pagination(page_number, page_size);
@@ -42,7 +43,7 @@ pub async fn get_ratings_query(
     .await?;
 
     let serialized = serde_json::to_string(&ratings)?;
-    let _: () = redis.set_ex(ratings_cache.clone(), serialized, 604800u64).await?;
+    let _: () = redis.set_ex(ratings_cache.clone(), serialized, cache_ttl_seconds).await?;
 
     Ok(ratings)
 }

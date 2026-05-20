@@ -21,11 +21,12 @@ pub struct RatingCatalogService {
     service_name: String,
     pool: PgPool,
     redis: ConnectionManager,
+    cache_ttl_seconds: u64,
 }
 
 impl RatingCatalogService {
-    pub fn new(service_name: String, pool: PgPool, redis: ConnectionManager) -> Self {
-        Self { service_name, pool, redis }
+    pub fn new(service_name: String, pool: PgPool, redis: ConnectionManager, cache_ttl_seconds: u64) -> Self {
+        Self { service_name, pool, redis, cache_ttl_seconds }
     }
 }
 
@@ -99,6 +100,7 @@ impl RatingCatalogGrpc for RatingCatalogService {
                 &self.redis,
                 req.page_number,
                 req.page_size,
+                self.cache_ttl_seconds,
             )
             .await
             .map_err(|err| Status::internal(err.to_string()))?;

@@ -8,6 +8,7 @@ pub struct AppConfig {
     pub host: String,
     pub grpc_port: u16,
     pub redis_url: String,
+    pub cache_ttl_seconds: u64,
 }
 
 impl AppConfig {
@@ -15,6 +16,10 @@ impl AppConfig {
         let host = env::var("HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
         let grpc_port = read_port("GRPC_PORT", 50052);
         let redis_url =  std::env::var("REDIS_URL").expect("REDIS_URL must be set");
+        let cache_ttl_seconds = env::var("CACHE_TTL_SECONDS")
+            .ok()
+            .and_then(|v| v.parse::<u64>().ok())
+            .unwrap_or(604800);
 
         println!("DEBUG: HOST={}, GRPC_PORT={}", host, grpc_port);
 
@@ -23,6 +28,7 @@ impl AppConfig {
             host,
             grpc_port,
             redis_url,
+            cache_ttl_seconds,
         }
     }
 

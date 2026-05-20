@@ -18,8 +18,9 @@ pub async fn get_ratings(
     redis: &ConnectionManager,
     page_number: Option<i64>,
     page_size: Option<i64>,
+    cache_ttl_seconds: u64,
 ) -> Result<Vec<Rating>> {
-    get_ratings_query(pool, redis, page_number, page_size).await
+    get_ratings_query(pool, redis, page_number, page_size, cache_ttl_seconds).await
 }
 
 pub async fn add_rating(
