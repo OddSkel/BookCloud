@@ -1,0 +1,70 @@
+# name: CD - Main Branch
+
+# on:
+#   push:
+#     branches:
+#       - main
+
+# jobs:
+#   build-and-push-images:
+#     name: Build and push Docker images
+#     runs-on: ubuntu-latest
+
+#     strategy:
+#       matrix:
+#         include:
+#           - name: api-gateway
+#             path: api-gateway
+#             image: api-gateway
+
+#           - name: author-analytics-service
+#             path: services/author-analytics-service
+#             image: author-analytics-service
+
+#           - name: author-catalog
+#             path: services/author-catalog
+#             image: author-catalog
+
+#           - name: book-catalog
+#             path: services/book-catalog
+#             image: book-catalog
+
+#           - name: book-recommendation
+#             path: services/book-recommendation
+#             image: book-recommendation
+
+#           - name: book-search
+#             path: services/book-search
+#             image: book-search
+
+#           - name: compare-service
+#             path: services/compare-service
+#             image: compare-service
+
+#           - name: genre-analysis-service
+#             path: services/genre-analysis-service
+#             image: genre-analysis-service
+
+#           - name: rating-catalog
+#             path: services/rating-catalog
+#             image: rating-catalog
+
+#     steps:
+#       - name: Checkout repository
+#         uses: actions/checkout@v4
+
+#       - name: Log in to Docker Hub
+#         uses: docker/login-action@v3
+#         with:
+#           username: ${{ secrets.DOCKER_USERNAME }}
+#           password: ${{ secrets.DOCKER_PASSWORD }}
+
+#       - name: Build Docker image
+#         run: |
+#           docker build \
+#             -t ${{ secrets.DOCKER_USERNAME }}/bookcloud-${{ matrix.image }}:${{ github.sha }} \
+#             ./${{ matrix.path }}
+
+#       - name: Push Docker image
+#         run: |
+#           docker push ${{ secrets.DOCKER_USERNAME }}/bookcloud-${{ matrix.image }}:${{ github.sha }}

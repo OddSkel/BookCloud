@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import time
 from dataclasses import dataclass
 from typing import Generic, TypeVar
@@ -16,6 +17,16 @@ from src.grpc import (
     _grpc_target,
 )
 
+LOGGER = logging.getLogger(__name__)
+
+GRPC_TIMEOUT_SECONDS = 60
+MAX_RETRIES_PER_PAGE = 2
+GRPC_RETRYABLE_CODES = {
+    grpc.StatusCode.UNAVAILABLE,
+    grpc.StatusCode.DEADLINE_EXCEEDED,
+    grpc.StatusCode.RESOURCE_EXHAUSTED,
+    grpc.StatusCode.ABORTED,
+}
 
 T = TypeVar("T")
 
@@ -110,12 +121,29 @@ class CatalogDataCache:
     async def get_genres_by_isbn(self) -> dict[int, tuple[BookGenreSeed, ...]]:
         return await self._genres_cache.get(self._load_genres_by_isbn)
 
+    async def _call_with_retry(self, stub_method, request, name: str):
+        for attempt in range(MAX_RETRIES_PER_PAGE):
+            try:
+                return await stub_method(request, timeout=GRPC_TIMEOUT_SECONDS)
+            except grpc.RpcError as exc:
+                if attempt < MAX_RETRIES_PER_PAGE - 1 and exc.code() in GRPC_RETRYABLE_CODES:
+                    LOGGER.warning(
+                        "gRPC %s failed (attempt %d/%d): %s",
+                        name, attempt + 1, MAX_RETRIES_PER_PAGE, exc.code().name,
+                    )
+                    await asyncio.sleep(1)
+                    continue
+                raise
+
     async def _load_books(self) -> tuple[CatalogBookSeed, ...]:
+        start = time.monotonic()
         page_size = max(self._config.book_page_size, 1)
         parallelism = max(self._config.parallel_requests, 1)
 
-        first_response = await self._book_stub.GetBooks(
-            book_catalog_pb2.GetBooksRequest(page_num=1, page_size=page_size)
+        first_response = await self._call_with_retry(
+            self._book_stub.GetBooks,
+            _book_page_request(1, page_size),
+            "GetBooks/page=1",
         )
         books = [self._book_from_proto(book) for book in first_response.books]
 
@@ -125,11 +153,10 @@ class CatalogDataCache:
             batch_end = min(next_page + parallelism, total_pages + 1)
             responses = await asyncio.gather(
                 *[
-                    self._book_stub.GetBooks(
-                        book_catalog_pb2.GetBooksRequest(
-                            page_num=page_num,
-                            page_size=page_size,
-                        )
+                    self._call_with_retry(
+                        self._book_stub.GetBooks,
+                        _book_page_request(page_num, page_size),
+                        f"GetBooks/page={page_num}",
                     )
                     for page_num in range(next_page, batch_end)
                 ]
@@ -140,23 +167,35 @@ class CatalogDataCache:
 
             next_page = batch_end
 
+        elapsed = time.monotonic() - start
+        LOGGER.info(
+            "Loaded %d books in %.2fs (%d pages, %d parallel)",
+            len(books),
+            elapsed,
+            total_pages,
+            parallelism,
+        )
         return tuple(books)
 
     async def _load_ratings_by_isbn(self) -> dict[int, tuple[int, float]]:
+        start = time.monotonic()
         page_size = max(self._config.rating_page_size, 1)
         parallelism = max(self._config.parallel_requests, 1)
         ratings_by_isbn: dict[int, tuple[int, float]] = {}
         page_number = 1
+        pages_fetched = 0
 
         while True:
             batch_end = page_number + parallelism
             responses = await asyncio.gather(
                 *[
-                    self._rating_stub.GetRatings(
+                    self._call_with_retry(
+                        self._rating_stub.GetRatings,
                         rating_catalog_pb2.GetRatingsRequest(
                             page_number=current_page,
                             page_size=page_size,
-                        )
+                        ),
+                        f"GetRatings/page={current_page}",
                     )
                     for current_page in range(page_number, batch_end)
                 ]
@@ -164,6 +203,7 @@ class CatalogDataCache:
 
             stop = False
             for response in responses:
+                pages_fetched += 1
                 ratings = response.ratings
                 for rating in ratings:
                     ratings_by_isbn[int(rating.book_isbn)] = (
@@ -176,16 +216,27 @@ class CatalogDataCache:
                     break
 
             if stop:
+                elapsed = time.monotonic() - start
+                LOGGER.info(
+                    "Loaded %d ratings in %.2fs (%d pages, %d parallel)",
+                    len(ratings_by_isbn),
+                    elapsed,
+                    pages_fetched,
+                    parallelism,
+                )
                 return ratings_by_isbn
 
             page_number = batch_end
 
     async def _load_genres_by_isbn(self) -> dict[int, tuple[BookGenreSeed, ...]]:
+        start = time.monotonic()
         page_size = max(self._config.genre_page_size, 1)
         genres_by_isbn: dict[int, list[BookGenreSeed]] = {}
 
-        first_response = await self._genre_stub.GetBookGenres(
-            genre_service_pb2.GetBookGenresRequest(page_num=1, page_size=page_size)
+        first_response = await self._call_with_retry(
+            self._genre_stub.GetBookGenres,
+            genre_service_pb2.GetBookGenresRequest(page_num=1, page_size=page_size),
+            "GetBookGenres/page=1",
         )
         self._accumulate_book_genres(genres_by_isbn, first_response.items)
 
@@ -196,11 +247,13 @@ class CatalogDataCache:
             batch_end = min(next_page + parallelism, total_pages + 1)
             responses = await asyncio.gather(
                 *[
-                    self._genre_stub.GetBookGenres(
+                    self._call_with_retry(
+                        self._genre_stub.GetBookGenres,
                         genre_service_pb2.GetBookGenresRequest(
                             page_num=page_num,
                             page_size=page_size,
-                        )
+                        ),
+                        f"GetBookGenres/page={page_num}",
                     )
                     for page_num in range(next_page, batch_end)
                 ]
@@ -211,6 +264,14 @@ class CatalogDataCache:
 
             next_page = batch_end
 
+        elapsed = time.monotonic() - start
+        LOGGER.info(
+            "Loaded genres for %d books in %.2fs (%d pages, %d parallel)",
+            len(genres_by_isbn),
+            elapsed,
+            total_pages,
+            parallelism,
+        )
         return {isbn: tuple(entries) for isbn, entries in genres_by_isbn.items()}
 
     @staticmethod
@@ -233,3 +294,13 @@ class CatalogDataCache:
             name=book.name,
             pub_year=book.pub_year if book.pub_year != 0 else None,
         )
+
+
+def _book_page_request(page_num: int, page_size: int):
+    request = book_catalog_pb2.GetBooksRequest(
+        page_num=page_num,
+        page_size=page_size,
+    )
+    if hasattr(request, "include_details"):
+        request.include_details = False
+    return request

@@ -61,8 +61,8 @@ use contracts::{
     },
     genre_service::{
         AddGenreRequest, DeleteGenreRequest, GenreGrowthRequest, GenrePopularityRequest,
-        GenreSort as ProtoGenreSort, GetGenreRequest as GetGenreAnalysisRequest, GetGenresRequest,
-        UpdateGenreRequest, genre_analysis_grpc_client::GenreAnalysisGrpcClient,
+        GetGenreRequest as GetGenreAnalysisRequest, GetGenresRequest, UpdateGenreRequest,
+        genre_analysis_grpc_client::GenreAnalysisGrpcClient,
     },
     rating_catalog::{
         AddRatingRequest, DeleteRatingRequest, GetRatingRequest, GetRatingsRequest, RatingAdd,

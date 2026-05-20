@@ -16,6 +16,7 @@ pub async fn get_authors(
     pool: &PgPool,
     redis: &ConnectionManager,
     params: &GetAuthorsRequest,
+    cache_ttl_seconds: u64,
 ) -> Result<GetAuthorsResponse> {
     let mut redis = redis.clone();
     let (pages, pages_size) = normalize_pagination(params.page, params.page_size);
@@ -45,7 +46,7 @@ pub async fn get_authors(
     .collect();
 
     let serialized = serde_json::to_string(&proto_authors)?;
-    let _: () = redis.set_ex(authors_cache.clone(), serialized, 604800u64).await?;
+    let _: () = redis.set_ex(authors_cache.clone(), serialized, cache_ttl_seconds).await?;
 
     Ok(GetAuthorsResponse {
         authors: proto_authors

@@ -5,6 +5,28 @@ set -eu
 BASE_DIR=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
 
 NETWORK_NAME="bookcloud-network"
+COMPOSE_BUILD="true"
+
+# =========================
+# ARGUMENTS
+# =========================
+for arg in "$@"; do
+    case "$arg" in
+        --no-build)
+            COMPOSE_BUILD="false"
+            ;;
+        --build)
+            COMPOSE_BUILD="true"
+            ;;
+        *)
+            printf 'Unknown option: %s\n' "$arg"
+            printf 'Usage: %s [--build|--no-build]\n' "$0"
+            exit 1
+            ;;
+    esac
+done
+
+printf 'Compose build enabled: %s\n' "$COMPOSE_BUILD"
 
 # =========================
 # NETWORK
@@ -33,7 +55,11 @@ start_service() {
     printf 'Starting %s...\n' "$service_name"
     (
         cd "$service_dir"
-        docker compose up --build -d
+        if [ "$COMPOSE_BUILD" = "true" ]; then
+            docker compose up --build -d
+        else
+            docker compose up -d
+        fi
     )
 }
 
@@ -69,12 +95,22 @@ done
 # API GATEWAY
 # =========================
 if [ -f "$BASE_DIR/api-gateway/docker-compose.yml" ]; then
+    if [ -f "$BASE_DIR/api-gateway/.example.env" ]; then
+        printf 'Copying .example.env to .env for api-gateway...\n'
+        cp "$BASE_DIR/api-gateway/.example.env" "$BASE_DIR/api-gateway/.env"
+    else
+        printf 'No .example.env found for api-gateway. Skipping env copy.\n'
+    fi
+
     printf 'Starting api-gateway...\n'
     (
         cd "$BASE_DIR/api-gateway"
-        docker compose up --build -d
+        if [ "$COMPOSE_BUILD" = "true" ]; then
+            docker compose up --build -d
+        else
+            docker compose up -d
+        fi
     )
 fi
-
 
 printf 'All services started.\n'

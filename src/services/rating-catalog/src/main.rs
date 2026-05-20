@@ -44,6 +44,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 config.service_name.clone(),
                 pool,
                 redis_conn,
+                config.cache_ttl_seconds,
             ))
             .max_decoding_message_size(RATING_GRPC_MESSAGE_SIZE_LIMIT)
             .max_encoding_message_size(RATING_GRPC_MESSAGE_SIZE_LIMIT),

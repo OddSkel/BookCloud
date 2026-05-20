@@ -7,12 +7,21 @@ data:
   SERVICE_NAME: "compare-service"
   HOST: "0.0.0.0"
   GRPC_PORT: "50054"
+
   BOOK_CATALOG_GRPC_URL: "http://book-catalog:50051"
   AUTHOR_CATALOG_GRPC_URL: "http://author-catalog:50052"
   RATING_CATALOG_GRPC_URL: "http://rating-catalog:50053"
   GENRE_ANALYSIS_GRPC_URL: "http://genre-analysis-service:50055"
-  BOOK_PAGE_SIZE: "2000"
-  RATING_PAGE_SIZE: "2000"
+
+  BOOK_PAGE_SIZE: "10000"
+  RATING_PAGE_SIZE: "10000"
   GENRE_PAGE_SIZE: "4000"
   PARALLEL_REQUESTS: "4"
-  CACHE_TTL_SECONDS: "300"
+
+  # Local in-process cache for base datasets.
+  CACHE_TTL_SECONDS: "86400"
+
+  # Redis cache for final JSON responses shared between compare-service pods.
+  REDIS_URL: "redis://compare-redis:6379/0"
+  RESPONSE_CACHE_ENABLED: "true"
+  RESPONSE_CACHE_TTL_SECONDS: "900"

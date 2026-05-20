@@ -3,11 +3,13 @@ kind: Service
 metadata:
   name: compare-service
   namespace: bookcloud
+  labels:
+    app: compare-service
 spec:
+  type: ClusterIP
   selector:
     app: compare-service
   ports:
     - name: grpc
       port: 50054
       targetPort: grpc
-  type: ClusterIP

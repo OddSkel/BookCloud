@@ -43,7 +43,10 @@ pub async fn book_search(
                 .find(|a| contains_case_insensitive(&a.name, author_name));
 
             match matched {
-                Some(a) => Some(a.author_id),
+                Some(a) => Some(
+                    i32::try_from(a.author_id)
+                        .map_err(|_| "author_id is out of range for book-catalog".to_string())?,
+                ),
                 None => return Ok(BookSearchResponse { books: vec![] }),
             }
         }

@@ -42,6 +42,8 @@ resources:
   - observability/servicemonitor-book-catalog.yaml
   - observability/servicemonitor-rating-catalog.yaml
 
+  - compare-redis/deployment.yaml
+  - compare-redis/service.yaml
   - compare-service/configmap.yaml
   - compare-service/deployment.yaml
   - compare-service/service.yaml

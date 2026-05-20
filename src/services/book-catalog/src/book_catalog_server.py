@@ -74,11 +74,19 @@ def book_row_to_pb(row) -> Book:
     )
 
 
+def optional_field_value(message, field_name: str, default=None):
+    try:
+        return getattr(message, field_name) if message.HasField(field_name) else default
+    except (AttributeError, ValueError):
+        return default
+
+
 class BookCatalogService(generated_protos.book_catalog_pb2_grpc.BookCatalogGrpcServicer):
-    def __init__(self, pool: asyncpg.pool.Pool, service_name: str, redis):
+    def __init__(self, pool: asyncpg.pool.Pool, service_name: str, redis, cache_ttl: int = 604800):
         self.pool = pool
         self.service_name = service_name
         self.redis = redis
+        self.cache_ttl = cache_ttl
 
     async def HealthCheck(self, request, context):
         return generated_protos.common_pb2.HealthCheckResponse(
@@ -94,11 +102,18 @@ class BookCatalogService(generated_protos.book_catalog_pb2_grpc.BookCatalogGrpcS
                 page_size = request.page_size if request.page_size > 0 else 10
                 offset = (page_num - 1) * page_size
 
-                cache_key = f"books:page:{page_num}:page_size:{page_size}"
-                
+                author_id = optional_field_value(request, "author_id")
+                include_details = optional_field_value(request, "include_details", True)
+
+                cache_key = (
+                    f"books:author:{author_id}:page:{page_num}:"
+                    f"page_size:{page_size}:details:{int(bool(include_details))}"
+                )
+
                 cached = await self.redis.get(cache_key)
                 if cached:
                     import json
+
                     books_data = json.loads(cached)
                     return GetBooksResponse(
                         books=[Book(**b) for b in books_data["books"]],
@@ -108,39 +123,81 @@ class BookCatalogService(generated_protos.book_catalog_pb2_grpc.BookCatalogGrpcS
                         total_pages=books_data["total_pages"],
                     )
 
-                
-                # Check if author_id filter is provided
-                author_id = request.author_id if request.HasField("author_id") else None
-
                 if author_id is not None:
                     total_items_row = await self.pool.fetchrow(
-                        "SELECT COUNT(*) as cnt FROM book JOIN book_author ON book.isbn = book_author.book_isbn WHERE book_author.author_id = $1",
+                        """
+                        SELECT COUNT(*) as cnt
+                        FROM book
+                        JOIN book_author ON book.isbn = book_author.book_isbn
+                        WHERE book_author.author_id = $1
+                        """,
                         author_id,
                     )
+
                     total_items = total_items_row["cnt"] if total_items_row is not None else 0
                     total_pages = (total_items + page_size - 1) // page_size if page_size > 0 else 0
 
-                    rows = await self.pool.fetch(
-                        "SELECT book.isbn, book.name, book.url, book.summary_clean, book.pub_year "
-                        "FROM book JOIN book_author ON book.isbn = book_author.book_isbn "
-                        "WHERE book_author.author_id = $1 "
-                        "ORDER BY book.isbn LIMIT $2 OFFSET $3",
-                        author_id,
-                        page_size,
-                        offset,
-                    )
+                    if include_details:
+                        rows = await self.pool.fetch(
+                            """
+                            SELECT book.isbn, book.name, book.url, book.summary_clean, book.pub_year
+                            FROM book
+                            JOIN book_author ON book.isbn = book_author.book_isbn
+                            WHERE book_author.author_id = $1
+                            ORDER BY book.isbn
+                            LIMIT $2 OFFSET $3
+                            """,
+                            author_id,
+                            page_size,
+                            offset,
+                        )
+                    else:
+                        rows = await self.pool.fetch(
+                            """
+                            SELECT book.isbn, book.name, '' AS url, '' AS summary_clean, book.pub_year
+                            FROM book
+                            JOIN book_author ON book.isbn = book_author.book_isbn
+                            WHERE book_author.author_id = $1
+                            ORDER BY book.isbn
+                            LIMIT $2 OFFSET $3
+                            """,
+                            author_id,
+                            page_size,
+                            offset,
+                        )
                 else:
-                    total_items_row = await self.pool.fetchrow("SELECT COUNT(*) as cnt FROM book")
+                    total_items_row = await self.pool.fetchrow(
+                        "SELECT COUNT(*) as cnt FROM book"
+                    )
+
                     total_items = total_items_row["cnt"] if total_items_row is not None else 0
                     total_pages = (total_items + page_size - 1) // page_size if page_size > 0 else 0
 
-                    rows = await self.pool.fetch(
-                        "SELECT isbn, name, url, summary_clean, pub_year FROM book ORDER BY isbn LIMIT $1 OFFSET $2",
-                        page_size,
-                        offset,
-                    )
-            
+                    if include_details:
+                        rows = await self.pool.fetch(
+                            """
+                            SELECT isbn, name, url, summary_clean, pub_year
+                            FROM book
+                            ORDER BY isbn
+                            LIMIT $1 OFFSET $2
+                            """,
+                            page_size,
+                            offset,
+                        )
+                    else:
+                        rows = await self.pool.fetch(
+                            """
+                            SELECT isbn, name, '' AS url, '' AS summary_clean, pub_year
+                            FROM book
+                            ORDER BY isbn
+                            LIMIT $1 OFFSET $2
+                            """,
+                            page_size,
+                            offset,
+                        )
+
                 books = [book_row_to_pb(r) for r in rows]
+
                 response = GetBooksResponse(
                     books=books,
                     page_num=page_num,
@@ -148,24 +205,33 @@ class BookCatalogService(generated_protos.book_catalog_pb2_grpc.BookCatalogGrpcS
                     total_items=total_items,
                     total_pages=total_pages,
                 )
-                
+
+                import json
+                serialized = json.dumps({
+                    "books": [
+                        {
+                            "isbn": b.isbn,
+                            "name": b.name,
+                            "url": b.url,
+                            "summary_clean": b.summary_clean,
+                            "pub_year": b.pub_year,
+                        }
+                        for b in books
+                    ],
+                    "page_num": page_num,
+                    "page_size": page_size,
+                    "total_items": total_items,
+                    "total_pages": total_pages,
+                })
+
+                await self.redis.setex(cache_key, self.cache_ttl, serialized)
+
+                record_success(operation)
+                return response
+
             except Exception:
                 record_error(operation)
                 raise
-
-        import json
-        serialized = json.dumps({
-            "books": [{"isbn": b.isbn, "name": b.name, "url": b.url,
-                    "summary_clean": b.summary_clean, "pub_year": b.pub_year}
-                    for b in books],
-            "page_num": page_num,
-            "page_size": page_size,
-            "total_items": total_items,
-            "total_pages": total_pages,
-        })
-        await self.redis.setex(cache_key, 604800, serialized)
-        
-        return response
 
     async def GetBook(self, request, context):
         operation = "get_book"
@@ -293,14 +359,21 @@ async def serve():
     print("book-catalog metrics server listening on 0.0.0.0:9100")
 
     pool = await create_pool()
-    
+
     redis_url = os.getenv("REDIS_URL", "redis://localhost:6377")
     print(f"DEBUG: Connecting to Redis at {redis_url}")
     redis_client = aioredis.from_url(redis_url)
 
+    cache_ttl = int(os.getenv("CACHE_TTL_SECONDS", "604800"))
+
     server = grpc.aio.server()
     generated_protos.book_catalog_pb2_grpc.add_BookCatalogGrpcServicer_to_server(
-        BookCatalogService(pool=pool, service_name=service_name, redis=redis_client),
+        BookCatalogService(
+            pool=pool,
+            service_name=service_name,
+            redis=redis_client,
+            cache_ttl=cache_ttl,
+        ),
         server,
     )
 

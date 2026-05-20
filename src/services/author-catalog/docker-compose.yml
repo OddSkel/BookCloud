@@ -34,7 +34,7 @@ services:
       - author-db-data:/var/lib/postgresql/data
     networks:
       - bookcloud-network
-    
+
   author-redis:
     image: redis:7
     container_name: author-redis

@@ -25,6 +25,7 @@ message GetBooksRequest {
   int32 page_size = 2;
   optional int32 author_id = 3;
   repeated int64 isbns = 4;
+  optional bool include_details = 5;
 }
 message GetBooksResponse {
   repeated Book books = 1;

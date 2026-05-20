@@ -1,6 +1,6 @@
+use redis::aio::ConnectionManager;
 use sqlx::PgPool;
 use tonic::{Request, Response, Status};
-use redis::aio::ConnectionManager;
 
 use crate::grpc::contracts::author_catalog::{
     AddAuthorRequest, AddAuthorResponse, Author as ProtoAuthor, AuthorDeleteResponse,
@@ -16,12 +16,13 @@ use crate::metrics;
 
 pub struct AuthorCatalogService {
     pool: PgPool,
-    redis: ConnectionManager
+    redis: ConnectionManager,
+    cache_ttl_seconds: u64,
 }
 
 impl AuthorCatalogService {
-    pub fn new(pool: PgPool, redis: ConnectionManager) -> Self {
-        Self { pool, redis }
+    pub fn new(pool: PgPool, redis: ConnectionManager, cache_ttl_seconds: u64) -> Self {
+        Self { pool, redis, cache_ttl_seconds }
     }
 }
 
@@ -35,7 +36,7 @@ impl AuthorCatalogGrpc for AuthorCatalogService {
 
         Ok(Response::new(response))
     }
-    
+
     async fn get_authors(
         &self,
         request: tonic::Request<GetAuthorsRequest>,
@@ -46,9 +47,11 @@ impl AuthorCatalogGrpc for AuthorCatalogService {
         let result = async {
             let params = request.into_inner();
 
-            let response = author_handler::get_authors(&self.pool, &self.redis, &params)
-                .await
-                .map_err(|e| Status::internal(e.to_string()))?;
+            let response = author_handler::get_authors(
+                &self.pool, &self.redis, &params, self.cache_ttl_seconds,
+            )
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
             Ok(Response::new(response))
         }
