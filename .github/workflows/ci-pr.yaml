@@ -44,8 +44,6 @@ jobs:
     strategy:
       matrix:
         service:
-          # - src/services/book-catalog
-          # - src/services/genre-analysis-service
           - src/services/compare-service
 
     steps:
@@ -61,8 +59,18 @@ jobs:
         working-directory: ${{ matrix.service }}
         run: |
           python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          pip install flake8 pytest
+          if [ -f requirements.txt ]; then python -m pip install -r requirements.txt; fi
+          python -m pip install flake8 pytest pytest-asyncio grpcio grpcio-tools
+
+      - name: Generate protobuf files
+        working-directory: ${{ matrix.service }}
+        run: |
+          mkdir -p src/generated
+          python -m grpc_tools.protoc \
+            -I proto \
+            --python_out=src/generated \
+            --grpc_python_out=src/generated \
+            proto/*.proto
 
       - name: Lint Python service with flake8
         working-directory: ${{ matrix.service }}

@@ -102,7 +102,7 @@ impl AuthorAnalyticsDb {
         let books   = self.fetch_all_books().await?;
         let ratings = self.fetch_all_ratings().await?;
         let mut rows = Self::join_books_ratings(books, ratings);
-        rows.sort_by(|a, b| b.num_ratings.cmp(&a.num_ratings));
+        rows.sort_by_key(|b| std::cmp::Reverse(b.num_ratings));
         Ok(rows
             .into_iter()
             .map(|r| RankedAuthorRow {

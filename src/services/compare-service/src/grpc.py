@@ -1,8 +1,12 @@
 import asyncio
 from pathlib import Path
 import sys
+from typing import TYPE_CHECKING
 
 import grpc
+
+if TYPE_CHECKING:
+    from src.models.popularity import PopularityFilters
 
 
 GENERATED_DIR = Path(__file__).resolve().parent / "generated"
