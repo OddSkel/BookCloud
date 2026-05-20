@@ -635,7 +635,7 @@ mod tests {
                 .filter(|rating| rating.num_ratings >= min_num_ratings as i64)
                 .cloned()
                 .collect::<Vec<_>>();
-            ratings.sort_by(|left, right| right.num_ratings.cmp(&left.num_ratings));
+            ratings.sort_by_key(|right| std::cmp::Reverse(right.num_ratings));
             Ok(Self::paginated(ratings, page_num, page_size))
         }
     }
