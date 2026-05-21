@@ -1,6 +1,5 @@
 use config::AppConfig;
 use tonic::transport::Server;
-use sqlx::postgres::PgPoolOptions;
 
 use crate::{grpc::contracts::book_recommendation::book_recommendation_grpc_server::BookRecommendationGrpcServer, service::BookRecommendationService};
 

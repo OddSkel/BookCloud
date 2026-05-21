@@ -99,6 +99,59 @@ impl AuthorAnalyticsDb {
             })
             .collect();
 
+    // ── public query methods (same signatures as before) ─────────────────────
+
+    pub async fn rank_authors_by_avg_rating(
+        &self,
+    ) -> Result<Vec<RankedAuthorRow>, sqlx::Error> {
+        let books   = self.fetch_all_books().await?;
+        let ratings = self.fetch_all_ratings().await?;
+        let mut rows = Self::join_books_ratings(books, ratings);
+        rows.sort_by(|a, b| {
+            b.star_rating.partial_cmp(&a.star_rating)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+        Ok(rows
+            .into_iter()
+            .map(|r| RankedAuthorRow {
+                author_id:     r.author_id,
+                author_name:   r.author_name,
+                average_rating: r.star_rating,
+                total_ratings:  r.num_ratings,
+            })
+            .collect())
+    }
+
+    pub async fn rank_authors_by_total_ratings(
+        &self,
+    ) -> Result<Vec<RankedAuthorRow>, sqlx::Error> {
+        let books   = self.fetch_all_books().await?;
+        let ratings = self.fetch_all_ratings().await?;
+        let mut rows = Self::join_books_ratings(books, ratings);
+        rows.sort_by_key(|b| std::cmp::Reverse(b.num_ratings));
+        Ok(rows
+            .into_iter()
+            .map(|r| RankedAuthorRow {
+                author_id:     r.author_id,
+                author_name:   r.author_name,
+                average_rating: r.star_rating,
+                total_ratings:  r.num_ratings,
+            })
+            .collect())
+    }
+
+    pub async fn author_books_with_ratings(
+        &self,
+        author_name: Option<&str>,
+        author_id: Option<i32>,
+        pub_year_from: Option<i32>,
+        pub_year_to: Option<i32>,
+    ) -> Result<Vec<AuthorBookRow>, sqlx::Error> {
+        let books   = self.fetch_all_books().await?;
+        let ratings = self.fetch_all_ratings().await?;
+        let mut rows = Self::join_books_ratings(books, ratings);
+
+        // filter by name (ILIKE simulation)
         if let Some(name) = author_name {
             let lower = name.to_lowercase();
             rows.retain(|r| r.author_name.to_lowercase().contains(&lower));

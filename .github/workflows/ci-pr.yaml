@@ -1,0 +1,140 @@
+name: CI - Pull Request to Main
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  rust-unit-tests:
+    name: Rust services - build and unit tests
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        package:
+          - api-gateway
+          - book-search
+          - rating-catalog
+          - author-analytics-service
+          - book-recommendation
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Lint Rust service with Clippy
+        run: cargo clippy -p ${{ matrix.package }} --all-targets -- -D warnings -A dead_code
+
+      - name: Build Rust service
+        run: cargo build -p ${{ matrix.package }} --verbose
+
+      - name: Run Rust unit tests
+        run: cargo test -p ${{ matrix.package }} --verbose
+
+  python-unit-tests:
+    name: Python services - unit tests
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        service:
+          - src/services/compare-service
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python dependencies
+        working-directory: ${{ matrix.service }}
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then python -m pip install -r requirements.txt; fi
+          python -m pip install flake8 pytest pytest-asyncio grpcio grpcio-tools
+
+      - name: Generate protobuf files
+        working-directory: ${{ matrix.service }}
+        run: |
+          mkdir -p src/generated
+          python -m grpc_tools.protoc \
+            -I proto \
+            --python_out=src/generated \
+            --grpc_python_out=src/generated \
+            proto/*.proto
+
+      - name: Lint Python service with flake8
+        working-directory: ${{ matrix.service }}
+        run: |
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=generated,generated_protos
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics --exclude=generated,generated_protos
+
+      - name: Run Python unit tests
+        working-directory: ${{ matrix.service }}
+        run: pytest -v
+
+  integration-tests:
+    name: Local integration tests with Docker
+    runs-on: ubuntu-latest
+    needs:
+      - rust-unit-tests
+      - python-unit-tests
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Start containers
+        working-directory: src
+        run: |
+          chmod +x ./up_containers.sh
+          ./up_containers.sh
+
+      - name: Wait for services readiness
+        working-directory: src
+        env:
+          BASE_URL: http://localhost:8000
+          TIMEOUT_SECONDS: 120
+          INTERVAL_SECONDS: 5
+        run: |
+          chmod +x ./tests/wait_for_services.sh
+          ./tests/wait_for_services.sh
+
+      - name: Run local integration tests
+        working-directory: src
+        env:
+          BASE_URL: http://localhost:8000
+        run: |
+          chmod +x ./tests/non_staging_integration/run.sh
+          ./tests/non_staging_integration/run.sh
+
+      - name: Show container status on failure
+        if: failure()
+        run: docker ps -a
+
+      - name: Show container logs on failure
+        if: failure()
+        working-directory: src
+        run: |
+          for compose_file in services/*/docker-compose.yml api-gateway/docker-compose.yml; do
+            [ -f "$compose_file" ] || continue
+            service_dir=$(dirname "$compose_file")
+            echo "Logs for $service_dir"
+            (cd "$service_dir" && docker compose logs)
+          done
+
+      - name: Stop containers
+        if: always()
+        working-directory: src
+        run: |
+          chmod +x ./down_containers.sh
+          ./down_containers.sh
