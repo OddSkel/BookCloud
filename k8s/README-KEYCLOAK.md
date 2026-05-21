@@ -289,3 +289,10 @@ print(json.dumps(json.loads(base64.b64decode(payload)), indent=2))
 curl -s http://localhost:8080/admin/realms/bookcloud/users \
   -H "Authorization: Bearer $ADMIN_TOKEN" | python3 -m json.tool
 ```
+
+
+
+
+
+client-secret: XbMHv4gUz8ypvuRFFlwRDEpMMM41d2vR
+

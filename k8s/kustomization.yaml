@@ -5,6 +5,11 @@ resources:
 
   - shared/postgres-credentials.yaml
 
+  - author-analytics-service/configmap.yaml
+  - author-analytics-service/deployment.yaml
+  - author-analytics-service/service.yaml
+  - author-analytics-service/hpa.yaml
+
   - book-catalog/db-configmap.yaml
   - book-catalog/db-pvc.yaml
   - book-catalog/db-deployment.yaml
@@ -74,3 +79,4 @@ resources:
   - keycloak/configmap.yaml
   - keycloak/deployment.yaml
   - keycloak/service.yaml
+  - keycloak/realm-configmap.yaml 

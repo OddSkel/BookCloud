@@ -19,7 +19,9 @@ spec:
         - name: keycloak
           image: quay.io/keycloak/keycloak:24.0
           imagePullPolicy: IfNotPresent
-          args: ["start-dev"]
+          args: 
+            - start-dev
+            - --import-realm
           envFrom:
             - configMapRef:
                 name: keycloak-config
@@ -44,22 +46,30 @@ spec:
             limits:
               cpu: 500m
               memory: 1Gi
+          volumeMounts:
+            - name: realm-config
+              mountPath: /opt/keycloak/data/import
+              readOnly: true
           readinessProbe:
             httpGet:
-              path: /realms/master
+              path: /realms/bookcloud
               port: http
             initialDelaySeconds: 60
             periodSeconds: 15
             failureThreshold: 10
           livenessProbe:
             httpGet:
-              path: /realms/master
+              path: /realms/bookcloud
               port: http
             initialDelaySeconds: 90
             periodSeconds: 20
           startupProbe:
             httpGet:
-              path: /realms/master
+              path: /realms/bookcloud
               port: http
             failureThreshold: 30
             periodSeconds: 10
+      volumes:
+        - name: realm-config
+          configMap:
+            name: keycloak-realm
