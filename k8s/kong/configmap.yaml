@@ -8,6 +8,22 @@ data:
     _format_version: "3.0"
     _transform: true
 
+    consumers:
+      - username: keycloak-users
+        jwt_secrets:
+          - key: "http://localhost:8080/realms/bookcloud"
+            algorithm: RS256
+            rsa_public_key: |
+              -----BEGIN PUBLIC KEY-----
+              MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyXTOzZrPWJQhTyDPpsw3
+              WK2IYXnFCMEjBfWKOX1KChKxBI0hdwcUawPTrvEisW37EIwB42stwcLUe7mbbPRR
+              ySFMjW1J3kD3BQKGvCm29ZbLFV109prVrNUtfqEH8GwEZ4wUoIiJQlCyGpwQts+J
+              pek0MN0nM1KK68+0FjbLcKX+VAL5S/joDMsCYujkF+9UhXOkG42MnkxkPIEOplAA
+              VgkwQZNCsbylWLNHYNKLrTTyZ+RbfYNQCqunfWBHvYiLaj5CURWLW3ZYu71Bf2bB
+              IXq0hw6QhKwVdXY6zW2fR0uK0K4kM/7zuPO2Jdi2FDhqb7Fls9xCLGatfHdEgGu3
+              kwIDAQAB
+              -----END PUBLIC KEY-----
+
     services:
       - name: bookcloud-api-gateway
         url: http://api-gateway:80
@@ -15,10 +31,16 @@ data:
         write_timeout: 60000
         read_timeout: 300000
         routes:
-          - name: all-routes
+          - name: public-routes
+            paths:
+              - /health
+            strip_path: false
+          - name: protected-routes
             paths:
               - /
             strip_path: false
+            plugins:
+              - name: jwt
 
     plugins:
       - name: rate-limiting
@@ -26,7 +48,6 @@ data:
           minute: 100
           hour: 1000
           policy: local
-
       - name: cors
         config:
           origins:
@@ -41,12 +62,10 @@ data:
             - Content-Type
             - Authorization
           max_age: 3600
-
       - name: request-size-limiting
         config:
           allowed_payload_size: 10
           size_unit: megabytes
-
       - name: response-transformer
         config:
           add:

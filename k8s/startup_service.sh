@@ -9,6 +9,14 @@ NAMESPACE="${BOOKCLOUD_NAMESPACE:-bookcloud}"
 MINIKUBE_NODES="${BOOKCLOUD_MINIKUBE_NODES:-1}"
 ROLLOUT_TIMEOUT="${BOOKCLOUD_ROLLOUT_TIMEOUT:-300s}"
 
+MINIKUBE_MEMORY="${BOOKCLOUD_MINIKUBE_MEMORY:-6144}"
+MINIKUBE_CPUS="${BOOKCLOUD_MINIKUBE_CPUS:-4}"
+
+KEYCLOAK_URL="http://localhost:8090"
+KEYCLOAK_ADMIN="admin"
+KEYCLOAK_ADMIN_PASSWORD="bookcloud-pass"
+REALM="bookcloud"
+
 require_command() {
   if ! command -v "$1" >/dev/null 2>&1; then
     echo "Erro: comando '$1' nao encontrado." >&2
@@ -54,6 +62,69 @@ wait_for_rollouts() {
   done
 }
 
+wait_for_keycloak() {
+  echo "Waiting for Keycloak to be ready..."
+  until curl -sf "$KEYCLOAK_URL/realms/master" >/dev/null 2>&1; do
+    sleep 3
+  done
+  echo "Keycloak is ready."
+}
+
+setup_keycloak_users() {
+  wait_for_keycloak
+
+  # Get admin token
+  TOKEN=$(curl -s -X POST "$KEYCLOAK_URL/realms/master/protocol/openid-connect/token" \
+    -d "client_id=admin-cli&grant_type=password&username=$KEYCLOAK_ADMIN&password=$KEYCLOAK_ADMIN_PASSWORD" \
+    | jq -r '.access_token')
+
+  # Create users with roles
+  # Format: "username:role"
+
+  USERS_LIST=(
+    "testuser:user"
+    "adminuser:admin"
+    "readonlyuser:readonly"
+  ) 
+
+  for entry in "${USERS_LIST[@]}"; do
+    USERNAME="${entry%%:*}"
+    ROLE="${entry##*:}"
+
+    echo "Creating user: $USERNAME with role: $ROLE"
+
+    # Create user (skip if exists)
+    curl -s -X POST "$KEYCLOAK_URL/admin/realms/$REALM/users" \
+      -H "Authorization: Bearer $TOKEN" \
+      -H "Content-Type: application/json" \
+      -d "{
+        \"username\": \"$USERNAME\",
+        \"enabled\": true,
+        \"credentials\": [{
+          \"type\": \"password\",
+          \"value\": \"password\",
+          \"temporary\": false
+        }]
+      }" || true
+
+    # Get user ID
+    USER_ID=$(curl -s "$KEYCLOAK_URL/admin/realms/$REALM/users?username=$USERNAME" \
+      -H "Authorization: Bearer $TOKEN" | jq -r '.[0].id')
+
+    # Get role ID
+    ROLE_ID=$(curl -s "$KEYCLOAK_URL/admin/realms/$REALM/roles/$ROLE" \
+      -H "Authorization: Bearer $TOKEN" | jq -r '.id')
+
+    # Assign role
+    curl -s -X POST "$KEYCLOAK_URL/admin/realms/$REALM/users/$USER_ID/role-mappings/realm" \
+      -H "Authorization: Bearer $TOKEN" \
+      -H "Content-Type: application/json" \
+      -d "[{\"id\": \"$ROLE_ID\", \"name\": \"$ROLE\"}]"
+
+    echo "✓ $USERNAME ($ROLE)"
+  done
+}
+
 require_command docker
 require_command minikube
 require_command kubectl
@@ -84,11 +155,21 @@ install_monitoring_local() {
 
 cd "$REPO_ROOT"
 
-if minikube -p "$PROFILE" status >/dev/null 2>&1; then
+if minikube -p "$PROFILE" status | grep -q "host: Running"; then
   echo "Minikube profile '$PROFILE' ja esta ativo."
 else
-  run minikube start -p "$PROFILE" --nodes "$MINIKUBE_NODES"
+  run minikube start -p "$PROFILE" \
+  --nodes "$MINIKUBE_NODES" \
+  --memory "$MINIKUBE_MEMORY" \
+  --cpus "$MINIKUBE_CPUS"
 fi
+
+# Wait for API server to be fully ready before enabling addons
+echo "Waiting for API server to be ready..."
+until kubectl --context "$PROFILE" cluster-info >/dev/null 2>&1; do
+  sleep 3
+done
+echo "API server is ready."
 
 run minikube -p "$PROFILE" addons enable metrics-server
 
@@ -98,12 +179,36 @@ build_image "bookcloud/author-catalog:latest" "$REPO_ROOT/src/services/author-ca
 build_image "bookcloud/rating-catalog:latest" "$REPO_ROOT/src/services/rating-catalog"
 build_image "bookcloud/compare-service:latest" "$REPO_ROOT/src/services/compare-service"
 build_image "bookcloud/genre-analysis-service:latest" "$REPO_ROOT/src/services/genre-analysis-service"
+build_image "bookcloud/author-analytics-service:latest" "$REPO_ROOT/src/services/author-analytics-service"
 
 install_monitoring_local
 
 run kubectl apply -k "$SCRIPT_DIR"
 
+# Regenerate realm ConfigMap from latest JSON
+echo "Regenerating keycloak realm ConfigMap..."
+kubectl create configmap keycloak-realm \
+  --from-file=bookcloud-realm.json="$SCRIPT_DIR/keycloak/bookcloud-realm.json" \
+  --namespace "$NAMESPACE" \
+  --dry-run=client -o yaml \
+  | kubectl apply -f -
+
+
 wait_for_rollouts
+
+# Port-forward Keycloak for local bootstrap
+kubectl -n "$NAMESPACE" port-forward svc/keycloak 8090:80 &
+PF_PID=$!
+
+# Wait until the tunnel is actually accepting connections
+echo "Waiting for port-forward to be ready..."
+until curl -sf http://localhost:8090/realms/master >/dev/null 2>&1; do
+  sleep 2
+done
+
+setup_keycloak_users
+
+kill $PF_PID 2>/dev/null || true
 
 run kubectl -n "$NAMESPACE" get pods,svc,hpa
 
@@ -121,12 +226,18 @@ Grafana:
   user: admin
   password: admin
 
+Keycloak:
+  kubectl -n bookcloud port-forward service/keycloak 8080:80
+  http://localhost:8080
+  user: admin
+  password: bookcloud-pass
+
 BookCloud via Kong:
   kubectl -n $NAMESPACE port-forward service/kong 9000:80
   http://localhost:9000
 
 Acesso direto ao api-gateway, se precisares testar sem o Kong:
-  kubectl -n $NAMESPACE port-forward svc/api-gateway 8080:80
+  kubectl -n $NAMESPACE port-forward service/api-gateway 8080:80
   curl http://localhost:8080/health
 
 EOF

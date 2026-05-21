@@ -41,52 +41,42 @@ run() {
 require_project() {
   if [[ -z "$PROJECT_ID" ]]; then
     cat >&2 <<EOF
-Error: could not determine the GCP project automatically.
-
-Set GCP_PROJECT_ID or run inside Cloud Shell / a configured gcloud session.
-
-Example:
-  GCP_PROJECT_ID=my-gcp-project ./k8s/deploy_gke.sh
-
+Error: GCP project ID not set.
+Set one of: GCP_PROJECT_ID, GOOGLE_CLOUD_PROJECT, CLOUDSDK_CORE_PROJECT, or DEVSHELL_PROJECT_ID.
 EOF
     exit 1
   fi
 }
 
 resolve_from_gcloud() {
-  local value
-
-  if [[ -z "$PROJECT_ID" ]]; then
-    value="$(gcloud config get-value project --quiet 2>/dev/null | tr -d '\r' || true)"
-    [[ -n "$value" ]] && PROJECT_ID="$value"
-  fi
-
   if [[ -z "$REGION" ]]; then
-    value="$(gcloud config get-value compute/region --quiet 2>/dev/null | tr -d '\r' || true)"
-    [[ -n "$value" ]] && REGION="$value"
+    REGION="$(gcloud config get-value compute/region 2>/dev/null || true)"
+    if [[ -z "$REGION" ]]; then
+      echo "Error: GCP_REGION not set and gcloud compute/region not configured." >&2
+      exit 1
+    fi
   fi
 
   if [[ -z "$ZONE" ]]; then
-    value="$(gcloud config get-value compute/zone --quiet 2>/dev/null | tr -d '\r' || true)"
-    [[ -n "$value" ]] && ZONE="$value"
+    ZONE="$(gcloud config get-value compute/zone 2>/dev/null || true)"
+    if [[ -z "$ZONE" ]]; then
+      echo "Error: GCP_ZONE not set and gcloud compute/zone not configured." >&2
+      exit 1
+    fi
   fi
-
-  [[ -z "$REGION" ]] && REGION="europe-west1"
-  [[ -z "$ZONE" ]] && ZONE="europe-west1-b"
 }
 
 enable_services() {
   run gcloud services enable \
     container.googleapis.com \
     artifactregistry.googleapis.com \
-    compute.googleapis.com \
     cloudbuild.googleapis.com \
     --project "$PROJECT_ID"
 }
 
 ensure_artifact_registry() {
   if gcloud artifacts repositories describe "$REPOSITORY" \
-    --location "$REGION" \
+    --location="$REGION" \
     --project "$PROJECT_ID" >/dev/null 2>&1; then
     echo "Artifact Registry repository '$REPOSITORY' already exists in '$REGION'."
     return 0
@@ -205,6 +195,9 @@ render_manifests() {
   replace_image rating-catalog
   replace_image compare-service
   replace_image genre-analysis-service
+  replace_image book-recommendation
+  replace_image book-search
+  replace_image   author-analytics-service
 
   force_api_gateway_cluster_ip
   force_kong_load_balancer
@@ -283,6 +276,8 @@ print_monitoring_access() {
   echo "  http://localhost:9090"
 }
 
+# ── Main ──────────────────────────────────────────────────────────────────────
+
 require_command gcloud
 require_command kubectl
 require_command curl
@@ -301,14 +296,25 @@ ensure_artifact_registry
 ensure_cluster
 install_monitoring
 
-build_and_push api-gateway "$REPO_ROOT/src/api-gateway"
-build_and_push book-catalog "$REPO_ROOT/src/services/book-catalog"
-build_and_push author-catalog "$REPO_ROOT/src/services/author-catalog"
-build_and_push rating-catalog "$REPO_ROOT/src/services/rating-catalog"
-build_and_push compare-service "$REPO_ROOT/src/services/compare-service"
-build_and_push genre-analysis-service "$REPO_ROOT/src/services/genre-analysis-service"
+build_and_push api-gateway                "$REPO_ROOT/src/api-gateway"
+build_and_push book-catalog               "$REPO_ROOT/src/services/book-catalog"
+build_and_push author-catalog             "$REPO_ROOT/src/services/author-catalog"
+build_and_push rating-catalog             "$REPO_ROOT/src/services/rating-catalog"
+build_and_push compare-service            "$REPO_ROOT/src/services/compare-service"
+build_and_push genre-analysis-service     "$REPO_ROOT/src/services/genre-analysis-service"
+build_and_push book-recommendation        "$REPO_ROOT/src/services/book-recommendation"
+build_and_push book-search                "$REPO_ROOT/src/services/book-search"
+build_and_push author-analytics-service   "$REPO_ROOT/src/services/author-analytics-service"
 
 render_manifests
+
+# Regenerate realm ConfigMap from latest JSON
+echo "Regenerating keycloak realm ConfigMap..."
+kubectl create configmap keycloak-realm \
+  --from-file=bookcloud-realm.json="$SCRIPT_DIR/keycloak/bookcloud-realm.json" \
+  --namespace "$NAMESPACE" \
+  --dry-run=client -o yaml \
+  | kubectl apply -f -
 
 run kubectl apply -k "$RENDER_DIR"
 wait_for_rollouts

@@ -1,11 +1,10 @@
 import os
 import sys
+import json
 import logging
 import asyncio
 import redis.asyncio as aioredis
 
-# Ensure generated_protos directory is on sys.path to support generated files
-# that use unqualified imports like `import common_pb2`.
 ROOT_DIR = os.path.dirname(__file__)
 sys.path.insert(0, ROOT_DIR)
 sys.path.insert(0, os.path.join(ROOT_DIR, "generated_protos"))
@@ -73,6 +72,16 @@ def book_row_to_pb(row) -> Book:
         pub_year=row["pub_year"] or 0,
     )
 
+# sera que se pode remover?
+def book_to_dict(b: Book) -> dict:
+    return {
+        "isbn": b.isbn,
+        "name": b.name,
+        "url": b.url,
+        "summary_clean": b.summary_clean,
+        "pub_year": b.pub_year,
+    }
+
 
 def optional_field_value(message, field_name: str, default=None):
     try:
@@ -101,6 +110,9 @@ class BookCatalogService(generated_protos.book_catalog_pb2_grpc.BookCatalogGrpcS
                 page_num = request.page_num if request.page_num > 0 else 1
                 page_size = request.page_size if request.page_size > 0 else 10
                 offset = (page_num - 1) * page_size
+                author_id = request.author_id if request.HasField("author_id") else None
+
+                cache_key = f"books:page:{page_num}:page_size:{page_size}:author:{author_id}"
 
                 author_id = optional_field_value(request, "author_id")
                 include_details = optional_field_value(request, "include_details", True)
@@ -115,6 +127,7 @@ class BookCatalogService(generated_protos.book_catalog_pb2_grpc.BookCatalogGrpcS
                     import json
 
                     books_data = json.loads(cached)
+                    record_success(operation)
                     return GetBooksResponse(
                         books=[Book(**b) for b in books_data["books"]],
                         page_num=books_data["page_num"],
@@ -223,7 +236,6 @@ class BookCatalogService(generated_protos.book_catalog_pb2_grpc.BookCatalogGrpcS
                     "total_items": total_items,
                     "total_pages": total_pages,
                 })
-
                 await self.redis.setex(cache_key, self.cache_ttl, serialized)
 
                 record_success(operation)
@@ -237,6 +249,12 @@ class BookCatalogService(generated_protos.book_catalog_pb2_grpc.BookCatalogGrpcS
         operation = "get_book"
         with observe_duration(operation):
             try:
+                cache_key = f"book:{request.isbn}"
+                cached = await self.redis.get(cache_key)
+                if cached:
+                    record_success(operation)
+                    return GetBookResponse(book=Book(**json.loads(cached)))
+
                 row = await self.pool.fetchrow(
                     "SELECT isbn, name, url, summary_clean, pub_year FROM book WHERE isbn = $1",
                     request.isbn,
@@ -246,8 +264,13 @@ class BookCatalogService(generated_protos.book_catalog_pb2_grpc.BookCatalogGrpcS
                     context.set_code(grpc.StatusCode.NOT_FOUND)
                     record_success(operation)
                     return GetBookResponse()
+
+                book = book_row_to_pb(row)
+                await self.redis.setex(cache_key, self.cache_ttl, json.dumps(book_to_dict(book)))
+
                 record_success(operation)
-                return GetBookResponse(book=book_row_to_pb(row))
+                return GetBookResponse(book=book)
+
             except Exception:
                 record_error(operation)
                 raise
@@ -273,8 +296,11 @@ class BookCatalogService(generated_protos.book_catalog_pb2_grpc.BookCatalogGrpcS
                     book.pub_year,
                 )
 
+                await self._invalidate_book(book.isbn)
+
                 record_success(operation)
                 return AddBookResponse(book=book_row_to_pb(row))
+
             except Exception:
                 record_error(operation)
                 raise
@@ -300,8 +326,11 @@ class BookCatalogService(generated_protos.book_catalog_pb2_grpc.BookCatalogGrpcS
                     record_success(operation)
                     return UpdateBookResponse()
 
+                await self._invalidate_book(request.isbn)
+
                 record_success(operation)
                 return UpdateBookResponse(book=book_row_to_pb(result))
+
             except Exception:
                 record_error(operation)
                 raise
@@ -316,8 +345,12 @@ class BookCatalogService(generated_protos.book_catalog_pb2_grpc.BookCatalogGrpcS
                     context.set_code(grpc.StatusCode.NOT_FOUND)
                     record_success(operation)
                     return DeleteBookResponse()
+
+                await self._invalidate_book(request.isbn)
+
                 record_success(operation)
                 return DeleteBookResponse()
+
             except Exception:
                 record_error(operation)
                 raise
@@ -354,9 +387,10 @@ async def serve():
     grpc_host = os.getenv("GRPC_HOST", "0.0.0.0")
     grpc_port = int(os.getenv("GRPC_PORT", "50051"))
     service_name = os.getenv("SERVICE_NAME", "book-catalog")
+    cache_ttl = int(os.getenv("CACHE_TTL", "300"))
 
     start_http_server(9100)
-    print("book-catalog metrics server listening on 0.0.0.0:9100")
+    logging.info("book-catalog metrics server listening on 0.0.0.0:9100")
 
     pool = await create_pool()
 

@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: author-analytics-service
+  namespace: bookcloud
+  labels:
+    app: author-analytics-service
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: author-analytics-service
+  template:
+    metadata:
+      labels:
+        app: author-analytics-service
+    spec:
+      containers:
+        - name: author-analytics-service
+          image: bookcloud/author-analytics-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: grpc
+              containerPort: 50056
+            - name: http
+              containerPort: 8086
+          envFrom:
+            - configMapRef:
+                name: author-analytics-service-config
+            - secretRef:
+                name: postgres-credentials
+          env:
+            - name: BOOK_DATABASE_URL
+              value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@book-db:5432/book_catalog"
+            - name: RATING_DATABASE_URL
+              value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@rating-db:5432/rating_catalog"
+            - name: AUTHOR_DATABASE_URL
+              value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@author-db:5432/author_catalog"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "400m"
+              memory: "512Mi"
+          readinessProbe:
+            tcpSocket:
+              port: grpc
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          startupProbe:
+            tcpSocket:
+              port: grpc
+            failureThreshold: 30
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: grpc
+            initialDelaySeconds: 15
+            periodSeconds: 20

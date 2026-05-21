@@ -6,6 +6,7 @@ pub struct AppConfig {
     pub http_port:    u16,
     pub book_db_url: String,
     pub rating_db_url: String,
+    pub author_db_url: String,
 }
 
 impl AppConfig {
@@ -23,6 +24,8 @@ impl AppConfig {
                 .expect("BOOK_DATABASE_URL must be set"),
             rating_db_url: std::env::var("RATING_DATABASE_URL")
                 .expect("RATING_DATABASE_URL must be set"),
+            author_db_url: std::env::var("AUTHOR_DATABASE_URL")
+                .expect("AUTHOR_DATABASE_URL must be set"),
         }
     }
 

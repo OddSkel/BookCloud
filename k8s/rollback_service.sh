@@ -6,11 +6,14 @@ ROLLOUT_TIMEOUT="${BOOKCLOUD_ROLLOUT_TIMEOUT:-300s}"
 
 DEPLOYMENTS=(
   api-gateway
+  author-analytics-service
   book-catalog
   author-catalog
   rating-catalog
   compare-service
   genre-analysis-service
+  book-recommendation
+  book-search
 )
 
 run() {

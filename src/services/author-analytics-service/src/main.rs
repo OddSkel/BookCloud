@@ -41,7 +41,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await
         .expect("Failed to connect to rating-db");
 
-    let db = AuthorAnalyticsDb::new(book_pool, rating_pool);
+    let author_pool = PgPoolOptions::new()
+        .max_connections(5)
+        .connect(&config.author_db_url)
+        .await
+        .expect("Failed to connect to author-db");
+
+    let db = AuthorAnalyticsDb::new(book_pool, rating_pool, author_pool);
     let svc = AuthorAnalyticsService::new(db);
 
     let http_addr_clone = http_addr.clone();
