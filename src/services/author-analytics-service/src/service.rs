@@ -179,10 +179,8 @@ impl AuthorAnalyticsGrpc for AuthorAnalyticsService {
 
 #[cfg(test)]
 mod tests {
-    use tonic::Request;
 
     use crate::models::{AuthorBookRow, RankedAuthorRow};
-    use crate::service::AuthorAnalyticsService;
 
     // ─────────────────────────────────────────────────────────────────────────
     // FakeDb  (mirrors FakeCatalogCache in compare-service/tests/conftest.py)
@@ -213,8 +211,6 @@ mod tests {
 
     // Thin wrapper so we can inject FakeDb into AuthorAnalyticsService.
     // We re-implement only the db methods called by service.rs.
-    use crate::db::AuthorAnalyticsDb;
-    use sqlx::postgres::PgPoolOptions;
 
     // Because AuthorAnalyticsDb wraps real PgPools we cannot easily swap it.
     // The cleanest group-style solution (no trait refactor needed) is to test
@@ -248,7 +244,7 @@ mod tests {
 
     /// rank_authors — sort by total ratings.
     fn rank_by_total(mut rows: Vec<RankedAuthorRow>) -> Vec<RankedAuthor> {
-        rows.sort_by(|a, b| b.total_ratings.cmp(&a.total_ratings));
+        rows.sort_by_key(|item| std::cmp::Reverse(item.total_ratings));
         rows.into_iter().map(|r| RankedAuthor {
             author_name:          r.author_name,
             average_rating:       r.average_rating,

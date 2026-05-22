@@ -1,6 +1,7 @@
 use sqlx::FromRow;
 
 #[derive(FromRow)]
+#[allow(dead_code)]
 pub struct RankedAuthorRow {
     pub author_id:      i32,
     pub author_name:    String,
@@ -9,6 +10,7 @@ pub struct RankedAuthorRow {
 }
 
 #[derive(FromRow)]
+#[allow(dead_code)]
 pub struct AuthorBookRow {
     pub author_id:   i32,
     pub author_name: String,
