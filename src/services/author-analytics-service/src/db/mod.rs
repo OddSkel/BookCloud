@@ -176,7 +176,7 @@ impl AuthorAnalyticsDb {
             })
             .collect();
 
-        results.sort_by(|a, b| b.total_ratings.cmp(&a.total_ratings));
+        results.sort_by_key(|item| std::cmp::Reverse(item.total_ratings));
         Ok(results)
     }
 

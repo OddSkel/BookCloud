@@ -27,6 +27,7 @@ from generated_protos.genre_service_pb2 import (
     GenreTrendPointPopularity,
     GenreGrowthResponse,
     GenrePopularityResponse,
+    BookGenreInfo,
     GetBooksByGenreResponse,
 )
 from generated_protos.genre_service_pb2 import GetGenreResponse
@@ -450,6 +451,28 @@ async def create_pool():
         )
         await connection.execute(
             """
+            DO $$
+            BEGIN
+                IF NOT EXISTS (
+                    SELECT 1
+                    FROM pg_constraint c
+                    JOIN pg_attribute a
+                        ON a.attrelid = c.conrelid
+                        AND a.attnum = ANY(c.conkey)
+                    WHERE c.conrelid = 'genre'::regclass
+                        AND c.contype IN ('p', 'u')
+                        AND a.attname = 'genre_id'
+                    GROUP BY c.oid
+                    HAVING COUNT(*) = 1
+                ) THEN
+                    ALTER TABLE genre ADD CONSTRAINT genre_genre_id_key UNIQUE (genre_id);
+                END IF;
+            END
+            $$;
+            """
+        )
+        await connection.execute(
+            """
             CREATE TABLE IF NOT EXISTS book_genre (
                 book_isbn BIGINT NOT NULL,
                 genre_id INTEGER NOT NULL REFERENCES genre(genre_id) ON DELETE CASCADE,
@@ -463,8 +486,15 @@ async def create_pool():
                 genre_id INT PRIMARY KEY REFERENCES genre(genre_id) ON DELETE CASCADE,
                 avg_rating DOUBLE PRECISION DEFAULT 0,
                 total_num_ratings BIGINT DEFAULT 0,
+                book_count INT DEFAULT 0,
                 updated_at TIMESTAMP DEFAULT NOW()
             )
+            """
+        )
+        await connection.execute(
+            """
+            ALTER TABLE genre_stats_cache
+            ADD COLUMN IF NOT EXISTS book_count INT DEFAULT 0
             """
         )
         await connection.execute(
@@ -716,12 +746,6 @@ async def serve():
         f"{book_catalog_host}:{book_catalog_port}"
     )
 
-    logging.info("Updating genre cache (this may take several minutes)...")
-    try:
-        await update_genre_cache(pool, rating_catalog_channel, book_catalog_channel)
-    except Exception as e:
-        logging.warning(f"Failed to update cache: {e}")
-
     server = grpc.aio.server()
     genre_service_grpc.add_GenreAnalysisGrpcServicer_to_server(
         GenreAnalysisService(
@@ -738,6 +762,15 @@ async def serve():
 
     logging.info("Starting GenreAnalysis Python gRPC service on %s", server_addr)
     await server.start()
+
+    async def update_cache_in_background():
+        logging.info("Updating genre cache (this may take several minutes)...")
+        try:
+            await update_genre_cache(pool, rating_catalog_channel, book_catalog_channel)
+        except Exception as e:
+            logging.warning(f"Failed to update cache: {e}")
+
+    asyncio.create_task(update_cache_in_background())
     await server.wait_for_termination()
 
 

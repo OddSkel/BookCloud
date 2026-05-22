@@ -102,7 +102,7 @@ jobs:
       - name: Wait for services readiness
         working-directory: src
         env:
-          BASE_URL: http://localhost:8000
+          BASE_URL: http://localhost:8080
           TIMEOUT_SECONDS: 120
           INTERVAL_SECONDS: 5
         run: |
@@ -112,7 +112,7 @@ jobs:
       - name: Run local integration tests
         working-directory: src
         env:
-          BASE_URL: http://localhost:8000
+          BASE_URL: http://localhost:8080
         run: |
           chmod +x ./tests/non_staging_integration/run.sh
           ./tests/non_staging_integration/run.sh

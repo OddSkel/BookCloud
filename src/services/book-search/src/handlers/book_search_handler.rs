@@ -8,6 +8,8 @@ use crate::grpc::contracts::book_catalog::{
 };
 use crate::grpc::contracts::book_search::{Book as Proto_Book, BookSearchResponse, Query};
 
+const MAX_SEARCH_RESULTS: usize = 50;
+
 pub async fn book_search(
     book_catalog_grpc_url: &str,
     author_catalog_grpc_url: &str,
@@ -84,10 +86,17 @@ pub async fn book_search(
                     url: book.url,
                     pub_year: book.pub_year,
                 });
+                if books.len() >= MAX_SEARCH_RESULTS {
+                    break;
+                }
             }
         }
 
-        if page_num >= response.total_pages || page_num >= max_pages || response.total_pages == 0 {
+        if books.len() >= MAX_SEARCH_RESULTS
+            || page_num >= response.total_pages
+            || page_num >= max_pages
+            || response.total_pages == 0
+        {
             break;
         }
 

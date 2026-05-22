@@ -2,7 +2,7 @@
 
 set -eu
 
-BASE_URL="${BASE_URL:-http://localhost:8000}"
+BASE_URL="${BASE_URL:-http://localhost:8080}"
 API_BASE_URL="${API_BASE_URL:-${BASE_URL}/api}"
 TIMEOUT_SECONDS="${TIMEOUT_SECONDS:-120}"
 INTERVAL_SECONDS="${INTERVAL_SECONDS:-5}"
