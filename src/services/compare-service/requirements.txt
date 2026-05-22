@@ -10,3 +10,5 @@ pytest
 pytest-asyncio
 grpcio
 grpcio-tools
+python-dotenv
+redis

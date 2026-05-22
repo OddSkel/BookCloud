@@ -15,6 +15,8 @@ use crate::grpc::contracts::rating_catalog::{
     rating_catalog_grpc_client::RatingCatalogGrpcClient,
 };
 
+const MAX_RECOMMENDATION_RESULTS: usize = 50;
+
 pub async fn book_recommendation(
     params: Query,
     genre_analysis_grpc_url: &str,
@@ -110,7 +112,7 @@ pub async fn book_recommendation(
         .map_err(|e: TonicError| e.to_string())?;
 
     let mut books = Vec::new();
-    for isbn in book_isbns {
+    for isbn in book_isbns.into_iter().take(MAX_RECOMMENDATION_RESULTS) {
         match book_client
             .get_book(Request::new(GetBookRequest { isbn }))
             .await

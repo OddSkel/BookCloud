@@ -2,7 +2,7 @@
 
 set -eu
 
-BASE_URL="${BASE_URL:-http://localhost:8000}"
+BASE_URL="${BASE_URL:-http://localhost:8080}"
 API_BASE_URL="${API_BASE_URL:-${BASE_URL}/api}"
 DATASET_DIR="${DATASET_DIR:-$(CDPATH= cd "$(dirname "$0")/../dataset" && pwd)}"
 
