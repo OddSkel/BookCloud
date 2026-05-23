@@ -51,11 +51,11 @@ message AddAuthorResponse {
 }
 
 message GetAuthorRequest {
-  string author_id = 1;
+  int64 author_id = 1;
 }
 
 message DeleteAuthorRequest {
-  string author_id = 1;
+  int64 author_id = 1;
 }
 
 message GetAuthorsResponse {

@@ -127,10 +127,7 @@ pub async fn delete_author(
     pool: &PgPool,
     params: DeleteAuthorRequest,
 ) -> Result<AuthorDeleteResponse, sqlx::Error> {
-    let author_id = params
-        .author_id
-        .parse::<i64>()
-        .map_err(|_| sqlx::Error::Protocol("Invalid author_id".to_string()))?;
+    let author_id = params.author_id;
 
     let deleted_author =
         sqlx::query_as::<_, Model_Author>("DELETE FROM author WHERE author_id = $1 RETURNING *")
@@ -154,10 +151,7 @@ pub async fn get_author(
     pool: &PgPool,
     params: GetAuthorRequest,
 ) -> Result<GetAuthorResponse, sqlx::Error> {
-    let author_id = params
-        .author_id
-        .parse::<i64>()
-        .map_err(|_| sqlx::Error::Protocol("Invalid author_id".to_string()))?;
+    let author_id = params.author_id;
 
     let get_author = sqlx::query_as::<_, Model_Author>("SELECT * FROM author WHERE author_id = $1")
         .bind(author_id)

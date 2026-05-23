@@ -46,7 +46,7 @@ pub async fn book_search(
 
             match matched {
                 Some(a) => Some(
-                    i32::try_from(a.author_id)
+                    i64::try_from(a.author_id)
                         .map_err(|_| "author_id is out of range for book-catalog".to_string())?,
                 ),
                 None => return Ok(BookSearchResponse { books: vec![] }),
