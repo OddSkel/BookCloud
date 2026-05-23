@@ -6,10 +6,8 @@ services:
     restart: unless-stopped
     env_file:
       - .env
-    environment:
-      RUST_LOG: info
     ports:
-      - "${HOST_GRPC_PORT}:50055"
+      - "${HOST_GRPC_PORT}:${GRPC_PORT}"
     networks:
       - bookcloud-network
 
