@@ -4,7 +4,9 @@ set -eu
 
 BASE_URL="${BASE_URL:-http://localhost:8080}"
 API_BASE_URL="${API_BASE_URL:-${BASE_URL}/api}"
-DATASET_DIR="${DATASET_DIR:-$(CDPATH= cd "$(dirname "$0")/../dataset" && pwd)}"
+
+SCRIPT_DIR="$(CDPATH= cd "$(dirname "$0")" && pwd -P)"
+DATASET_DIR="${DATASET_DIR:-${SCRIPT_DIR}/../dataset}"
 
 BOOK_CSV="${DATASET_DIR}/book.csv"
 AUTHOR_CSV="${DATASET_DIR}/author.csv"
@@ -14,6 +16,20 @@ RATING_CSV="${DATASET_DIR}/rating.csv"
 require_file() {
   if [ ! -f "$1" ]; then
     printf 'Required test dataset file not found: %s\n' "$1" >&2
+    printf 'Current directory: %s\n' "$(pwd)" >&2
+    printf 'Script directory: %s\n' "$SCRIPT_DIR" >&2
+    printf 'Dataset directory: %s\n' "$DATASET_DIR" >&2
+
+    if [ -d "$SCRIPT_DIR/.." ]; then
+      printf 'Available files in tests directory:\n' >&2
+      ls -la "$SCRIPT_DIR/.." >&2
+    fi
+
+    if [ -d "$DATASET_DIR" ]; then
+      printf 'Available files in dataset directory:\n' >&2
+      ls -la "$DATASET_DIR" >&2
+    fi
+
     exit 1
   fi
 }
@@ -21,9 +37,11 @@ require_file() {
 first_csv_value() {
   file="$1"
   column="$2"
+
   awk -F ',' -v column="$column" '
     NR == 1 {
       for (i = 1; i <= NF; i++) {
+        gsub(/\r$/, "", $i)
         if ($i == column) {
           column_index = i
           break
@@ -31,9 +49,15 @@ first_csv_value() {
       }
       next
     }
-    column_index > 0 && $column_index != "" {
-      print $column_index
-      exit
+
+    column_index > 0 {
+      value = $column_index
+      gsub(/\r$/, "", value)
+
+      if (value != "") {
+        print value
+        exit
+      }
     }
   ' "$file"
 }
