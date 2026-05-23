@@ -7,12 +7,8 @@ services:
     restart: unless-stopped
     env_file:
       - .env
-    environment:
-      RUST_LOG: info
-      DATABASE_URL: postgres://postgres:postgres@rating-db:5432/ratings
-      REDIS_URL: "redis://rating-redis:6379"
     ports:
-      - "${HOST_GRPC_PORT}:50053"
+      - "${HOST_GRPC_PORT}:${GRPC_PORT}"
     depends_on:
       - rating-db
       - rating-redis
@@ -23,12 +19,10 @@ services:
     image: postgres:15
     container_name: rating-db
     restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+    env_file:
+      - .env
     ports:
-      - "${POSTGRES_PORT}:5432"
+      - "${HOST_POSTGRES_PORT}:${POSTGRES_PORT}"
     volumes:
       - rating-db-data:/var/lib/postgresql/data
     networks:
@@ -39,7 +33,7 @@ services:
     container_name: rating-redis
     restart: unless-stopped
     ports:
-      - "6378:6379"
+      - "${HOST_REDIS_PORT}:${REDIS_PORT}"
     networks:
       - bookcloud-network
 
