@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: book-recommendation-config
+  namespace: bookcloud
+data:
+  HOST: "0.0.0.0"
+  GRPC_PORT: "50056"
+  HOST_GRPC_PORT: "50056"
+  SERVICE_NAME: "book-recommendation"
+  BOOK_CATALOG_GRPC_URL: "http://book-catalog:50051"

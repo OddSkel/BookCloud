@@ -17,7 +17,7 @@ pub async fn book_search(
     search_max_pages: i32,
     params: Query,
 ) -> Result<BookSearchResponse, String> {
-    let author_id: Option<i32> = if let Some(author_name) = params.author.as_deref() {
+    let author_id: Option<i64> = if let Some(author_name) = params.author.as_deref() {
         if author_name.trim().is_empty() {
             None
         } else {
@@ -61,48 +61,29 @@ pub async fn book_search(
         .map_err(|e| e.to_string())?;
 
     let page_size = search_page_size.max(1);
-    let max_pages = search_max_pages.max(1);
-    let mut page_num = 1;
-    let mut books = Vec::new();
 
-    loop {
-        let request = GetBooksRequest {
-            page_num,
-            page_size,
-            author_id,
-        };
+    let request = GetBooksRequest {
+        page_num: 1,
+        page_size,
+        author_id,
+    };
 
-        let response = book_client
-            .get_books(Request::new(request))
-            .await
-            .map(|r| r.into_inner())
-            .map_err(|e| e.to_string())?;
+    let response = book_client
+        .get_books(Request::new(request))
+        .await
+        .map(|r| r.into_inner())
+        .map_err(|e| e.to_string())?;
 
-        for book in response.books {
-            if matches_query(&book, &params) {
-                books.push(Proto_Book {
-                    isbn: book.isbn,
-                    name: book.name,
-                    url: book.url,
-                    pub_year: book.pub_year,
-                });
-                if books.len() >= MAX_SEARCH_RESULTS {
-                    break;
-                }
-            }
-        }
-
-        if books.len() >= MAX_SEARCH_RESULTS
-            || page_num >= response.total_pages
-            || page_num >= max_pages
-            || response.total_pages == 0
-        {
-            break;
-        }
-
-        page_num += 1;
-    }
-
+    let books = response.books.into_iter()
+    .filter(|book| matches_query(&book, &params))
+    .map(|book| Proto_Book {
+        isbn: book.isbn,
+        name: book.name,
+        url: book.url,
+        pub_year: book.pub_year,
+    })
+    .collect();
+    
     Ok(BookSearchResponse { books })
 }
 

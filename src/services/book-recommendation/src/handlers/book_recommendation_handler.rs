@@ -106,6 +106,8 @@ pub async fn book_recommendation(
         return Ok(BookRecommendationResponse { books: vec![] });
     }
 
+    book_isbns.truncate(20);
+    
     // Step 4: Single client connection, loop for individual fetches
     let mut book_client = BookCatalogGrpcClient::connect(book_catalog_grpc_url.to_string())
         .await
