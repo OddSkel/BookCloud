@@ -16,6 +16,7 @@ jobs:
           - api-gateway
           - book-search
           - rating-catalog
+          - author-catalog
           - author-analytics-service
           - book-recommendation
 
