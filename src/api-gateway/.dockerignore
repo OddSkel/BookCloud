@@ -1,5 +1,20 @@
-target
-.git
+# Pastas de Build e Cache
+target/
+**/target/
+**/build/
+**/target/**
+
+# Repositório e Sistema
+.git/
 .gitignore
+.gitmodules
+
+# Ambientes e Dependências
 .env
-node_modules
+node_modules/
+**/node_modules/
+
+# Logs e temporários
+*.log
+*.tmp
+.DS_Store

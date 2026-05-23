@@ -1,0 +1,72 @@
+syntax = "proto3";
+import "common.proto";
+
+package gateway.authorcatalog;
+
+service AuthorCatalogGrpc {
+  rpc GetAuthors(GetAuthorsRequest) returns (GetAuthorsResponse);
+
+  rpc AddAuthor(AddAuthorRequest) returns (AddAuthorResponse);
+
+  rpc UpdateAuthor(UpdateAuthorRequest) returns (UpdateAuthorResponse);
+
+  rpc DeleteAuthor(DeleteAuthorRequest) returns (AuthorDeleteResponse);
+
+  rpc GetAuthor(GetAuthorRequest) returns (GetAuthorResponse);
+
+  rpc GetAuthorsByName(GetAuthorsByNameRequest) returns (GetAuthorsResponse);
+
+  rpc HealthCheck (gateway.common.HealthCheckRequest) returns (gateway.common.HealthCheckResponse);
+}
+message GetAuthorsByNameRequest {
+  string name = 1;
+}
+
+message GetAuthorsRequest{
+  optional int64 page = 1;
+  optional int64 page_size = 2;
+}
+
+message Author {
+  int64 author_id = 1;
+  string name = 2;
+}
+
+message AddAuthorRequest {
+  int64 author_id = 1;
+  string name = 2;
+}
+
+message UpdateAuthorResponse {
+  repeated Author authors = 1;
+}
+
+message UpdateAuthorRequest {
+  int64 author_id = 1;
+  optional string name = 2;
+}
+
+message AddAuthorResponse {
+  Author author = 1;
+}
+
+message GetAuthorRequest {
+  string author_id = 1;
+}
+
+message DeleteAuthorRequest {
+  string author_id = 1;
+}
+
+message GetAuthorsResponse {
+  repeated Author authors = 1;
+}
+
+message GetAuthorResponse {
+  Author author = 1;
+}
+
+message AuthorDeleteResponse {
+  bool sucessful = 1;
+  string message = 2;
+}

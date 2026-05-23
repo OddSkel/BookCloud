@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: book-search-config
+  namespace: bookcloud
+data:
+  HOST: "0.0.0.0"
+  GRPC_PORT: "50057"
+  HOST_GRPC_PORT: "50057"
+  SERVICE_NAME: "book-search"
+  BOOK_CATALOG_GRPC_URL: "http://book-catalog:50051"
+  BOOK_SEARCH_PAGE_SIZE: "1000"
+  BOOK_SEARCH_MAX_PAGES: "100"

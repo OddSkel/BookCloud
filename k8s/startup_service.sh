@@ -24,23 +24,20 @@ run() {
 build_image() {
   local image="$1"
   local context="$2"
-  local log_file
+  local dockerfile_path="${3:-$context/Dockerfile}"
 
-  log_file="$(mktemp)"
-  echo "+ minikube -p $PROFILE image build -t $image $context"
-  if ! minikube -p "$PROFILE" image build -t "$image" "$context" 2>&1 | tee "$log_file"; then
-    echo "Erro: falhou o build da imagem '$image'." >&2
-    rm -f "$log_file"
+  echo "--- Construindo imagem $image ---"
+  echo "DEBUG: context=$context, dockerfile=$dockerfile_path"
+  if ! docker build -t "$image" -f "$dockerfile_path" "$context"; then
+    echo "Erro: falhou o build local da imagem '$image'." >&2
     exit 1
   fi
 
-  if grep -qE "ERROR: failed to build|error: could not compile" "$log_file"; then
-    echo "Erro: o build da imagem '$image' terminou com erros." >&2
-    rm -f "$log_file"
+  echo "--- Carregando $image para o Minikube ---"
+  if ! minikube image load "$image" -p "$PROFILE"; then
+    echo "Erro: falhou o load da imagem para o Minikube." >&2
     exit 1
   fi
-
-  rm -f "$log_file"
 }
 
 wait_for_rollouts() {
@@ -90,14 +87,25 @@ else
   run minikube start -p "$PROFILE" --nodes "$MINIKUBE_NODES"
 fi
 
+minikube -p "$PROFILE" update-context
+
+echo "Aguardando o API server ficar disponivel..."
+until kubectl cluster-info --request-timeout=5s >/dev/null 2>&1; do
+  echo "  API server ainda nao esta pronto, aguardando..."
+  sleep 3
+done
+echo "API server pronto."
+
 run minikube -p "$PROFILE" addons enable metrics-server
 
-build_image "bookcloud/api-gateway:latest" "$REPO_ROOT/src/api-gateway"
-build_image "bookcloud/book-catalog:latest" "$REPO_ROOT/src/services/book-catalog"
-build_image "bookcloud/author-catalog:latest" "$REPO_ROOT/src/services/author-catalog"
-build_image "bookcloud/rating-catalog:latest" "$REPO_ROOT/src/services/rating-catalog"
-build_image "bookcloud/compare-service:latest" "$REPO_ROOT/src/services/compare-service"
+build_image "bookcloud/api-gateway:latest"           "$REPO_ROOT/src/api-gateway"
+build_image "bookcloud/book-catalog:latest"          "$REPO_ROOT/src/services/book-catalog"
+build_image "bookcloud/author-catalog:latest"        "$REPO_ROOT/src/services/author-catalog"
+build_image "bookcloud/rating-catalog:latest"        "$REPO_ROOT/src/services/rating-catalog"
+build_image "bookcloud/compare-service:latest"       "$REPO_ROOT/src/services/compare-service"
 build_image "bookcloud/genre-analysis-service:latest" "$REPO_ROOT/src/services/genre-analysis-service"
+build_image "bookcloud/book-search:latest"           "$REPO_ROOT"  "$REPO_ROOT/src/services/book-search/Dockerfile"
+build_image "bookcloud/book-recommendation:latest"   "$REPO_ROOT/src/services/book-recommendation"
 
 install_monitoring_local
 

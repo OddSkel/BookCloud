@@ -7,17 +7,12 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy workspace Cargo.toml
-COPY Cargo.toml .
+COPY src/services/book-search/Cargo.toml .
+COPY src/services/book-search/Cargo.lock .
+COPY src/services/book-search/src/ src/
+COPY src/services/book-search/build.rs .
+COPY src/services/book-search/proto/ proto/
 
-# Copy all workspace members
-COPY src/services/book-search/ src/services/book-search/
-COPY src/services/author-catalog/ src/services/author-catalog/
-COPY src/services/rating-catalog/ src/services/rating-catalog/
-COPY src/services/book-recommendation/ src/services/book-recommendation/
-
-# Build from within book-search
-WORKDIR /app/src/services/book-search
 RUN cargo build --release
 
 FROM debian:bookworm-slim AS runtime
@@ -31,7 +26,6 @@ RUN apt-get update && apt-get install -y \
 
 RUN useradd -ms /bin/bash appuser
 
-# Binary is now under the workspace target
 COPY --from=builder /app/target/release/book-search /usr/local/bin/book-search
 
 RUN chown appuser:appuser /usr/local/bin/book-search

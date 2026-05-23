@@ -294,8 +294,8 @@ impl CatalogService {
             Self::CompareService => "http://compare-service:50054",
             Self::GenreAnalysis => "http://genre-analysis-service:50055",
             Self::AuthorAnalytics => "http://author-analytics-service:50056",
-            Self::BookSearch => "http://book-search:50054",
-            Self::BookRecommendation => "http://book-recommendation:50055",
+            Self::BookSearch => "http://book-search:50057",
+            Self::BookRecommendation => "http://book-recommendation:50056",
         }
     }
 }

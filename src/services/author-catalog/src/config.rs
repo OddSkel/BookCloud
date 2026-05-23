@@ -1,7 +1,5 @@
-use std::{
-    env,
-    net::{AddrParseError, SocketAddr},
-};
+use std::env;
+
 
 pub struct AppConfig {
     pub service_name: String,

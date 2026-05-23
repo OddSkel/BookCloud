@@ -15,7 +15,7 @@ pub async fn book_search(
     search_max_pages: i32,
     params: Query,
 ) -> Result<BookSearchResponse, String> {
-    let author_id: Option<i32> = if let Some(author_name) = params.author.as_deref() {
+    let author_id: Option<i64> = if let Some(author_name) = params.author.as_deref() {
         if author_name.trim().is_empty() {
             None
         } else {

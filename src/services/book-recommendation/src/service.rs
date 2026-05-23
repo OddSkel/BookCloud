@@ -1,4 +1,3 @@
-use sqlx::PgPool;
 use tonic::{Request, Response, Status};
 
 use crate::{

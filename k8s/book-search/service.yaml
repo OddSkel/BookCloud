@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: book-search
+  namespace: bookcloud
+  labels:
+    app: book-search
+spec:
+  type: ClusterIP
+  selector:
+    app: book-search
+  ports:
+    - name: grpc
+      port: 50057
+      targetPort: 50057

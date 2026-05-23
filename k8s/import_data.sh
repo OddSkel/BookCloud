@@ -58,7 +58,7 @@ start_port_forward() {
       return 0
     fi
 
-    if ! kill -0 "${PORT_FORWARD_PIDS[-1]}" >/dev/null 2>&1; then
+  if ! kill -0 "${PORT_FORWARD_PIDS[${#PORT_FORWARD_PIDS[@]}-1]}" >/dev/null 2>&1; then
       cat "$log_file" >&2
       rm -f "$log_file"
       echo "Error: failed to start port-forward for service '$service'." >&2
@@ -95,7 +95,7 @@ import_service() {
     --schema public \
     --chunk-size "$CHUNK_SIZE" \
     --create-tables \
-    "${drop_flag[@]}"
+    ${drop_flag[@]+"${drop_flag[@]}"}
 }
 
 trap cleanup EXIT

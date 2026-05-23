@@ -16,6 +16,7 @@ from dotenv import load_dotenv
 from generated_protos.genre_service_pb2 import (
     Genre,
     BookGenre,
+    BookGenreInfo,
     GenreWithRating,
     GetGenresResponse,
     AddGenreResponse,

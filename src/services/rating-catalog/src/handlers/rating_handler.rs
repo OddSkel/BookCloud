@@ -52,7 +52,7 @@ pub async fn get_books_by_rating(
 ) -> Result<Vec<Rating>, sqlx::Error> {
     let offset = (page_num - 1) * page_size;
     let ratings: Vec<Rating> = sqlx::query_as::<_, Rating>(
-        "SELECT book_isbn, num_ratings, star_rating FROM ratings WHERE star_rating >= $1 ORDER BY star_rating DESC LIMIT $2 OFFSET $3"
+        "SELECT book_isbn, num_ratings, star_rating FROM rating WHERE star_rating >= $1 ORDER BY star_rating DESC LIMIT $2 OFFSET $3"
     )
     .bind(min_rating)
     .bind(page_size)
@@ -70,7 +70,7 @@ pub async fn get_books_by_popularity(
 ) -> Result<Vec<Rating>, sqlx::Error> {
     let offset = (page_num - 1) * page_size;
     let ratings: Vec<Rating> = sqlx::query_as::<_, Rating>(
-        "SELECT book_isbn, num_ratings, star_rating FROM ratings WHERE num_ratings >= $1 ORDER BY num_ratings DESC LIMIT $2 OFFSET $3"
+        "SELECT book_isbn, num_ratings, star_rating FROM rating WHERE num_ratings >= $1 ORDER BY num_ratings DESC LIMIT $2 OFFSET $3"
     )
     .bind(min_num_ratings)
     .bind(page_size)
