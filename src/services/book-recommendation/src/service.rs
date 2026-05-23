@@ -88,8 +88,8 @@ mod tests {
             _req: Request<HealthCheckRequest>,
         ) -> Result<Response<HealthCheckResponse>, Status> {
             Ok(Response::new(HealthCheckResponse {
+                service: "book-recommendation".into(),
                 status: "SERVING".into(),
-                ..Default::default()
             }))
         }
 
@@ -100,10 +100,7 @@ mod tests {
             if self.fail {
                 return Err(self.handler_err());
             }
-            Ok(Response::new(BookRecommendationResponse {
-                books: vec![],
-                ..Default::default()
-            }))
+            Ok(Response::new(BookRecommendationResponse { books: vec![] }))
         }
     }
 
@@ -128,7 +125,6 @@ mod tests {
             popularity: Some(100.0),
             page: Some(1),
             page_size: Some(10),
-            ..Default::default()
         };
         let resp = TestService::ok()
             .book_recommendation(Request::new(query))
