@@ -62,8 +62,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     Server::builder()
         .add_service(
-            AuthorAnalyticsGrpcServer::new(svc)
-                .max_encoding_message_size(64 * 1024 * 1024)  // 64 MB
+            AuthorAnalyticsGrpcServer::new(svc).max_encoding_message_size(64 * 1024 * 1024), // 64 MB
         )
         .serve(grpc_addr)
         .await?;

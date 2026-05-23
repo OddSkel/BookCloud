@@ -41,7 +41,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     Server::builder()
         .add_service(AuthorCatalogGrpcServer::new(AuthorCatalogService::new(
-            pool, redis_conn, config.cache_ttl_seconds,
+            pool,
+            redis_conn,
+            config.cache_ttl_seconds,
         )))
         .serve(address)
         .await

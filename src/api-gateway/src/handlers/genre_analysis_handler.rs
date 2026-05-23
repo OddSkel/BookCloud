@@ -23,7 +23,10 @@ pub async fn get_genres(
 ) -> impl Responder {
     let q = query.into_inner();
 
-    match registry.get_genres(q.sort_by, q.ascending, q.page_num, q.page_size).await {
+    match registry
+        .get_genres(q.sort_by, q.ascending, q.page_num, q.page_size)
+        .await
+    {
         Ok(genres) => HttpResponse::Ok().json(genres),
         Err(error) => crate::utils::map_genre_error(error),
     }
@@ -39,10 +42,7 @@ pub async fn add_genre(
     }
 }
 
-pub async fn get_genre(
-    registry: web::Data<GrpcRegistry>,
-    path: web::Path<i64>,
-) -> impl Responder {
+pub async fn get_genre(registry: web::Data<GrpcRegistry>, path: web::Path<i64>) -> impl Responder {
     match registry.get_genre(path.into_inner()).await {
         Ok(genre) => HttpResponse::Ok().json(genre),
         Err(error) => crate::utils::map_genre_error(error),
@@ -81,7 +81,10 @@ pub async fn get_genre_growth(
     let genre_id = path.into_inner();
     let q = query.into_inner();
 
-    match registry.get_genre_growth(genre_id, q.year_from, q.year_to).await {
+    match registry
+        .get_genre_growth(genre_id, q.year_from, q.year_to)
+        .await
+    {
         Ok(payload) => HttpResponse::Ok().json(payload),
         Err(error) => crate::utils::map_genre_error(error),
     }
@@ -95,9 +98,11 @@ pub async fn get_genre_popularity(
     let genre_id = path.into_inner();
     let q = query.into_inner();
 
-    match registry.get_genre_popularity(genre_id, q.year_from, q.year_to).await {
+    match registry
+        .get_genre_popularity(genre_id, q.year_from, q.year_to)
+        .await
+    {
         Ok(payload) => HttpResponse::Ok().json(payload),
         Err(error) => crate::utils::map_genre_error(error),
     }
 }
-

@@ -22,7 +22,11 @@ pub struct AuthorCatalogService {
 
 impl AuthorCatalogService {
     pub fn new(pool: PgPool, redis: ConnectionManager, cache_ttl_seconds: u64) -> Self {
-        Self { pool, redis, cache_ttl_seconds }
+        Self {
+            pool,
+            redis,
+            cache_ttl_seconds,
+        }
     }
 }
 
@@ -48,7 +52,10 @@ impl AuthorCatalogGrpc for AuthorCatalogService {
             let params = request.into_inner();
 
             let response = author_handler::get_authors(
-                &self.pool, &self.redis, &params, self.cache_ttl_seconds,
+                &self.pool,
+                &self.redis,
+                &params,
+                self.cache_ttl_seconds,
             )
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
@@ -254,8 +261,12 @@ mod tests {
     }
 
     impl TestService {
-        fn ok() -> Self   { Self { fail: false } }
-        fn fail() -> Self { Self { fail: true  } }
+        fn ok() -> Self {
+            Self { fail: false }
+        }
+        fn fail() -> Self {
+            Self { fail: true }
+        }
 
         fn db_err(&self) -> Status {
             Status::internal("db error")
@@ -279,10 +290,14 @@ mod tests {
             &self,
             _req: Request<GetAuthorsRequest>,
         ) -> Result<Response<GetAuthorsResponse>, Status> {
-            if self.fail { return Err(self.db_err()); }
+            if self.fail {
+                return Err(self.db_err());
+            }
             Ok(Response::new(GetAuthorsResponse {
-                authors: vec![ProtoAuthor { author_id: 1, name: "Alice".into() }],
-                ..Default::default()
+                authors: vec![ProtoAuthor {
+                    author_id: 1,
+                    name: "Alice".into(),
+                }],
             }))
         }
 
@@ -292,11 +307,15 @@ mod tests {
             &self,
             req: Request<AddAuthorRequest>,
         ) -> Result<Response<AddAuthorResponse>, Status> {
-            if self.fail { return Err(self.db_err()); }
+            if self.fail {
+                return Err(self.db_err());
+            }
             let p = req.into_inner();
             Ok(Response::new(AddAuthorResponse {
-                author: Some(ProtoAuthor { author_id: p.author_id, name: p.name }),
-                ..Default::default()
+                author: Some(ProtoAuthor {
+                    author_id: p.author_id,
+                    name: p.name,
+                }),
             }))
         }
 
@@ -306,11 +325,15 @@ mod tests {
             &self,
             req: Request<UpdateAuthorRequest>,
         ) -> Result<Response<UpdateAuthorResponse>, Status> {
-            if self.fail { return Err(self.db_err()); }
+            if self.fail {
+                return Err(self.db_err());
+            }
             let p = req.into_inner();
             Ok(Response::new(UpdateAuthorResponse {
-                authors: vec![ProtoAuthor { author_id: p.author_id, name: p.name.unwrap_or_default() }],
-                ..Default::default()
+                authors: vec![ProtoAuthor {
+                    author_id: p.author_id,
+                    name: p.name.unwrap_or_default(),
+                }],
             }))
         }
 
@@ -320,7 +343,9 @@ mod tests {
             &self,
             _req: Request<DeleteAuthorRequest>,
         ) -> Result<Response<AuthorDeleteResponse>, Status> {
-            if self.fail { return Err(self.db_err()); }
+            if self.fail {
+                return Err(self.db_err());
+            }
             Ok(Response::new(AuthorDeleteResponse {
                 sucessful: true,
                 ..Default::default()
@@ -333,11 +358,15 @@ mod tests {
             &self,
             req: Request<GetAuthorRequest>,
         ) -> Result<Response<GetAuthorResponse>, Status> {
-            if self.fail { return Err(self.db_err()); }
+            if self.fail {
+                return Err(self.db_err());
+            }
             let p = req.into_inner();
             Ok(Response::new(GetAuthorResponse {
-                author: Some(ProtoAuthor { author_id: p.author_id, name: "Alice".into() }),
-                ..Default::default()
+                author: Some(ProtoAuthor {
+                    author_id: p.author_id,
+                    name: "Alice".into(),
+                }),
             }))
         }
 
@@ -347,11 +376,15 @@ mod tests {
             &self,
             req: Request<GetAuthorsByNameRequest>,
         ) -> Result<Response<GetAuthorsResponse>, Status> {
-            if self.fail { return Err(self.db_err()); }
+            if self.fail {
+                return Err(self.db_err());
+            }
             let p = req.into_inner();
             Ok(Response::new(GetAuthorsResponse {
-                authors: vec![ProtoAuthor { author_id: 1, name: p.name }],
-                ..Default::default()
+                authors: vec![ProtoAuthor {
+                    author_id: 1,
+                    name: p.name,
+                }],
             }))
         }
     }
@@ -403,7 +436,6 @@ mod tests {
             .add_author(Request::new(AddAuthorRequest {
                 author_id: 42,
                 name: "Bob".into(),
-                ..Default::default()
             }))
             .await
             .unwrap();
@@ -429,11 +461,15 @@ mod tests {
             .update_author(Request::new(UpdateAuthorRequest {
                 author_id: 7,
                 name: Some("Updated".to_string()),
-                ..Default::default()
             }))
             .await
             .unwrap();
-        let author = resp.into_inner().authors.into_iter().next().expect("expected one author");
+        let author = resp
+            .into_inner()
+            .authors
+            .into_iter()
+            .next()
+            .expect("expected one author");
         assert_eq!(author.author_id, 7);
         assert_eq!(author.name, "Updated");
     }
@@ -452,10 +488,7 @@ mod tests {
     #[tokio::test]
     async fn delete_author_returns_success_true() {
         let resp = TestService::ok()
-            .delete_author(Request::new(DeleteAuthorRequest {
-                author_id: 3,
-                ..Default::default()
-            }))
+            .delete_author(Request::new(DeleteAuthorRequest { author_id: 3 }))
             .await
             .unwrap();
         assert!(resp.into_inner().sucessful);
@@ -475,10 +508,7 @@ mod tests {
     #[tokio::test]
     async fn get_author_returns_correct_author() {
         let resp = TestService::ok()
-            .get_author(Request::new(GetAuthorRequest {
-                author_id: 1,
-                ..Default::default()
-            }))
+            .get_author(Request::new(GetAuthorRequest { author_id: 1 }))
             .await
             .unwrap();
         let author = resp.into_inner().author.expect("expected Some(Author)");
@@ -502,7 +532,6 @@ mod tests {
         let resp = TestService::ok()
             .get_authors_by_name(Request::new(GetAuthorsByNameRequest {
                 name: "Alice".into(),
-                ..Default::default()
             }))
             .await
             .unwrap();

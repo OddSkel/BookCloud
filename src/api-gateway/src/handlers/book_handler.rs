@@ -1,12 +1,11 @@
 use actix_web::{HttpRequest, HttpResponse, Responder, web};
 
-
 use crate::grpc::{BookAddPayload, GrpcRegistry};
 
 pub async fn get_books(registry: web::Data<GrpcRegistry>) -> impl Responder {
     match registry.get_books(None, None).await {
         Ok(books) => HttpResponse::Ok().json(books),
-        Err(e)    => crate::utils::map_error(e),
+        Err(e) => crate::utils::map_error(e),
     }
 }
 
@@ -16,7 +15,7 @@ pub async fn get_book(
 ) -> impl Responder {
     match registry.get_book(&path.into_inner()).await {
         Ok(book) => HttpResponse::Ok().json(book),
-        Err(e)   => crate::utils::map_error(e),
+        Err(e) => crate::utils::map_error(e),
     }
 }
 
@@ -26,7 +25,7 @@ pub async fn add_book(
 ) -> impl Responder {
     match registry.add_book(body.into_inner()).await {
         Ok(book) => HttpResponse::Created().json(book),
-        Err(e)   => crate::utils::map_error(e),
+        Err(e) => crate::utils::map_error(e),
     }
 }
 
@@ -43,7 +42,7 @@ pub async fn update_book(
 
     match registry.update_book(isbn, body.into_inner()).await {
         Ok(books) => HttpResponse::Ok().json(books),
-        Err(e)    => crate::utils::map_error(e),
+        Err(e) => crate::utils::map_error(e),
     }
 }
 
@@ -52,7 +51,7 @@ pub async fn delete_book(
     path: web::Path<String>,
 ) -> impl Responder {
     match registry.delete_book(&path.into_inner()).await {
-        Ok(_)  => HttpResponse::NoContent().finish(),
+        Ok(_) => HttpResponse::NoContent().finish(),
         Err(e) => crate::utils::map_error(e),
     }
 }
