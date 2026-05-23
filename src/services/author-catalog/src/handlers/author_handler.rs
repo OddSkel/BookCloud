@@ -3,10 +3,10 @@ use crate::grpc::contracts::author_catalog::{
     GetAuthorRequest, GetAuthorResponse, GetAuthorsByNameRequest, GetAuthorsRequest,
     GetAuthorsResponse, UpdateAuthorRequest, UpdateAuthorResponse,
 };
-use redis::aio::ConnectionManager;
-use redis::AsyncCommands;
-use anyhow::Result;
 use crate::models::author::Author as Model_Author;
+use anyhow::Result;
+use redis::AsyncCommands;
+use redis::aio::ConnectionManager;
 use sqlx::PgPool;
 
 const DEFAULT_PAGE_SIZE: i64 = 10;
@@ -23,7 +23,10 @@ pub async fn get_authors(
 
     let authors_cache = format!("authors: page:{}:page_size:{}", pages, pages_size);
 
-    if let Some(cache) = redis.get::<_, Option<String>>(authors_cache.clone()).await? {
+    if let Some(cache) = redis
+        .get::<_, Option<String>>(authors_cache.clone())
+        .await?
+    {
         let cached_authors: Vec<ProtoAuthor> = serde_json::from_str(&cache)?;
         return Ok(GetAuthorsResponse {
             authors: cached_authors,
@@ -38,18 +41,20 @@ pub async fn get_authors(
             .await?;
 
     let proto_authors: Vec<ProtoAuthor> = all_authors
-    .into_iter()
-    .map(|a| ProtoAuthor {
-        author_id: a.author_id,
-        name: a.name,
-    })
-    .collect();
+        .into_iter()
+        .map(|a| ProtoAuthor {
+            author_id: a.author_id,
+            name: a.name,
+        })
+        .collect();
 
     let serialized = serde_json::to_string(&proto_authors)?;
-    let _: () = redis.set_ex(authors_cache.clone(), serialized, cache_ttl_seconds).await?;
+    let _: () = redis
+        .set_ex(authors_cache.clone(), serialized, cache_ttl_seconds)
+        .await?;
 
     Ok(GetAuthorsResponse {
-        authors: proto_authors
+        authors: proto_authors,
     })
 }
 
@@ -127,10 +132,7 @@ pub async fn delete_author(
     pool: &PgPool,
     params: DeleteAuthorRequest,
 ) -> Result<AuthorDeleteResponse, sqlx::Error> {
-    let author_id = params
-        .author_id
-        .parse::<i64>()
-        .map_err(|_| sqlx::Error::Protocol("Invalid author_id".to_string()))?;
+    let author_id = params.author_id;
 
     let deleted_author =
         sqlx::query_as::<_, Model_Author>("DELETE FROM author WHERE author_id = $1 RETURNING *")
@@ -154,10 +156,7 @@ pub async fn get_author(
     pool: &PgPool,
     params: GetAuthorRequest,
 ) -> Result<GetAuthorResponse, sqlx::Error> {
-    let author_id = params
-        .author_id
-        .parse::<i64>()
-        .map_err(|_| sqlx::Error::Protocol("Invalid author_id".to_string()))?;
+    let author_id = params.author_id;
 
     let get_author = sqlx::query_as::<_, Model_Author>("SELECT * FROM author WHERE author_id = $1")
         .bind(author_id)

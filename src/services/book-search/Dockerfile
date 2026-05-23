@@ -57,7 +57,6 @@ RUN apt-get update && apt-get install -y \
 
 RUN useradd -ms /bin/bash appuser
 
-# Binary is now under the workspace target
 COPY --from=builder /app/target/release/book-search /usr/local/bin/book-search
 
 RUN chown appuser:appuser /usr/local/bin/book-search

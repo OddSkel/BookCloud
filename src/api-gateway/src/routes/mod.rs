@@ -1,14 +1,10 @@
 use actix_web::web;
 
 use self::{
-    author_analytics_routes::author_analytics_routes,
-    author_catalog_routes::author_routes,
-    book_catalog_routes::book_routes,
-    book_recommendation_route::book_recommendation_routes,
-    book_search_route::book_search_routes,
-    compare_service_routes::compare_routes,
-    health_routes::health_routes,
-    genre_analysis_routes::genre_analysis_routes,
+    author_analytics_routes::author_analytics_routes, author_catalog_routes::author_routes,
+    book_catalog_routes::book_routes, book_recommendation_route::book_recommendation_routes,
+    book_search_route::book_search_routes, compare_service_routes::compare_routes,
+    genre_analysis_routes::genre_analysis_routes, health_routes::health_routes,
     rating_catalog_routes::rating_routes,
 };
 

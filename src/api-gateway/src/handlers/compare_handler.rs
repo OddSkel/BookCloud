@@ -62,7 +62,11 @@ pub async fn popular_low_rated(
     {
         Ok(payload) => HttpResponse::Ok().json(payload),
         Err(e) => {
-            let safe = if e.len() > 200 { "Upstream service error".to_string() } else { e };
+            let safe = if e.len() > 200 {
+                "Upstream service error".to_string()
+            } else {
+                e
+            };
             crate::utils::map_error(safe)
         }
     }
@@ -75,7 +79,11 @@ pub async fn hidden_gems(
     match registry.get_hidden_gems(query.into_inner().into()).await {
         Ok(payload) => HttpResponse::Ok().json(payload),
         Err(e) => {
-            let safe = if e.len() > 200 { "Upstream service error".to_string() } else { e };
+            let safe = if e.len() > 200 {
+                "Upstream service error".to_string()
+            } else {
+                e
+            };
             crate::utils::map_error(safe)
         }
     }
@@ -88,7 +96,11 @@ pub async fn correlation(
     match registry.get_correlation(query.into_inner().into()).await {
         Ok(payload) => HttpResponse::Ok().json(payload),
         Err(e) => {
-            let safe = if e.len() > 200 { "Upstream service error".to_string() } else { e };
+            let safe = if e.len() > 200 {
+                "Upstream service error".to_string()
+            } else {
+                e
+            };
             crate::utils::map_error(safe)
         }
     }
@@ -104,7 +116,11 @@ pub async fn publishing_growth(
     {
         Ok(payload) => HttpResponse::Ok().json(payload),
         Err(e) => {
-            let safe = if e.len() > 200 { "Upstream service error".to_string() } else { e };
+            let safe = if e.len() > 200 {
+                "Upstream service error".to_string()
+            } else {
+                e
+            };
             crate::utils::map_error(safe)
         }
     }
@@ -117,7 +133,11 @@ pub async fn eras(
     match registry.get_eras(query.into_inner().into()).await {
         Ok(payload) => HttpResponse::Ok().json(payload),
         Err(e) => {
-            let safe = if e.len() > 200 { "Upstream service error".to_string() } else { e };
+            let safe = if e.len() > 200 {
+                "Upstream service error".to_string()
+            } else {
+                e
+            };
             crate::utils::map_error(safe)
         }
     }

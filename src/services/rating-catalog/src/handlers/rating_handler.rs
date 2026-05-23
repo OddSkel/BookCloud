@@ -54,13 +54,13 @@ pub async fn get_books_by_rating(
     page_size: i32,
 ) -> Result<Vec<Rating>, sqlx::Error> {
     let offset = (page_num - 1) * page_size;
-    let ratings: Vec<Rating> = sqlx::query_as::<_, Rating>(BOOKS_BY_RATING_QUERY)
+
+    sqlx::query_as::<_, Rating>(BOOKS_BY_RATING_QUERY)
         .bind(min_rating)
         .bind(page_size)
         .bind(offset)
         .fetch_all(pool)
-        .await?;
-    Ok(ratings)
+        .await
 }
 
 pub async fn get_books_by_popularity(
@@ -70,11 +70,11 @@ pub async fn get_books_by_popularity(
     page_size: i32,
 ) -> Result<Vec<Rating>, sqlx::Error> {
     let offset = (page_num - 1) * page_size;
-    let ratings: Vec<Rating> = sqlx::query_as::<_, Rating>(BOOKS_BY_POPULARITY_QUERY)
+
+    sqlx::query_as::<_, Rating>(BOOKS_BY_POPULARITY_QUERY)
         .bind(min_num_ratings)
         .bind(page_size)
         .bind(offset)
         .fetch_all(pool)
-        .await?;
-    Ok(ratings)
+        .await
 }

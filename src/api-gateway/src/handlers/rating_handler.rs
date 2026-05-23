@@ -17,7 +17,7 @@ pub async fn get_ratings(
 
     match registry.get_ratings(q.page_number, q.page_size).await {
         Ok(ratings) => HttpResponse::Ok().json(ratings),
-        Err(e)      => crate::utils::map_error(e),
+        Err(e) => crate::utils::map_error(e),
     }
 }
 
@@ -27,7 +27,7 @@ pub async fn get_rating(
 ) -> impl Responder {
     match registry.get_rating(&path.into_inner()).await {
         Ok(rating) => HttpResponse::Ok().json(rating),
-        Err(e)      => crate::utils::map_error(e),
+        Err(e) => crate::utils::map_error(e),
     }
 }
 
@@ -41,7 +41,7 @@ pub async fn add_rating(
         .await
     {
         Ok(rating) => HttpResponse::Created().json(rating),
-        Err(e)     => crate::utils::map_error(e),
+        Err(e) => crate::utils::map_error(e),
     }
 }
 
@@ -57,7 +57,7 @@ pub async fn update_rating(
         .await
     {
         Ok(ratings) => HttpResponse::Ok().json(ratings),
-        Err(e)      => crate::utils::map_error(e),
+        Err(e) => crate::utils::map_error(e),
     }
 }
 
@@ -66,7 +66,7 @@ pub async fn delete_rating(
     path: web::Path<String>,
 ) -> impl Responder {
     match registry.delete_rating(&path.into_inner()).await {
-        Ok(_)  => HttpResponse::NoContent().finish(),
+        Ok(_) => HttpResponse::NoContent().finish(),
         Err(e) => crate::utils::map_error(e),
     }
 }

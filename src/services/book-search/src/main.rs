@@ -1,12 +1,15 @@
 use config::AppConfig;
 use tonic::transport::Server;
 
-use crate::{grpc::contracts::book_search::book_search_grpc_server::BookSearchGrpcServer, service::BookSearchService};
+use crate::{
+    grpc::contracts::book_search::book_search_grpc_server::BookSearchGrpcServer,
+    service::BookSearchService,
+};
 
 mod config;
 mod grpc;
-mod service;
 mod handlers;
+mod service;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -14,7 +17,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let config = AppConfig::from_env();
     let address = config.grpc_address()?;
-    
+
     println!("{} gRPC started on {}", config.service_name, address);
 
     Server::builder()

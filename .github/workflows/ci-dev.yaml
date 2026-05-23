@@ -18,6 +18,7 @@ jobs:
           - rating-catalog
           - author-analytics-service
           - book-recommendation
+          - author-catalog
 
     steps:
       - name: Checkout repository

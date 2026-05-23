@@ -1,54 +1,54 @@
-use sqlx::PgPool;
 use crate::models::{AuthorBookRow, RankedAuthorRow};
+use sqlx::PgPool;
 
 #[derive(Clone)]
 pub struct AuthorAnalyticsDb {
-    book_pool:   PgPool,
+    book_pool: PgPool,
     rating_pool: PgPool,
     author_pool: PgPool,
 }
 
 #[derive(sqlx::FromRow)]
 struct BookRow {
-    isbn:     i64,
+    isbn: i64,
     pub_year: Option<i32>,
 }
 
 #[derive(sqlx::FromRow)]
 struct RatingRow {
-    book_isbn:   i64,
+    book_isbn: i64,
     star_rating: Option<f64>,
     num_ratings: Option<i64>,
 }
 
 #[derive(sqlx::FromRow)]
 struct AuthorRow {
-    author_id:   i64,
+    author_id: i64,
     author_name: String,
-    book_isbn:   i64,
+    book_isbn: i64,
 }
 
 impl AuthorAnalyticsDb {
     pub fn new(book_pool: PgPool, rating_pool: PgPool, author_pool: PgPool) -> Self {
-        Self { book_pool, rating_pool, author_pool }
+        Self {
+            book_pool,
+            rating_pool,
+            author_pool,
+        }
     }
 
     // ── helpers ───────────────────────────────────────────────────────────────
 
     async fn fetch_all_books(&self) -> Result<Vec<BookRow>, sqlx::Error> {
-        sqlx::query_as::<_, BookRow>(
-            "SELECT isbn, pub_year FROM book ORDER BY isbn LIMIT 5000",
-        )
-        .fetch_all(&self.book_pool)
-        .await
+        sqlx::query_as::<_, BookRow>("SELECT isbn, pub_year FROM book ORDER BY isbn LIMIT 5000")
+            .fetch_all(&self.book_pool)
+            .await
     }
 
     async fn fetch_all_ratings(&self) -> Result<Vec<RatingRow>, sqlx::Error> {
-        sqlx::query_as::<_, RatingRow>(
-            "SELECT book_isbn, star_rating, num_ratings FROM rating",
-        )
-        .fetch_all(&self.rating_pool)
-        .await
+        sqlx::query_as::<_, RatingRow>("SELECT book_isbn, star_rating, num_ratings FROM rating")
+            .fetch_all(&self.rating_pool)
+            .await
     }
 
     async fn fetch_all_author_books(&self) -> Result<Vec<AuthorRow>, sqlx::Error> {
@@ -65,19 +65,18 @@ impl AuthorAnalyticsDb {
 
     async fn full_join(
         &self,
-        author_name:   Option<&str>,
-        author_id:     Option<i32>,
+        author_name: Option<&str>,
+        author_id: Option<i32>,
         pub_year_from: Option<i32>,
-        pub_year_to:   Option<i32>,
+        pub_year_to: Option<i32>,
     ) -> Result<Vec<AuthorBookRow>, sqlx::Error> {
         use std::collections::HashMap;
 
-        let books        = self.fetch_all_books().await?;
-        let ratings      = self.fetch_all_ratings().await?;
+        let books = self.fetch_all_books().await?;
+        let ratings = self.fetch_all_ratings().await?;
         let author_books = self.fetch_all_author_books().await?;
 
-        let book_map: HashMap<i64, &BookRow> =
-            books.iter().map(|b| (b.isbn, b)).collect();
+        let book_map: HashMap<i64, &BookRow> = books.iter().map(|b| (b.isbn, b)).collect();
         let rating_map: HashMap<i64, &RatingRow> =
             ratings.iter().map(|r| (r.book_isbn, r)).collect();
 
@@ -87,40 +86,38 @@ impl AuthorAnalyticsDb {
                 let b = book_map.get(&ab.book_isbn)?;
                 let r = rating_map.get(&ab.book_isbn)?;
                 Some(AuthorBookRow {
-                    author_id:   ab.author_id as i32,
+                    author_id: ab.author_id as i32,
                     author_name: ab.author_name.clone(),
-                    book_isbn:   ab.book_isbn,
-                    book_name:   String::new(),
-                    pub_year:    b.pub_year.unwrap_or(0),
+                    book_isbn: ab.book_isbn,
+                    book_name: String::new(),
+                    pub_year: b.pub_year.unwrap_or(0),
                     star_rating: r.star_rating.unwrap_or(0.0),
                     num_ratings: r.num_ratings.unwrap_or(0),
-                    genre_name:  None,
+                    genre_name: None,
                 })
             })
             .collect();
-            if let Some(name) = author_name {
-                let lower = name.to_lowercase();
-                rows.retain(|r| r.author_name.to_lowercase().contains(&lower));
-            }
-            if let Some(id) = author_id {
-                rows.retain(|r| r.author_id == id);
-            }
-            if let Some(from) = pub_year_from {
-                rows.retain(|r| r.pub_year >= from);
-            }
-            if let Some(to) = pub_year_to {
-                rows.retain(|r| r.pub_year <= to);
-            }
-
-            rows.sort_by_key(|r| r.pub_year);
-            Ok(rows)
+        if let Some(name) = author_name {
+            let lower = name.to_lowercase();
+            rows.retain(|r| r.author_name.to_lowercase().contains(&lower));
         }
+        if let Some(id) = author_id {
+            rows.retain(|r| r.author_id == id);
+        }
+        if let Some(from) = pub_year_from {
+            rows.retain(|r| r.pub_year >= from);
+        }
+        if let Some(to) = pub_year_to {
+            rows.retain(|r| r.pub_year <= to);
+        }
+
+        rows.sort_by_key(|r| r.pub_year);
+        Ok(rows)
+    }
     // ── public query methods (same signatures as before) ─────────────────────
     // ── public query methods ──────────────────────────────────────────────────
 
-    pub async fn rank_authors_by_avg_rating(
-        &self,
-    ) -> Result<Vec<RankedAuthorRow>, sqlx::Error> {
+    pub async fn rank_authors_by_avg_rating(&self) -> Result<Vec<RankedAuthorRow>, sqlx::Error> {
         use std::collections::HashMap;
         let rows = self.full_join(None, None, None, None).await?;
 
@@ -137,22 +134,25 @@ impl AuthorAnalyticsDb {
 
         let mut results: Vec<RankedAuthorRow> = per_author
             .into_iter()
-            .map(|((id, name), (sum, total_ratings, count))| RankedAuthorRow {
-                author_id:      id,
-                author_name:    name,
-                average_rating: sum / count as f64,
-                total_ratings,
-            })
+            .map(
+                |((id, name), (sum, total_ratings, count))| RankedAuthorRow {
+                    author_id: id,
+                    author_name: name,
+                    average_rating: sum / count as f64,
+                    total_ratings,
+                },
+            )
             .collect();
 
-        results.sort_by(|a, b| b.average_rating.partial_cmp(&a.average_rating)
-            .unwrap_or(std::cmp::Ordering::Equal));
+        results.sort_by(|a, b| {
+            b.average_rating
+                .partial_cmp(&a.average_rating)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         Ok(results)
     }
 
-    pub async fn rank_authors_by_total_ratings(
-        &self,
-    ) -> Result<Vec<RankedAuthorRow>, sqlx::Error> {
+    pub async fn rank_authors_by_total_ratings(&self) -> Result<Vec<RankedAuthorRow>, sqlx::Error> {
         use std::collections::HashMap;
         let rows = self.full_join(None, None, None, None).await?;
 
@@ -168,12 +168,14 @@ impl AuthorAnalyticsDb {
 
         let mut results: Vec<RankedAuthorRow> = per_author
             .into_iter()
-            .map(|((id, name), (sum, total_ratings, count))| RankedAuthorRow {
-                author_id:      id,
-                author_name:    name,
-                average_rating: sum / count as f64,
-                total_ratings,
-            })
+            .map(
+                |((id, name), (sum, total_ratings, count))| RankedAuthorRow {
+                    author_id: id,
+                    author_name: name,
+                    average_rating: sum / count as f64,
+                    total_ratings,
+                },
+            )
             .collect();
 
         results.sort_by_key(|item| std::cmp::Reverse(item.total_ratings));
@@ -182,18 +184,19 @@ impl AuthorAnalyticsDb {
 
     pub async fn author_books_with_ratings(
         &self,
-        author_name:   Option<&str>,
-        author_id:     Option<i32>,
+        author_name: Option<&str>,
+        author_id: Option<i32>,
         pub_year_from: Option<i32>,
-        pub_year_to:   Option<i32>,
+        pub_year_to: Option<i32>,
     ) -> Result<Vec<AuthorBookRow>, sqlx::Error> {
-        self.full_join(author_name, author_id, pub_year_from, pub_year_to).await
+        self.full_join(author_name, author_id, pub_year_from, pub_year_to)
+            .await
     }
 
     pub async fn author_rating_per_book(
         &self,
         author_name: Option<&str>,
-        author_id:   Option<i32>,
+        author_id: Option<i32>,
     ) -> Result<Vec<AuthorBookRow>, sqlx::Error> {
         self.full_join(author_name, author_id, None, None).await
     }
@@ -201,7 +204,7 @@ impl AuthorAnalyticsDb {
     pub async fn author_books_chronological(
         &self,
         author_name: Option<&str>,
-        author_id:   Option<i32>,
+        author_id: Option<i32>,
     ) -> Result<Vec<AuthorBookRow>, sqlx::Error> {
         self.full_join(author_name, author_id, None, None).await
     }

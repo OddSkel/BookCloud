@@ -1,6 +1,6 @@
-use redis::aio::ConnectionManager;
-use redis::AsyncCommands;
 use anyhow::Result;
+use redis::AsyncCommands;
+use redis::aio::ConnectionManager;
 use sqlx::PgPool;
 
 use crate::models::rating::Rating;
@@ -20,7 +20,10 @@ pub async fn get_ratings_query(
 
     let ratings_cache = format!("ratings: page:{}:page_size:{}", limit, offset);
 
-    if let Some(cache) = redis.get::<_, Option<String>>(ratings_cache.clone()).await? {
+    if let Some(cache) = redis
+        .get::<_, Option<String>>(ratings_cache.clone())
+        .await?
+    {
         let cached_ratings: Vec<Rating> = serde_json::from_str(&cache)?;
         return Ok(cached_ratings);
     }
@@ -43,7 +46,9 @@ pub async fn get_ratings_query(
     .await?;
 
     let serialized = serde_json::to_string(&ratings)?;
-    let _: () = redis.set_ex(ratings_cache.clone(), serialized, cache_ttl_seconds).await?;
+    let _: () = redis
+        .set_ex(ratings_cache.clone(), serialized, cache_ttl_seconds)
+        .await?;
 
     Ok(ratings)
 }

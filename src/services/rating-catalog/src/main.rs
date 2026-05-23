@@ -1,8 +1,8 @@
 use config::AppConfig;
 use grpc::contracts::rating_catalog::rating_catalog_grpc_server::RatingCatalogGrpcServer;
+use redis::Client;
 use service::RatingCatalogService;
 use tonic::transport::Server;
-use redis::Client;
 
 const RATING_GRPC_MESSAGE_SIZE_LIMIT: usize = 128 * 1024 * 1024;
 
@@ -31,8 +31,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await
         .expect("Failed to connect to PostgreSQL");
 
-    let redis_client = Client::open(config.redis_url.as_str())
-        .expect("Failed to create Redis client");
+    let redis_client =
+        Client::open(config.redis_url.as_str()).expect("Failed to create Redis client");
     let redis_conn = redis_client
         .get_connection_manager()
         .await
@@ -41,7 +41,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Server::builder()
         .add_service(
             RatingCatalogGrpcServer::new(RatingCatalogService::new(
-                config.service_name.clone(),
                 pool,
                 redis_conn,
                 config.cache_ttl_seconds,

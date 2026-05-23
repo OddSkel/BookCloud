@@ -38,4 +38,3 @@ fn read_port(key: &str, default: u16) -> u16 {
         .and_then(|value| value.parse::<u16>().ok())
         .unwrap_or(default)
 }
-

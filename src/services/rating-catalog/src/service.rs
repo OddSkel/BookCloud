@@ -19,19 +19,12 @@ use crate::grpc::contracts::{
 };
 
 pub struct RatingCatalogService {
-    service_name: String,
     backend: Arc<dyn RatingCatalogBackend>,
 }
 
 impl RatingCatalogService {
-    pub fn new(
-        service_name: String,
-        pool: PgPool,
-        redis: ConnectionManager,
-        cache_ttl_seconds: u64,
-    ) -> Self {
+    pub fn new(pool: PgPool, redis: ConnectionManager, cache_ttl_seconds: u64) -> Self {
         Self {
-            service_name,
             backend: Arc::new(PostgresRatingCatalogBackend {
                 pool,
                 redis,
@@ -41,11 +34,8 @@ impl RatingCatalogService {
     }
 
     #[cfg(test)]
-    fn with_backend(service_name: String, backend: Arc<dyn RatingCatalogBackend>) -> Self {
-        Self {
-            service_name,
-            backend,
-        }
+    fn with_backend(backend: Arc<dyn RatingCatalogBackend>) -> Self {
+        Self { backend }
     }
 }
 
@@ -479,8 +469,9 @@ impl RatingCatalogGrpc for RatingCatalogService {
 mod tests {
     use super::*;
     use crate::grpc::contracts::rating_catalog::{
-        AddRatingRequest, DeleteRatingRequest, GetBooksByPopularityRequest, GetBooksByRatingRequest,
-        GetRatingRequest, GetRatingsRequest, RatingAdd, UpdateRatingRequest,
+        AddRatingRequest, DeleteRatingRequest, GetBooksByPopularityRequest,
+        GetBooksByRatingRequest, GetRatingRequest, GetRatingsRequest, RatingAdd,
+        UpdateRatingRequest,
     };
     use std::collections::HashMap;
     use std::sync::Mutex;
@@ -642,10 +633,7 @@ mod tests {
 
     fn service() -> (RatingCatalogService, Arc<FakeRatingBackend>) {
         let backend = FakeRatingBackend::seeded();
-        (
-            RatingCatalogService::with_backend("rating-catalog".to_string(), backend.clone()),
-            backend,
-        )
+        (RatingCatalogService::with_backend(backend.clone()), backend)
     }
 
     #[tokio::test]

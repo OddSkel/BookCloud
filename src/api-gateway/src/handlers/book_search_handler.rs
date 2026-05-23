@@ -1,6 +1,6 @@
-use actix_web::{web, HttpResponse, Responder};
-use serde::Deserialize;
 use crate::grpc::GrpcRegistry;
+use actix_web::{HttpResponse, Responder, web};
+use serde::Deserialize;
 
 #[derive(Deserialize)]
 pub struct SearchQuery {

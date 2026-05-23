@@ -16,6 +16,7 @@ pub mod contracts {
         tonic::include_proto!("gateway.bookcatalog");
     }
     pub mod author_catalog {
+        #![allow(dead_code)]
         tonic::include_proto!("gateway.authorcatalog");
     }
     pub mod rating_catalog {
@@ -31,9 +32,11 @@ pub mod contracts {
         tonic::include_proto!("gateway.authoranalytics");
     }
     pub mod book_search {
+        #![allow(dead_code)]
         tonic::include_proto!("gateway.book_search");
     }
     pub mod book_recommendation {
+        #![allow(dead_code)]
         tonic::include_proto!("gateway.book_recommendation");
     }
 }
@@ -51,8 +54,11 @@ use contracts::{
         AddBookRequest, BookAdd, DeleteBookRequest, GetBookRequest, GetBooksRequest,
         UpdateBookRequest, book_catalog_grpc_client::BookCatalogGrpcClient,
     },
+    book_recommendation::{
+        Query as BookRecommendationQuery,
+        book_recommendation_grpc_client::BookRecommendationGrpcClient,
+    },
     book_search::{Query as BookSearchQuery, book_search_grpc_client::BookSearchGrpcClient},
-    book_recommendation::{Query as BookRecommendationQuery, book_recommendation_grpc_client::BookRecommendationGrpcClient},
     common::HealthCheckRequest,
     compare_service::{
         CompareFilters, GetCorrelationRequest, GetErasRequest, GetHiddenGemsRequest,
@@ -271,7 +277,7 @@ impl CatalogService {
             Self::GenreAnalysis => "genreAnalysis",
             Self::AuthorAnalytics => "authorAnalytics",
             Self::BookSearch => "bookSearch",
-            Self::BookRecommendation => "bookRecommendation"
+            Self::BookRecommendation => "bookRecommendation",
         }
     }
     pub const fn env_var(self) -> &'static str {
@@ -283,7 +289,7 @@ impl CatalogService {
             Self::GenreAnalysis => "GENRE_ANALYSIS_GRPC_URL",
             Self::AuthorAnalytics => "AUTHOR_ANALYTICS_GRPC_URL",
             Self::BookSearch => "BOOK_SEARCH_GRPC_URL",
-            Self::BookRecommendation => "BOOK_RECOMMENDATION_GRPC_URL"
+            Self::BookRecommendation => "BOOK_RECOMMENDATION_GRPC_URL",
         }
     }
     pub const fn default_uri(self) -> &'static str {
@@ -294,8 +300,8 @@ impl CatalogService {
             Self::CompareService => "http://compare-service:50054",
             Self::GenreAnalysis => "http://genre-analysis-service:50055",
             Self::AuthorAnalytics => "http://author-analytics-service:50056",
-            Self::BookSearch => "http://book-search:50054",
-            Self::BookRecommendation => "http://book-recommendation:50055",
+            Self::BookSearch => "http://book-search:50057",
+            Self::BookRecommendation => "http://book-recommendation:50056",
         }
     }
 }
@@ -317,7 +323,7 @@ impl GrpcRegistry {
             CatalogService::GenreAnalysis,
             CatalogService::AuthorAnalytics,
             CatalogService::BookSearch,
-            CatalogService::BookRecommendation
+            CatalogService::BookRecommendation,
         ]
         .into_iter()
         .map(|svc| {
@@ -391,18 +397,21 @@ impl GrpcRegistry {
     }
 
     pub async fn get_book_recommendation(
-    &self,
-    filters: crate::handlers::book_rec_handler::SearchQuery,
+        &self,
+        filters: crate::handlers::book_rec_handler::SearchQuery,
     ) -> Result<serde_json::Value, String> {
-        let mut client = book_recommendation_client(self.endpoint(CatalogService::BookRecommendation)).await?;
+        let mut client =
+            book_recommendation_client(self.endpoint(CatalogService::BookRecommendation)).await?;
 
         let response = client
             .book_recommendation(Request::new(BookRecommendationQuery {
                 genre: filters.genre,
-                rating: filters.rating
+                rating: filters
+                    .rating
                     .as_deref()
                     .and_then(|s| s.parse::<f64>().ok()),
-                popularity: filters.popularity
+                popularity: filters
+                    .popularity
                     .as_deref()
                     .and_then(|s| s.parse::<f64>().ok()),
             }))
@@ -713,7 +722,11 @@ impl GrpcRegistry {
             .map(|r| r.into_inner())
             .map_err(|e| e.to_string())?;
 
-        Ok(response.genres.into_iter().map(genre_with_rating_to_model).collect())
+        Ok(response
+            .genres
+            .into_iter()
+            .map(genre_with_rating_to_model)
+            .collect())
     }
 
     pub async fn get_genre(&self, genre_id: i64) -> Result<GenreDetailModel, String> {
@@ -804,7 +817,11 @@ impl GrpcRegistry {
         Ok(GenreGrowthModel {
             genre_id,
             genre: genre.genre_name,
-            points: response.points.into_iter().map(genre_trend_point_to_model).collect(),
+            points: response
+                .points
+                .into_iter()
+                .map(genre_trend_point_to_model)
+                .collect(),
             avg_rating: response.avg_rating,
             total_num_ratings: response.total_num_ratings,
         })
@@ -831,7 +848,11 @@ impl GrpcRegistry {
         Ok(GenrePopularityModel {
             genre_id,
             genre: genre.genre_name,
-            points: response.points.into_iter().map(genre_trend_point_popularity_to_model).collect(),
+            points: response
+                .points
+                .into_iter()
+                .map(genre_trend_point_popularity_to_model)
+                .collect(),
             total_num_ratings: response.total_num_ratings,
             total_books: response.total_books,
         })

@@ -68,6 +68,16 @@ resources:
   - api-gateway/service.yaml
   - api-gateway/hpa.yaml
 
+  - book-search/configmap.yaml
+  - book-search/deployment.yaml
+  - book-search/service.yaml
+  - book-search/hpa.yaml
+
+  - book-recommendation/configmap.yaml
+  - book-recommendation/deployment.yaml
+  - book-recommendation/service.yaml
+  - book-recommendation/hpa.yaml
+
   - kong/configmap.yaml
   - kong/deployment.yaml
   - kong/service.yaml

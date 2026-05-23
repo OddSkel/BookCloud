@@ -16,6 +16,8 @@ message Query {
   optional string genre = 1;
   optional double rating = 2;
   optional double popularity = 3;
+  optional int32 page = 4;
+  optional int32 page_size = 5;
 }
 
 message Book {

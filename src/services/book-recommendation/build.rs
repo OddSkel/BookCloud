@@ -12,11 +12,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "proto/book_catalog.proto",
             "proto/genre_service.proto",
             "proto/rating_catalog.proto",
-            ],
-        &[
-            "proto",
-            concat!(env!("CARGO_MANIFEST_DIR"), "/proto/"),
-            ],
+        ],
+        &["proto", concat!(env!("CARGO_MANIFEST_DIR"), "/proto/")],
     )?;
 
     println!("cargo:rerun-if-changed=proto");
