@@ -95,22 +95,19 @@ mod tests {
             _req: Request<HealthCheckRequest>,
         ) -> Result<Response<HealthCheckResponse>, Status> {
             Ok(Response::new(HealthCheckResponse {
+                service: "book-search".into(),
                 status: "SERVING".into(),
-                ..Default::default()
             }))
         }
 
         async fn book_search(
             &self,
-            req: Request<Query>,
+            _req: Request<Query>,
         ) -> Result<Response<BookSearchResponse>, Status> {
             if self.fail {
                 return Err(self.db_err());
             }
-            Ok(Response::new(BookSearchResponse {
-                books: vec![],
-                ..Default::default()
-            }))
+            Ok(Response::new(BookSearchResponse { books: vec![] }))
         }
     }
 
@@ -137,7 +134,6 @@ mod tests {
             title: Some("Rust programming".to_string()),
             author: Some("Steve Klabnik".to_string()),
             keywords: Some("ownership borrowing".to_string()),
-            ..Default::default()
         };
 
         let resp = TestService::ok()
