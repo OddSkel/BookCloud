@@ -15,11 +15,6 @@ AUTHOR_DB_CONTAINER="${AUTHOR_DB_CONTAINER:-author-db}"
 GENRE_DB_CONTAINER="${GENRE_DB_CONTAINER:-genre-db}"
 RATING_DB_CONTAINER="${RATING_DB_CONTAINER:-rating-db}"
 
-BOOK_TABLE="${BOOK_TABLE:-book}"
-AUTHOR_TABLE="${AUTHOR_TABLE:-author}"
-GENRE_TABLE="${GENRE_TABLE:-genre}"
-RATING_TABLE="${RATING_TABLE:-rating}"
-
 TIMEOUT_SECONDS="${TIMEOUT_SECONDS:-120}"
 INTERVAL_SECONDS="${INTERVAL_SECONDS:-5}"
 
@@ -72,6 +67,91 @@ wait_for_postgres() {
   return 1
 }
 
+run_sql() {
+  name="$1"
+  container="$2"
+  db_user="$3"
+  db_name="$4"
+  statement="$5"
+
+  printf "Ensuring schema for %s...\n" "$name"
+
+  docker exec -i "$container" \
+    psql -U "$db_user" -d "$db_name" -v ON_ERROR_STOP=1 <<SQL
+${statement}
+SQL
+}
+
+ensure_book_schema() {
+  run_sql "book-catalog" "$BOOK_DB_CONTAINER" "$BOOK_DB_USER" "$BOOK_DB_NAME" "
+CREATE TABLE IF NOT EXISTS book (
+  isbn BIGINT PRIMARY KEY,
+  name TEXT NOT NULL,
+  url TEXT,
+  summary_clean TEXT,
+  pub_year INTEGER
+);
+"
+}
+
+ensure_author_schema() {
+  run_sql "author-catalog" "$AUTHOR_DB_CONTAINER" "$AUTHOR_DB_USER" "$AUTHOR_DB_NAME" "
+CREATE TABLE IF NOT EXISTS author (
+  author_id BIGINT PRIMARY KEY,
+  name TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS book_author (
+  book_isbn BIGINT NOT NULL,
+  author_id BIGINT NOT NULL,
+  PRIMARY KEY (book_isbn, author_id)
+);
+"
+}
+
+ensure_genre_schema() {
+  run_sql "genre-analysis" "$GENRE_DB_CONTAINER" "$GENRE_DB_USER" "$GENRE_DB_NAME" "
+CREATE TABLE IF NOT EXISTS genre (
+  genre_id INTEGER PRIMARY KEY,
+  name TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS book_genre (
+  book_isbn BIGINT NOT NULL,
+  genre_id INTEGER NOT NULL,
+  PRIMARY KEY (book_isbn, genre_id)
+);
+
+CREATE TABLE IF NOT EXISTS genre_stats_cache (
+  genre_id INTEGER PRIMARY KEY,
+  total_books BIGINT,
+  average_rating DOUBLE PRECISION,
+  total_ratings BIGINT,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS genre_year_stats_cache (
+  genre_id INTEGER NOT NULL,
+  pub_year INTEGER NOT NULL,
+  total_books BIGINT,
+  average_rating DOUBLE PRECISION,
+  total_ratings BIGINT,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (genre_id, pub_year)
+);
+"
+}
+
+ensure_rating_schema() {
+  run_sql "rating-catalog" "$RATING_DB_CONTAINER" "$RATING_DB_USER" "$RATING_DB_NAME" "
+CREATE TABLE IF NOT EXISTS rating (
+  book_isbn BIGINT PRIMARY KEY,
+  star_rating DOUBLE PRECISION,
+  num_ratings BIGINT
+);
+"
+}
+
 seed_csv() {
   name="$1"
   container="$2"
@@ -101,15 +181,18 @@ wait_for_postgres "genre-analysis" "$GENRE_DB_CONTAINER" "$GENRE_DB_USER" "$GENR
 wait_for_postgres "book-catalog" "$BOOK_DB_CONTAINER" "$BOOK_DB_USER" "$BOOK_DB_NAME"
 wait_for_postgres "rating-catalog" "$RATING_DB_CONTAINER" "$RATING_DB_USER" "$RATING_DB_NAME"
 
-# Remove dados antigos antes de inserir para evitar duplicados.
+ensure_author_schema
+ensure_genre_schema
+ensure_book_schema
+ensure_rating_schema
+
 if [ -x "${SCRIPT_DIR}/cleanup_test_dataset.sh" ]; then
   "${SCRIPT_DIR}/cleanup_test_dataset.sh" || true
 fi
 
-# Ordem importante
-seed_csv "author-catalog" "$AUTHOR_DB_CONTAINER" "$AUTHOR_DB_USER" "$AUTHOR_DB_NAME" "$AUTHOR_TABLE" "$AUTHOR_CSV"
-seed_csv "genre-analysis" "$GENRE_DB_CONTAINER" "$GENRE_DB_USER" "$GENRE_DB_NAME" "$GENRE_TABLE" "$GENRE_CSV"
-seed_csv "book-catalog" "$BOOK_DB_CONTAINER" "$BOOK_DB_USER" "$BOOK_DB_NAME" "$BOOK_TABLE" "$BOOK_CSV"
-seed_csv "rating-catalog" "$RATING_DB_CONTAINER" "$RATING_DB_USER" "$RATING_DB_NAME" "$RATING_TABLE" "$RATING_CSV"
+seed_csv "author-catalog" "$AUTHOR_DB_CONTAINER" "$AUTHOR_DB_USER" "$AUTHOR_DB_NAME" "author" "$AUTHOR_CSV"
+seed_csv "genre-analysis" "$GENRE_DB_CONTAINER" "$GENRE_DB_USER" "$GENRE_DB_NAME" "genre" "$GENRE_CSV"
+seed_csv "book-catalog" "$BOOK_DB_CONTAINER" "$BOOK_DB_USER" "$BOOK_DB_NAME" "book" "$BOOK_CSV"
+seed_csv "rating-catalog" "$RATING_DB_CONTAINER" "$RATING_DB_USER" "$RATING_DB_NAME" "rating" "$RATING_CSV"
 
 printf "Test dataset seeded successfully.\n"
