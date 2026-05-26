@@ -21,7 +21,7 @@ message GetAuthorsRequest  {
 
 message GetAuthorsResponse { repeated Author authors = 1; }
 
-message GetAuthorRequest   { string author_id = 1; }
+message GetAuthorRequest   { int64 author_id = 1; }
 message GetAuthorResponse  { Author author = 1; }
 
 message AddAuthorRequest   { int64 author_id = 1; string name = 2; }
@@ -33,7 +33,7 @@ message UpdateAuthorRequest  {
 }
 message UpdateAuthorResponse { repeated Author authors = 1; }
 
-message DeleteAuthorRequest  { string author_id = 1; }
+message DeleteAuthorRequest  { int64 author_id = 1; }
 message DeleteAuthorResponse {
   bool sucessful = 1;
   string message = 2;

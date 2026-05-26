@@ -30,9 +30,9 @@ pub async fn get_authors(
 
 pub async fn get_author(
     registry: web::Data<GrpcRegistry>,
-    path: web::Path<String>,
+    path: web::Path<i64>,
 ) -> impl Responder {
-    match registry.get_author(&path.into_inner()).await {
+    match registry.get_author(path.into_inner()).await {
         Ok(author) => HttpResponse::Ok().json(author),
         Err(e) => crate::utils::map_error(e),
     }
@@ -67,9 +67,9 @@ pub async fn update_author(
 
 pub async fn delete_author(
     registry: web::Data<GrpcRegistry>,
-    path: web::Path<String>,
+    path: web::Path<i64>,
 ) -> impl Responder {
-    match registry.delete_author(&path.into_inner()).await {
+    match registry.delete_author(path.into_inner()).await {
         Ok(_) => HttpResponse::NoContent().finish(),
         Err(e) => crate::utils::map_error(e),
     }

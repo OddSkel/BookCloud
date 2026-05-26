@@ -112,11 +112,23 @@ fi
 if [ "$COMPOSE_BUILD" = "true" ]; then
     printf 'Building all services in parallel...\n'
 
+    BUILD_PIDS=""
     for service_dir in $SERVICE_DIRS; do
         build_service "$service_dir" &
+        BUILD_PIDS="$BUILD_PIDS $!"
     done
 
-    wait
+    BUILD_FAILED=0
+    for pid in $BUILD_PIDS; do
+        if ! wait "$pid"; then
+            BUILD_FAILED=1
+        fi
+    done
+
+    if [ "$BUILD_FAILED" -ne 0 ]; then
+        printf 'One or more service builds failed.\n' >&2
+        exit 1
+    fi
 
     printf 'All images built.\n'
 fi
