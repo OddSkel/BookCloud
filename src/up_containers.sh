@@ -38,43 +38,99 @@ else
     printf 'Network %s already exists.\n' "$NETWORK_NAME"
 fi
 
-start_service() {
+ensure_env_file() {
     service_dir="$1"
     service_name=$(basename "$service_dir")
 
-    # =========================
-    # ENV FILE
-    # =========================
-    if [ -f "$service_dir/.example.env" ]; then
-        printf 'Copying .example.env to .env for %s...\n' "$service_name"
+    if [ -f "$service_dir/.env" ]; then
+        printf '.env already exists for %s. Keeping existing file.\n' "$service_name"
+    elif [ -f "$service_dir/.example.env" ]; then
+        printf 'Creating .env from .example.env for %s...\n' "$service_name"
         cp "$service_dir/.example.env" "$service_dir/.env"
     else
-        printf 'No .example.env found for %s. Skipping env copy.\n' "$service_name"
+        printf 'No .env or .example.env found for %s.\n' "$service_name"
     fi
+}
 
-    printf 'Starting %s...\n' "$service_name"
+compose_cmd() {
+    service_dir="$1"
+    shift
+
     (
         cd "$service_dir"
-        if [ "$COMPOSE_BUILD" = "true" ]; then
-            docker compose up --build -d
+
+        if [ -f ".env" ]; then
+            docker compose --env-file .env "$@"
         else
-            docker compose up -d
+            docker compose "$@"
         fi
     )
 }
 
+build_service() {
+    service_dir="$1"
+    service_name=$(basename "$service_dir")
+
+    ensure_env_file "$service_dir"
+
+    printf 'Building %s...\n' "$service_name"
+    compose_cmd "$service_dir" build
+}
+
+start_service() {
+    service_dir="$1"
+    service_name=$(basename "$service_dir")
+
+    ensure_env_file "$service_dir"
+
+    printf 'Starting %s...\n' "$service_name"
+
+    if [ "$COMPOSE_BUILD" = "true" ]; then
+        compose_cmd "$service_dir" up -d --no-build
+    else
+        compose_cmd "$service_dir" up -d
+    fi
+}
+
 # =========================
-# SERVICES - CATALOG FIRST
+# COLLECT SERVICES
+# =========================
+SERVICE_DIRS=""
+
+for compose_file in "$BASE_DIR"/services/*/docker-compose.yml; do
+    [ -f "$compose_file" ] || continue
+    SERVICE_DIRS="$SERVICE_DIRS $(dirname "$compose_file")"
+done
+
+if [ -f "$BASE_DIR/api-gateway/docker-compose.yml" ]; then
+    SERVICE_DIRS="$SERVICE_DIRS $BASE_DIR/api-gateway"
+fi
+
+# =========================
+# BUILD ALL SERVICES IN PARALLEL
+# =========================
+if [ "$COMPOSE_BUILD" = "true" ]; then
+    printf 'Building all services in parallel...\n'
+
+    for service_dir in $SERVICE_DIRS; do
+        build_service "$service_dir" &
+    done
+
+    wait
+
+    printf 'All images built.\n'
+fi
+
+# =========================
+# START CATALOG SERVICES FIRST
 # =========================
 for compose_file in "$BASE_DIR"/services/*-catalog/docker-compose.yml; do
     [ -f "$compose_file" ] || continue
-
-    service_dir=$(dirname "$compose_file")
-    start_service "$service_dir"
+    start_service "$(dirname "$compose_file")"
 done
 
 # =========================
-# SERVICES - REST
+# START OTHER SERVICES
 # =========================
 for compose_file in "$BASE_DIR"/services/*/docker-compose.yml; do
     [ -f "$compose_file" ] || continue
@@ -92,25 +148,10 @@ for compose_file in "$BASE_DIR"/services/*/docker-compose.yml; do
 done
 
 # =========================
-# API GATEWAY
+# START API GATEWAY
 # =========================
 if [ -f "$BASE_DIR/api-gateway/docker-compose.yml" ]; then
-    if [ -f "$BASE_DIR/api-gateway/.example.env" ]; then
-        printf 'Copying .example.env to .env for api-gateway...\n'
-        cp "$BASE_DIR/api-gateway/.example.env" "$BASE_DIR/api-gateway/.env"
-    else
-        printf 'No .example.env found for api-gateway. Skipping env copy.\n'
-    fi
-
-    printf 'Starting api-gateway...\n'
-    (
-        cd "$BASE_DIR/api-gateway"
-        if [ "$COMPOSE_BUILD" = "true" ]; then
-            docker compose up --build -d
-        else
-            docker compose up -d
-        fi
-    )
+    start_service "$BASE_DIR/api-gateway"
 fi
 
 printf 'All services started.\n'
