@@ -147,23 +147,6 @@ jobs:
           chmod +x ./tests/wait_for_services.sh
           ./tests/wait_for_services.sh
 
-      - name: Cleanup previous integration test dataset
-        working-directory: src
-        continue-on-error: true
-        env:
-          BOOK_DB_CONTAINER: book-db
-          AUTHOR_DB_CONTAINER: author-db
-          GENRE_DB_CONTAINER: genre-db
-          RATING_DB_CONTAINER: rating-db
-
-          BOOK_TABLE: book
-          AUTHOR_TABLE: author
-          GENRE_TABLE: genre
-          RATING_TABLE: rating
-        run: |
-          chmod +x ./tests/cleanup_test_dataset.sh
-          ./tests/cleanup_test_dataset.sh || true
-
       - name: Seed integration test dataset
         working-directory: src
         env:
