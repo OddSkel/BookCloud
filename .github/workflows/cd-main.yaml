@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -28,6 +29,7 @@ env:
   GKE_LOCATION: ${{ vars.GKE_LOCATION }}
   GKE_MACHINE_TYPE: ${{ vars.GKE_MACHINE_TYPE }}
   GKE_NUM_NODES: ${{ vars.GKE_NUM_NODES }}
+  GKE_DISK_SIZE_GB: ${{ vars.GKE_DISK_SIZE_GB }}
 
   K8S_NAMESPACE: ${{ vars.K8S_NAMESPACE }}
   ROLLOUT_TIMEOUT: ${{ vars.ROLLOUT_TIMEOUT }}
@@ -40,6 +42,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Validate configuration
         shell: bash
         run: |
@@ -63,7 +68,7 @@ jobs:
           done
 
           if (( ${#missing[@]} > 0 )); then
-            printf 'Missing required GitHub Secrets/Variables:\n' >&2
+            printf 'Missing required GitHub Variables:\n' >&2
             printf ' - %s\n' "${missing[@]}" >&2
             exit 1
           fi
@@ -115,7 +120,8 @@ jobs:
           set -euo pipefail
 
           GKE_MACHINE_TYPE="${GKE_MACHINE_TYPE:-e2-standard-2}"
-          GKE_NUM_NODES="${GKE_NUM_NODES:-2}"
+          GKE_NUM_NODES="${GKE_NUM_NODES:-1}"
+          GKE_DISK_SIZE_GB="${GKE_DISK_SIZE_GB:-30}"
 
           if gcloud container clusters describe "$GKE_CLUSTER" \
             --location="$GKE_LOCATION" \
@@ -128,6 +134,8 @@ jobs:
               --location="$GKE_LOCATION" \
               --num-nodes="$GKE_NUM_NODES" \
               --machine-type="$GKE_MACHINE_TYPE" \
+              --disk-type="pd-standard" \
+              --disk-size="$GKE_DISK_SIZE_GB" \
               --enable-ip-alias \
               --project="$GCP_PROJECT_ID"
           fi
@@ -266,7 +274,7 @@ jobs:
           done
 
           if (( ${#missing[@]} > 0 )); then
-            printf 'Missing required GitHub Secrets/Variables:\n' >&2
+            printf 'Missing required GitHub Variables/Secrets:\n' >&2
             printf ' - %s\n' "${missing[@]}" >&2
             exit 1
           fi
