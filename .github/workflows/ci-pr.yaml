@@ -155,13 +155,6 @@ jobs:
           GENRE_DB_CONTAINER: genre-db
           RATING_DB_CONTAINER: rating-db
 
-          BOOK_TABLE: book
-          AUTHOR_TABLE: author
-          GENRE_TABLE: genre
-          RATING_TABLE: rating
-
-          TIMEOUT_SECONDS: 120
-          INTERVAL_SECONDS: 5
         run: |
           chmod +x ./tests/seed_test_dataset.sh
           ./tests/seed_test_dataset.sh
@@ -198,10 +191,6 @@ jobs:
           GENRE_DB_CONTAINER: genre-db
           RATING_DB_CONTAINER: rating-db
 
-          BOOK_TABLE: book
-          AUTHOR_TABLE: author
-          GENRE_TABLE: genre
-          RATING_TABLE: rating
         run: |
           chmod +x ./tests/cleanup_test_dataset.sh
           ./tests/cleanup_test_dataset.sh || true

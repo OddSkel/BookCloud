@@ -15,22 +15,142 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  GCP_WIF_PROVIDER: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+  GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
   GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
-  GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
-  ARTIFACT_REGISTRY_LOCATION: ${{ secrets.ARTIFACT_REGISTRY_LOCATION }}
-  ARTIFACT_REGISTRY_REPOSITORY: ${{ secrets.ARTIFACT_REGISTRY_REPOSITORY }}
-  IMAGE_PREFIX: ${{ secrets.ARTIFACT_REGISTRY_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REGISTRY_REPOSITORY }}
+
+  ARTIFACT_REGISTRY_LOCATION: ${{ vars.ARTIFACT_REGISTRY_LOCATION }}
+  ARTIFACT_REGISTRY_REPOSITORY: ${{ vars.ARTIFACT_REGISTRY_REPOSITORY }}
+
+  IMAGE_PREFIX: ${{ vars.ARTIFACT_REGISTRY_LOCATION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY_REPOSITORY }}
   IMAGE_TAG: ${{ github.sha }}
-  K8S_NAMESPACE: bookcloud
-  ROLLOUT_TIMEOUT: 600s
+
+  GKE_CLUSTER: ${{ vars.GKE_CLUSTER }}
+  GKE_LOCATION: ${{ vars.GKE_LOCATION }}
+  GKE_MACHINE_TYPE: ${{ vars.GKE_MACHINE_TYPE }}
+  GKE_NUM_NODES: ${{ vars.GKE_NUM_NODES }}
+
+  K8S_NAMESPACE: ${{ vars.K8S_NAMESPACE }}
+  ROLLOUT_TIMEOUT: ${{ vars.ROLLOUT_TIMEOUT }}
+
   DOCKER_BUILDKIT: "1"
 
 jobs:
+  setup-gke:
+    name: Setup GKE infrastructure
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          missing=()
+
+          for name in \
+            GCP_PROJECT_ID \
+            GCP_WORKLOAD_IDENTITY_PROVIDER \
+            GCP_SERVICE_ACCOUNT \
+            ARTIFACT_REGISTRY_LOCATION \
+            ARTIFACT_REGISTRY_REPOSITORY \
+            GKE_CLUSTER \
+            GKE_LOCATION \
+            K8S_NAMESPACE
+          do
+            if [[ -z "${!name}" ]]; then
+              missing+=("$name")
+            fi
+          done
+
+          if (( ${#missing[@]} > 0 )); then
+            printf 'Missing required GitHub Secrets/Variables:\n' >&2
+            printf ' - %s\n' "${missing[@]}" >&2
+            exit 1
+          fi
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ env.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+          install_components: gke-gcloud-auth-plugin,kubectl
+
+      - name: Enable required GCP APIs
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          gcloud services enable \
+            serviceusage.googleapis.com \
+            container.googleapis.com \
+            artifactregistry.googleapis.com \
+            iamcredentials.googleapis.com \
+            --project "$GCP_PROJECT_ID"
+
+      - name: Ensure Artifact Registry exists
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if gcloud artifacts repositories describe "$ARTIFACT_REGISTRY_REPOSITORY" \
+            --location="$ARTIFACT_REGISTRY_LOCATION" \
+            --project="$GCP_PROJECT_ID" >/dev/null 2>&1; then
+            echo "Artifact Registry repository already exists."
+          else
+            gcloud artifacts repositories create "$ARTIFACT_REGISTRY_REPOSITORY" \
+              --repository-format=docker \
+              --location="$ARTIFACT_REGISTRY_LOCATION" \
+              --description="BookCloud container images" \
+              --project="$GCP_PROJECT_ID"
+          fi
+
+      - name: Ensure GKE cluster exists
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          GKE_MACHINE_TYPE="${GKE_MACHINE_TYPE:-e2-standard-2}"
+          GKE_NUM_NODES="${GKE_NUM_NODES:-2}"
+
+          if gcloud container clusters describe "$GKE_CLUSTER" \
+            --location="$GKE_LOCATION" \
+            --project="$GCP_PROJECT_ID" >/dev/null 2>&1; then
+            echo "GKE cluster already exists."
+          else
+            echo "GKE cluster does not exist. Creating cluster..."
+
+            gcloud container clusters create "$GKE_CLUSTER" \
+              --location="$GKE_LOCATION" \
+              --num-nodes="$GKE_NUM_NODES" \
+              --machine-type="$GKE_MACHINE_TYPE" \
+              --enable-ip-alias \
+              --project="$GCP_PROJECT_ID"
+          fi
+
+      - name: Ensure Kubernetes namespace exists
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          gcloud container clusters get-credentials "$GKE_CLUSTER" \
+            --location="$GKE_LOCATION" \
+            --project="$GCP_PROJECT_ID"
+
+          kubectl create namespace "$K8S_NAMESPACE" \
+            --dry-run=client \
+            -o yaml | kubectl apply -f -
+
   build-and-push-images:
     name: Build and push ${{ matrix.service }}
     runs-on: ubuntu-latest
+    needs:
+      - setup-gke
 
     strategy:
       fail-fast: false
@@ -76,42 +196,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Validate GCP and registry configuration
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          missing=()
-          for name in GCP_PROJECT_ID ARTIFACT_REGISTRY_LOCATION ARTIFACT_REGISTRY_REPOSITORY; do
-            if [[ -z "${!name}" ]]; then
-              missing+=("$name")
-            fi
-          done
-
-          if [[ -z "${GCP_WIF_PROVIDER}" || -z "${GCP_SERVICE_ACCOUNT}" ]]; then
-            if [[ -z "${GCP_SA_KEY}" ]]; then
-              missing+=("GCP_WORKLOAD_IDENTITY_PROVIDER + GCP_SERVICE_ACCOUNT or GCP_SA_KEY")
-            fi
-          fi
-
-          if (( ${#missing[@]} > 0 )); then
-            printf 'Missing required GitHub Secrets/env values:\n' >&2
-            printf ' - %s\n' "${missing[@]}" >&2
-            exit 1
-          fi
-
-      - name: Authenticate to Google Cloud with Workload Identity Federation
-        if: ${{ env.GCP_WIF_PROVIDER != '' && env.GCP_SERVICE_ACCOUNT != '' }}
+      - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v3
         with:
-          workload_identity_provider: ${{ env.GCP_WIF_PROVIDER }}
+          workload_identity_provider: ${{ env.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
-
-      - name: Authenticate to Google Cloud with Service Account JSON
-        if: ${{ (env.GCP_WIF_PROVIDER == '' || env.GCP_SERVICE_ACCOUNT == '') && env.GCP_SA_KEY != '' }}
-        uses: google-github-actions/auth@v3
-        with:
-          credentials_json: ${{ env.GCP_SA_KEY }}
 
       - name: Set up Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v3
@@ -148,50 +237,46 @@ jobs:
       - build-and-push-images
 
     env:
-      GKE_CLUSTER: ${{ secrets.GKE_CLUSTER }}
-      GKE_LOCATION: ${{ secrets.GKE_REGION || secrets.GKE_ZONE }}
       STAGING_BASE_URL: ${{ secrets.STAGING_BASE_URL }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Validate GKE and staging configuration
+      - name: Validate deployment configuration
         shell: bash
         run: |
           set -euo pipefail
 
           missing=()
-          for name in GCP_PROJECT_ID ARTIFACT_REGISTRY_LOCATION ARTIFACT_REGISTRY_REPOSITORY GKE_CLUSTER GKE_LOCATION STAGING_BASE_URL; do
+
+          for name in \
+            GCP_PROJECT_ID \
+            GCP_WORKLOAD_IDENTITY_PROVIDER \
+            GCP_SERVICE_ACCOUNT \
+            ARTIFACT_REGISTRY_LOCATION \
+            ARTIFACT_REGISTRY_REPOSITORY \
+            GKE_CLUSTER \
+            GKE_LOCATION \
+            K8S_NAMESPACE \
+            STAGING_BASE_URL
+          do
             if [[ -z "${!name}" ]]; then
               missing+=("$name")
             fi
           done
 
-          if [[ -z "${GCP_WIF_PROVIDER}" || -z "${GCP_SERVICE_ACCOUNT}" ]]; then
-            if [[ -z "${GCP_SA_KEY}" ]]; then
-              missing+=("GCP_WORKLOAD_IDENTITY_PROVIDER + GCP_SERVICE_ACCOUNT or GCP_SA_KEY")
-            fi
-          fi
-
           if (( ${#missing[@]} > 0 )); then
-            printf 'Missing required GitHub Secrets/env values:\n' >&2
+            printf 'Missing required GitHub Secrets/Variables:\n' >&2
             printf ' - %s\n' "${missing[@]}" >&2
             exit 1
           fi
 
-      - name: Authenticate to Google Cloud with Workload Identity Federation
-        if: ${{ env.GCP_WIF_PROVIDER != '' && env.GCP_SERVICE_ACCOUNT != '' }}
+      - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v3
         with:
-          workload_identity_provider: ${{ env.GCP_WIF_PROVIDER }}
+          workload_identity_provider: ${{ env.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
-
-      - name: Authenticate to Google Cloud with Service Account JSON
-        if: ${{ (env.GCP_WIF_PROVIDER == '' || env.GCP_SERVICE_ACCOUNT == '') && env.GCP_SA_KEY != '' }}
-        uses: google-github-actions/auth@v3
-        with:
-          credentials_json: ${{ env.GCP_SA_KEY }}
 
       - name: Set up Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v3
@@ -206,7 +291,7 @@ jobs:
           location: ${{ env.GKE_LOCATION }}
           project_id: ${{ env.GCP_PROJECT_ID }}
 
-      - name: Render Kubernetes manifests for this commit
+      - name: Render Kubernetes manifests
         shell: bash
         run: |
           set -euo pipefail
@@ -248,7 +333,7 @@ jobs:
 
           echo "RENDERED_K8S_DIR=$rendered_dir" >> "$GITHUB_ENV"
 
-      - name: Apply manifests
+      - name: Apply Kubernetes manifests
         shell: bash
         run: |
           set -euo pipefail
@@ -258,6 +343,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+
+          ROLLOUT_TIMEOUT="${ROLLOUT_TIMEOUT:-600s}"
 
           services=(
             api-gateway
@@ -275,7 +362,7 @@ jobs:
             kubectl -n "$K8S_NAMESPACE" rollout status "deployment/${service}" --timeout="$ROLLOUT_TIMEOUT"
           done
 
-          kubectl -n "$K8S_NAMESPACE" get pods,svc,hpa
+          kubectl -n "$K8S_NAMESPACE" get pods,svc,hpa -o wide
 
       - name: Wait for public staging endpoint
         working-directory: src
