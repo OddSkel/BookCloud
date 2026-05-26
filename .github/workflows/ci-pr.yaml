@@ -134,6 +134,9 @@ jobs:
           chmod +x ./up_containers.sh
           ./up_containers.sh --build
 
+      - name: Show running containers
+        run: docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+
       - name: Wait for services readiness
         working-directory: src
         env:
@@ -143,6 +146,62 @@ jobs:
         run: |
           chmod +x ./tests/wait_for_services.sh
           ./tests/wait_for_services.sh
+
+      - name: Cleanup previous integration test dataset
+        working-directory: src
+        continue-on-error: true
+        env:
+          BOOK_DB_CONTAINER: book-db
+          AUTHOR_DB_CONTAINER: author-db
+          GENRE_DB_CONTAINER: genre-db
+          RATING_DB_CONTAINER: rating-db
+
+          BOOK_DB_NAME: book_catalog
+          AUTHOR_DB_NAME: author_catalog
+          GENRE_DB_NAME: genre_analysis
+          RATING_DB_NAME: rating_catalog
+
+          BOOK_DB_USER: postgres
+          AUTHOR_DB_USER: postgres
+          GENRE_DB_USER: postgres
+          RATING_DB_USER: postgres
+
+          BOOK_TABLE: book
+          AUTHOR_TABLE: author
+          GENRE_TABLE: genre
+          RATING_TABLE: rating
+        run: |
+          chmod +x ./tests/cleanup_test_dataset.sh
+          ./tests/cleanup_test_dataset.sh || true
+
+      - name: Seed integration test dataset
+        working-directory: src
+        env:
+          BOOK_DB_CONTAINER: book-db
+          AUTHOR_DB_CONTAINER: author-db
+          GENRE_DB_CONTAINER: genre-db
+          RATING_DB_CONTAINER: rating-db
+
+          BOOK_DB_NAME: book_catalog
+          AUTHOR_DB_NAME: author_catalog
+          GENRE_DB_NAME: genre_analysis
+          RATING_DB_NAME: rating_catalog
+
+          BOOK_DB_USER: postgres
+          AUTHOR_DB_USER: postgres
+          GENRE_DB_USER: postgres
+          RATING_DB_USER: postgres
+
+          BOOK_TABLE: book
+          AUTHOR_TABLE: author
+          GENRE_TABLE: genre
+          RATING_TABLE: rating
+
+          TIMEOUT_SECONDS: 120
+          INTERVAL_SECONDS: 5
+        run: |
+          chmod +x ./tests/seed_test_dataset.sh
+          ./tests/seed_test_dataset.sh
 
       - name: Run local integration tests
         working-directory: src
@@ -166,6 +225,33 @@ jobs:
             echo "Logs for $service_dir"
             (cd "$service_dir" && docker compose --env-file .env logs)
           done
+
+      - name: Cleanup integration test dataset
+        if: always()
+        working-directory: src
+        env:
+          BOOK_DB_CONTAINER: book-db
+          AUTHOR_DB_CONTAINER: author-db
+          GENRE_DB_CONTAINER: genre-db
+          RATING_DB_CONTAINER: rating-db
+
+          BOOK_DB_NAME: book_catalog
+          AUTHOR_DB_NAME: author_catalog
+          GENRE_DB_NAME: genre_analysis
+          RATING_DB_NAME: rating_catalog
+
+          BOOK_DB_USER: postgres
+          AUTHOR_DB_USER: postgres
+          GENRE_DB_USER: postgres
+          RATING_DB_USER: postgres
+
+          BOOK_TABLE: book
+          AUTHOR_TABLE: author
+          GENRE_TABLE: genre
+          RATING_TABLE: rating
+        run: |
+          chmod +x ./tests/cleanup_test_dataset.sh
+          ./tests/cleanup_test_dataset.sh || true
 
       - name: Stop containers
         if: always()
