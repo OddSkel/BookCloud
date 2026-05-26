@@ -1,70 +1,327 @@
-# name: CD - Main Branch
+name: CD - Main Branch
 
-# on:
-#   push:
-#     branches:
-#       - main
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
 
-# jobs:
-#   build-and-push-images:
-#     name: Build and push Docker images
-#     runs-on: ubuntu-latest
+permissions:
+  contents: read
+  id-token: write
 
-#     strategy:
-#       matrix:
-#         include:
-#           - name: api-gateway
-#             path: api-gateway
-#             image: api-gateway
+concurrency:
+  group: bookcloud-staging
+  cancel-in-progress: false
 
-#           - name: author-analytics-service
-#             path: services/author-analytics-service
-#             image: author-analytics-service
+env:
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GCP_WIF_PROVIDER: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+  GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+  GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+  ARTIFACT_REGISTRY_LOCATION: ${{ secrets.ARTIFACT_REGISTRY_LOCATION }}
+  ARTIFACT_REGISTRY_REPOSITORY: ${{ secrets.ARTIFACT_REGISTRY_REPOSITORY }}
+  IMAGE_PREFIX: ${{ secrets.ARTIFACT_REGISTRY_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REGISTRY_REPOSITORY }}
+  IMAGE_TAG: ${{ github.sha }}
+  K8S_NAMESPACE: bookcloud
+  ROLLOUT_TIMEOUT: 600s
+  DOCKER_BUILDKIT: "1"
 
-#           - name: author-catalog
-#             path: services/author-catalog
-#             image: author-catalog
+jobs:
+  build-and-push-images:
+    name: Build and push ${{ matrix.service }}
+    runs-on: ubuntu-latest
 
-#           - name: book-catalog
-#             path: services/book-catalog
-#             image: book-catalog
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: api-gateway
+            context: src/api-gateway
+            dockerfile: src/api-gateway/Dockerfile
 
-#           - name: book-recommendation
-#             path: services/book-recommendation
-#             image: book-recommendation
+          - service: author-analytics-service
+            context: src/services/author-analytics-service
+            dockerfile: src/services/author-analytics-service/Dockerfile
 
-#           - name: book-search
-#             path: services/book-search
-#             image: book-search
+          - service: author-catalog
+            context: src/services/author-catalog
+            dockerfile: src/services/author-catalog/Dockerfile
 
-#           - name: compare-service
-#             path: services/compare-service
-#             image: compare-service
+          - service: book-catalog
+            context: src/services/book-catalog
+            dockerfile: src/services/book-catalog/Dockerfile
 
-#           - name: genre-analysis-service
-#             path: services/genre-analysis-service
-#             image: genre-analysis-service
+          - service: book-recommendation
+            context: src/services/book-recommendation
+            dockerfile: src/services/book-recommendation/Dockerfile
 
-#           - name: rating-catalog
-#             path: services/rating-catalog
-#             image: rating-catalog
+          - service: book-search
+            context: .
+            dockerfile: src/services/book-search/Dockerfile
 
-#     steps:
-#       - name: Checkout repository
-#         uses: actions/checkout@v4
+          - service: compare-service
+            context: src/services/compare-service
+            dockerfile: src/services/compare-service/Dockerfile
 
-#       - name: Log in to Docker Hub
-#         uses: docker/login-action@v3
-#         with:
-#           username: ${{ secrets.DOCKER_USERNAME }}
-#           password: ${{ secrets.DOCKER_PASSWORD }}
+          - service: genre-analysis-service
+            context: src/services/genre-analysis-service
+            dockerfile: src/services/genre-analysis-service/Dockerfile
 
-#       - name: Build Docker image
-#         run: |
-#           docker build \
-#             -t ${{ secrets.DOCKER_USERNAME }}/bookcloud-${{ matrix.image }}:${{ github.sha }} \
-#             ./${{ matrix.path }}
+          - service: rating-catalog
+            context: src/services/rating-catalog
+            dockerfile: src/services/rating-catalog/Dockerfile
 
-#       - name: Push Docker image
-#         run: |
-#           docker push ${{ secrets.DOCKER_USERNAME }}/bookcloud-${{ matrix.image }}:${{ github.sha }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate GCP and registry configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          missing=()
+          for name in GCP_PROJECT_ID ARTIFACT_REGISTRY_LOCATION ARTIFACT_REGISTRY_REPOSITORY; do
+            if [[ -z "${!name}" ]]; then
+              missing+=("$name")
+            fi
+          done
+
+          if [[ -z "${GCP_WIF_PROVIDER}" || -z "${GCP_SERVICE_ACCOUNT}" ]]; then
+            if [[ -z "${GCP_SA_KEY}" ]]; then
+              missing+=("GCP_WORKLOAD_IDENTITY_PROVIDER + GCP_SERVICE_ACCOUNT or GCP_SA_KEY")
+            fi
+          fi
+
+          if (( ${#missing[@]} > 0 )); then
+            printf 'Missing required GitHub Secrets/env values:\n' >&2
+            printf ' - %s\n' "${missing[@]}" >&2
+            exit 1
+          fi
+
+      - name: Authenticate to Google Cloud with Workload Identity Federation
+        if: ${{ env.GCP_WIF_PROVIDER != '' && env.GCP_SERVICE_ACCOUNT != '' }}
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ env.GCP_WIF_PROVIDER }}
+          service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
+
+      - name: Authenticate to Google Cloud with Service Account JSON
+        if: ${{ (env.GCP_WIF_PROVIDER == '' || env.GCP_SERVICE_ACCOUNT == '') && env.GCP_SA_KEY != '' }}
+        uses: google-github-actions/auth@v3
+        with:
+          credentials_json: ${{ env.GCP_SA_KEY }}
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+
+      - name: Configure Docker for Artifact Registry
+        shell: bash
+        run: |
+          set -euo pipefail
+          gcloud auth configure-docker "${ARTIFACT_REGISTRY_LOCATION}-docker.pkg.dev" --quiet
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push image
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          image="${IMAGE_PREFIX}/${{ matrix.service }}"
+
+          docker buildx build \
+            --file "${{ matrix.dockerfile }}" \
+            --tag "${image}:${IMAGE_TAG}" \
+            --tag "${image}:main" \
+            --push \
+            "${{ matrix.context }}"
+
+  deploy-staging:
+    name: Deploy to GKE staging
+    runs-on: ubuntu-latest
+    needs:
+      - build-and-push-images
+
+    env:
+      GKE_CLUSTER: ${{ secrets.GKE_CLUSTER }}
+      GKE_LOCATION: ${{ secrets.GKE_REGION || secrets.GKE_ZONE }}
+      STAGING_BASE_URL: ${{ secrets.STAGING_BASE_URL }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate GKE and staging configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          missing=()
+          for name in GCP_PROJECT_ID ARTIFACT_REGISTRY_LOCATION ARTIFACT_REGISTRY_REPOSITORY GKE_CLUSTER GKE_LOCATION STAGING_BASE_URL; do
+            if [[ -z "${!name}" ]]; then
+              missing+=("$name")
+            fi
+          done
+
+          if [[ -z "${GCP_WIF_PROVIDER}" || -z "${GCP_SERVICE_ACCOUNT}" ]]; then
+            if [[ -z "${GCP_SA_KEY}" ]]; then
+              missing+=("GCP_WORKLOAD_IDENTITY_PROVIDER + GCP_SERVICE_ACCOUNT or GCP_SA_KEY")
+            fi
+          fi
+
+          if (( ${#missing[@]} > 0 )); then
+            printf 'Missing required GitHub Secrets/env values:\n' >&2
+            printf ' - %s\n' "${missing[@]}" >&2
+            exit 1
+          fi
+
+      - name: Authenticate to Google Cloud with Workload Identity Federation
+        if: ${{ env.GCP_WIF_PROVIDER != '' && env.GCP_SERVICE_ACCOUNT != '' }}
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ env.GCP_WIF_PROVIDER }}
+          service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
+
+      - name: Authenticate to Google Cloud with Service Account JSON
+        if: ${{ (env.GCP_WIF_PROVIDER == '' || env.GCP_SERVICE_ACCOUNT == '') && env.GCP_SA_KEY != '' }}
+        uses: google-github-actions/auth@v3
+        with:
+          credentials_json: ${{ env.GCP_SA_KEY }}
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+          install_components: gke-gcloud-auth-plugin,kubectl
+
+      - name: Get GKE credentials
+        uses: google-github-actions/get-gke-credentials@v3
+        with:
+          cluster_name: ${{ env.GKE_CLUSTER }}
+          location: ${{ env.GKE_LOCATION }}
+          project_id: ${{ env.GCP_PROJECT_ID }}
+
+      - name: Render Kubernetes manifests for this commit
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          rendered_dir="${RUNNER_TEMP}/bookcloud-k8s"
+          rm -rf "$rendered_dir"
+          cp -R k8s "$rendered_dir"
+
+          services=(
+            api-gateway
+            author-analytics-service
+            author-catalog
+            book-catalog
+            book-recommendation
+            book-search
+            compare-service
+            genre-analysis-service
+            rating-catalog
+          )
+
+          for service in "${services[@]}"; do
+            deployment_file="${rendered_dir}/${service}/deployment.yaml"
+            image="${IMAGE_PREFIX}/${service}:${IMAGE_TAG}"
+
+            if [[ ! -f "$deployment_file" ]]; then
+              echo "Deployment file not found: $deployment_file" >&2
+              exit 1
+            fi
+
+            sed -i "s#image: bookcloud/${service}:latest#image: ${image}#g" "$deployment_file"
+
+            if ! grep -F "image: ${image}" "$deployment_file" >/dev/null; then
+              echo "Image replacement failed for ${service}" >&2
+              exit 1
+            fi
+          done
+
+          find "$rendered_dir" -name deployment.yaml -exec sed -i 's/imagePullPolicy: IfNotPresent/imagePullPolicy: Always/g' {} +
+
+          echo "RENDERED_K8S_DIR=$rendered_dir" >> "$GITHUB_ENV"
+
+      - name: Apply manifests
+        shell: bash
+        run: |
+          set -euo pipefail
+          kubectl apply -k "$RENDERED_K8S_DIR"
+
+      - name: Wait for application rollouts
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          services=(
+            api-gateway
+            author-analytics-service
+            author-catalog
+            book-catalog
+            book-recommendation
+            book-search
+            compare-service
+            genre-analysis-service
+            rating-catalog
+          )
+
+          for service in "${services[@]}"; do
+            kubectl -n "$K8S_NAMESPACE" rollout status "deployment/${service}" --timeout="$ROLLOUT_TIMEOUT"
+          done
+
+          kubectl -n "$K8S_NAMESPACE" get pods,svc,hpa
+
+      - name: Wait for public staging endpoint
+        working-directory: src
+        env:
+          BASE_URL: ${{ env.STAGING_BASE_URL }}
+          TIMEOUT_SECONDS: 300
+          INTERVAL_SECONDS: 10
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x ./tests/wait_for_services.sh
+          ./tests/wait_for_services.sh
+
+      - name: Run staging integration tests
+        working-directory: src
+        env:
+          BASE_URL: ${{ env.STAGING_BASE_URL }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -f ./tests/staging_integration/run.sh ]]; then
+            chmod +x ./tests/staging_integration/run.sh
+            ./tests/staging_integration/run.sh
+          else
+            chmod +x ./tests/non_staging_integration/run.sh
+            ./tests/non_staging_integration/run.sh
+          fi
+
+      - name: Show Kubernetes diagnostics on failure
+        if: failure()
+        shell: bash
+        run: |
+          kubectl -n "$K8S_NAMESPACE" get pods,svc,hpa -o wide || true
+          kubectl -n "$K8S_NAMESPACE" describe pods || true
+
+          for deployment in \
+            api-gateway \
+            author-analytics-service \
+            author-catalog \
+            book-catalog \
+            book-recommendation \
+            book-search \
+            compare-service \
+            genre-analysis-service \
+            rating-catalog
+          do
+            kubectl -n "$K8S_NAMESPACE" logs "deployment/${deployment}" --tail=120 || true
+          done
