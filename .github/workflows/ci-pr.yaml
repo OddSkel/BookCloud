@@ -156,16 +156,6 @@ jobs:
           GENRE_DB_CONTAINER: genre-db
           RATING_DB_CONTAINER: rating-db
 
-          BOOK_DB_NAME: book_catalog
-          AUTHOR_DB_NAME: author_catalog
-          GENRE_DB_NAME: genre_analysis
-          RATING_DB_NAME: rating_catalog
-
-          BOOK_DB_USER: postgres
-          AUTHOR_DB_USER: postgres
-          GENRE_DB_USER: postgres
-          RATING_DB_USER: postgres
-
           BOOK_TABLE: book
           AUTHOR_TABLE: author
           GENRE_TABLE: genre
@@ -181,16 +171,6 @@ jobs:
           AUTHOR_DB_CONTAINER: author-db
           GENRE_DB_CONTAINER: genre-db
           RATING_DB_CONTAINER: rating-db
-
-          BOOK_DB_NAME: book_catalog
-          AUTHOR_DB_NAME: author_catalog
-          GENRE_DB_NAME: genre_analysis
-          RATING_DB_NAME: rating_catalog
-
-          BOOK_DB_USER: postgres
-          AUTHOR_DB_USER: postgres
-          GENRE_DB_USER: postgres
-          RATING_DB_USER: postgres
 
           BOOK_TABLE: book
           AUTHOR_TABLE: author
@@ -234,16 +214,6 @@ jobs:
           AUTHOR_DB_CONTAINER: author-db
           GENRE_DB_CONTAINER: genre-db
           RATING_DB_CONTAINER: rating-db
-
-          BOOK_DB_NAME: book_catalog
-          AUTHOR_DB_NAME: author_catalog
-          GENRE_DB_NAME: genre_analysis
-          RATING_DB_NAME: rating_catalog
-
-          BOOK_DB_USER: postgres
-          AUTHOR_DB_USER: postgres
-          GENRE_DB_USER: postgres
-          RATING_DB_USER: postgres
 
           BOOK_TABLE: book
           AUTHOR_TABLE: author
