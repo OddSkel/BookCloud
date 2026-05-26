@@ -140,7 +140,7 @@ class GenreAnalysisService(genre_service_grpc.GenreAnalysisGrpcServicer):
         cache_ready = await self._check_cache_ready()
 
         if cache_ready:
-            genres = await self.pool.fetch(
+            rows = await self.pool.fetch(
                 """
                 SELECT g.genre_id, g.name, COALESCE(c.avg_rating, 0) as avg_rating, 
                       COALESCE(c.total_num_ratings, 0) as total_num_ratings
@@ -149,8 +149,17 @@ class GenreAnalysisService(genre_service_grpc.GenreAnalysisGrpcServicer):
                 ORDER BY g.name
                 """
             )
+            genre_list = [
+                {
+                    "genre_id": r["genre_id"],
+                    "genre_name": r["name"],
+                    "avg_rating": r["avg_rating"],
+                    "total_num_ratings": r["total_num_ratings"],
+                }
+                for r in rows
+            ]
         else:
-            genres = await self.pool.fetch(
+            rows = await self.pool.fetch(
                 "SELECT genre_id, name FROM genre ORDER BY name"
             )
             all_isbns = await self.pool.fetch(
@@ -166,7 +175,7 @@ class GenreAnalysisService(genre_service_grpc.GenreAnalysisGrpcServicer):
                 gi[r["genre_id"]].append(str(r["book_isbn"]))
 
             genre_list = []
-            for g in genres:
+            for g in rows:
                 gid = g["genre_id"]
                 isbns = gi.get(gid, [])
                 star_sum = 0.0
@@ -185,7 +194,6 @@ class GenreAnalysisService(genre_service_grpc.GenreAnalysisGrpcServicer):
                     "avg_rating": avg_rating,
                     "total_num_ratings": num_ratings_sum,
                 })
-        
 
         genre_list.sort(
             key=lambda x: x["avg_rating"] if sort_by_rating else x["total_num_ratings"],

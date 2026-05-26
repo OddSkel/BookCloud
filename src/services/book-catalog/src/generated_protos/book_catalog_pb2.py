@@ -25,7 +25,7 @@ _sym_db = _symbol_database.Default()
 import common_pb2 as common__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x12\x62ook_catalog.proto\x12\x13gateway.bookcatalog\x1a\x0c\x63ommon.proto\"X\n\x04\x42ook\x12\x0c\n\x04isbn\x18\x01 \x01(\x03\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x0b\n\x03url\x18\x03 \x01(\t\x12\x15\n\rsummary_clean\x18\x04 \x01(\t\x12\x10\n\x08pub_year\x18\x05 \x01(\x05\"[\n\x07\x42ookAdd\x12\x0c\n\x04isbn\x18\x01 \x01(\x03\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x0b\n\x03url\x18\x03 \x01(\t\x12\x15\n\rsummary_clean\x18\x04 \x01(\t\x12\x10\n\x08pub_year\x18\x05 \x01(\x05\"6\n\x0fGetBooksRequest\x12\x10\n\x08page_num\x18\x01 \x01(\x05\x12\x11\n\tpage_size\x18\x02 \x01(\x05\"\x8b\x01\n\x10GetBooksResponse\x12(\n\x05\x62ooks\x18\x01 \x03(\x0b\x32\x19.gateway.bookcatalog.Book\x12\x10\n\x08page_num\x18\x02 \x01(\x05\x12\x11\n\tpage_size\x18\x03 \x01(\x05\x12\x13\n\x0btotal_items\x18\x04 \x01(\x05\x12\x13\n\x0btotal_pages\x18\x05 \x01(\x05\"\x1e\n\x0eGetBookRequest\x12\x0c\n\x04isbn\x18\x01 \x01(\x03\":\n\x0fGetBookResponse\x12\'\n\x04\x62ook\x18\x01 \x01(\x0b\x32\x19.gateway.bookcatalog.Book\"<\n\x0e\x41\x64\x64\x42ookRequest\x12*\n\x04\x62ook\x18\x01 \x01(\x0b\x32\x1c.gateway.bookcatalog.BookAdd\":\n\x0f\x41\x64\x64\x42ookResponse\x12\'\n\x04\x62ook\x18\x01 \x01(\x0b\x32\x19.gateway.bookcatalog.Book\"M\n\x11UpdateBookRequest\x12\x0c\n\x04isbn\x18\x01 \x01(\x03\x12*\n\x04\x62ook\x18\x02 \x01(\x0b\x32\x1c.gateway.bookcatalog.BookAdd\"=\n\x12UpdateBookResponse\x12\'\n\x04\x62ook\x18\x01 \x01(\x0b\x32\x19.gateway.bookcatalog.Book\"!\n\x11\x44\x65leteBookRequest\x12\x0c\n\x04isbn\x18\x01 \x01(\x03\"\x14\n\x12\x44\x65leteBookResponse2\xac\x04\n\x0f\x42ookCatalogGrpc\x12V\n\x0bHealthCheck\x12\".gateway.common.HealthCheckRequest\x1a#.gateway.common.HealthCheckResponse\x12W\n\x08GetBooks\x12$.gateway.bookcatalog.GetBooksRequest\x1a%.gateway.bookcatalog.GetBooksResponse\x12T\n\x07GetBook\x12#.gateway.bookcatalog.GetBookRequest\x1a$.gateway.bookcatalog.GetBookResponse\x12T\n\x07\x41\x64\x64\x42ook\x12#.gateway.bookcatalog.AddBookRequest\x1a$.gateway.bookcatalog.AddBookResponse\x12]\n\nUpdateBook\x12&.gateway.bookcatalog.UpdateBookRequest\x1a\'.gateway.bookcatalog.UpdateBookResponse\x12]\n\nDeleteBook\x12&.gateway.bookcatalog.DeleteBookRequest\x1a\'.gateway.bookcatalog.DeleteBookResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x12\x62ook_catalog.proto\x12\x13gateway.bookcatalog\x1a\x0c\x63ommon.proto\"X\n\x04\x42ook\x12\x0c\n\x04isbn\x18\x01 \x01(\x03\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x0b\n\x03url\x18\x03 \x01(\t\x12\x15\n\rsummary_clean\x18\x04 \x01(\t\x12\x10\n\x08pub_year\x18\x05 \x01(\x05\"[\n\x07\x42ookAdd\x12\x0c\n\x04isbn\x18\x01 \x01(\x03\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x0b\n\x03url\x18\x03 \x01(\t\x12\x15\n\rsummary_clean\x18\x04 \x01(\t\x12\x10\n\x08pub_year\x18\x05 \x01(\x05\"\x9d\x01\n\x0fGetBooksRequest\x12\x10\n\x08page_num\x18\x01 \x01(\x05\x12\x11\n\tpage_size\x18\x02 \x01(\x05\x12\x16\n\tauthor_id\x18\x03 \x01(\x05H\x00\x88\x01\x01\x12\r\n\x05isbns\x18\x04 \x03(\x03\x12\x1c\n\x0finclude_details\x18\x05 \x01(\x08H\x01\x88\x01\x01\x42\x0c\n\n_author_idB\x12\n\x10_include_details\"\x8b\x01\n\x10GetBooksResponse\x12(\n\x05\x62ooks\x18\x01 \x03(\x0b\x32\x19.gateway.bookcatalog.Book\x12\x10\n\x08page_num\x18\x02 \x01(\x05\x12\x11\n\tpage_size\x18\x03 \x01(\x05\x12\x13\n\x0btotal_items\x18\x04 \x01(\x05\x12\x13\n\x0btotal_pages\x18\x05 \x01(\x05\"\x1e\n\x0eGetBookRequest\x12\x0c\n\x04isbn\x18\x01 \x01(\x03\":\n\x0fGetBookResponse\x12\'\n\x04\x62ook\x18\x01 \x01(\x0b\x32\x19.gateway.bookcatalog.Book\"<\n\x0e\x41\x64\x64\x42ookRequest\x12*\n\x04\x62ook\x18\x01 \x01(\x0b\x32\x1c.gateway.bookcatalog.BookAdd\":\n\x0f\x41\x64\x64\x42ookResponse\x12\'\n\x04\x62ook\x18\x01 \x01(\x0b\x32\x19.gateway.bookcatalog.Book\"M\n\x11UpdateBookRequest\x12\x0c\n\x04isbn\x18\x01 \x01(\x03\x12*\n\x04\x62ook\x18\x02 \x01(\x0b\x32\x1c.gateway.bookcatalog.BookAdd\"=\n\x12UpdateBookResponse\x12\'\n\x04\x62ook\x18\x01 \x01(\x0b\x32\x19.gateway.bookcatalog.Book\"!\n\x11\x44\x65leteBookRequest\x12\x0c\n\x04isbn\x18\x01 \x01(\x03\"\x14\n\x12\x44\x65leteBookResponse2\xac\x04\n\x0f\x42ookCatalogGrpc\x12V\n\x0bHealthCheck\x12\".gateway.common.HealthCheckRequest\x1a#.gateway.common.HealthCheckResponse\x12W\n\x08GetBooks\x12$.gateway.bookcatalog.GetBooksRequest\x1a%.gateway.bookcatalog.GetBooksResponse\x12T\n\x07GetBook\x12#.gateway.bookcatalog.GetBookRequest\x1a$.gateway.bookcatalog.GetBookResponse\x12T\n\x07\x41\x64\x64\x42ook\x12#.gateway.bookcatalog.AddBookRequest\x1a$.gateway.bookcatalog.AddBookResponse\x12]\n\nUpdateBook\x12&.gateway.bookcatalog.UpdateBookRequest\x1a\'.gateway.bookcatalog.UpdateBookResponse\x12]\n\nDeleteBook\x12&.gateway.bookcatalog.DeleteBookRequest\x1a\'.gateway.bookcatalog.DeleteBookResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -36,26 +36,26 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_BOOK']._serialized_end=145
   _globals['_BOOKADD']._serialized_start=147
   _globals['_BOOKADD']._serialized_end=238
-  _globals['_GETBOOKSREQUEST']._serialized_start=240
-  _globals['_GETBOOKSREQUEST']._serialized_end=294
-  _globals['_GETBOOKSRESPONSE']._serialized_start=297
-  _globals['_GETBOOKSRESPONSE']._serialized_end=436
-  _globals['_GETBOOKREQUEST']._serialized_start=438
-  _globals['_GETBOOKREQUEST']._serialized_end=468
-  _globals['_GETBOOKRESPONSE']._serialized_start=470
-  _globals['_GETBOOKRESPONSE']._serialized_end=528
-  _globals['_ADDBOOKREQUEST']._serialized_start=530
-  _globals['_ADDBOOKREQUEST']._serialized_end=590
-  _globals['_ADDBOOKRESPONSE']._serialized_start=592
-  _globals['_ADDBOOKRESPONSE']._serialized_end=650
-  _globals['_UPDATEBOOKREQUEST']._serialized_start=652
-  _globals['_UPDATEBOOKREQUEST']._serialized_end=729
-  _globals['_UPDATEBOOKRESPONSE']._serialized_start=731
-  _globals['_UPDATEBOOKRESPONSE']._serialized_end=792
-  _globals['_DELETEBOOKREQUEST']._serialized_start=794
-  _globals['_DELETEBOOKREQUEST']._serialized_end=827
-  _globals['_DELETEBOOKRESPONSE']._serialized_start=829
-  _globals['_DELETEBOOKRESPONSE']._serialized_end=849
-  _globals['_BOOKCATALOGGRPC']._serialized_start=852
-  _globals['_BOOKCATALOGGRPC']._serialized_end=1408
+  _globals['_GETBOOKSREQUEST']._serialized_start=241
+  _globals['_GETBOOKSREQUEST']._serialized_end=398
+  _globals['_GETBOOKSRESPONSE']._serialized_start=401
+  _globals['_GETBOOKSRESPONSE']._serialized_end=540
+  _globals['_GETBOOKREQUEST']._serialized_start=542
+  _globals['_GETBOOKREQUEST']._serialized_end=572
+  _globals['_GETBOOKRESPONSE']._serialized_start=574
+  _globals['_GETBOOKRESPONSE']._serialized_end=632
+  _globals['_ADDBOOKREQUEST']._serialized_start=634
+  _globals['_ADDBOOKREQUEST']._serialized_end=694
+  _globals['_ADDBOOKRESPONSE']._serialized_start=696
+  _globals['_ADDBOOKRESPONSE']._serialized_end=754
+  _globals['_UPDATEBOOKREQUEST']._serialized_start=756
+  _globals['_UPDATEBOOKREQUEST']._serialized_end=833
+  _globals['_UPDATEBOOKRESPONSE']._serialized_start=835
+  _globals['_UPDATEBOOKRESPONSE']._serialized_end=896
+  _globals['_DELETEBOOKREQUEST']._serialized_start=898
+  _globals['_DELETEBOOKREQUEST']._serialized_end=931
+  _globals['_DELETEBOOKRESPONSE']._serialized_start=933
+  _globals['_DELETEBOOKRESPONSE']._serialized_end=953
+  _globals['_BOOKCATALOGGRPC']._serialized_start=956
+  _globals['_BOOKCATALOGGRPC']._serialized_end=1512
 # @@protoc_insertion_point(module_scope)

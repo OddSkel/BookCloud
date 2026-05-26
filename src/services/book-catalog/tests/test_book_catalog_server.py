@@ -103,7 +103,7 @@ class TestAddBook:
 
 class TestUpdateBook:
     async def test_updates_book(self, service, mock_pool, mock_redis):
-        mock_pool.fetchrow.return_value = SAMPLE_BOOK_ROW
+        mock_pool.fetchrow.return_value = {**SAMPLE_BOOK_ROW, "name": "Updated"}
 
         from generated_protos.book_catalog_pb2 import UpdateBookRequest, BookAdd
         req = UpdateBookRequest(isbn=1, book=BookAdd(name="Updated", pub_year=2024))

@@ -4,7 +4,6 @@ import grpc
 import warnings
 
 import book_catalog_pb2 as book__catalog__pb2
-import common_pb2 as common__pb2
 
 GRPC_GENERATED_VERSION = '1.80.0'
 GRPC_VERSION = grpc.__version__
@@ -35,11 +34,6 @@ class BookCatalogGrpcStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.HealthCheck = channel.unary_unary(
-                '/gateway.bookcatalog.BookCatalogGrpc/HealthCheck',
-                request_serializer=common__pb2.HealthCheckRequest.SerializeToString,
-                response_deserializer=common__pb2.HealthCheckResponse.FromString,
-                _registered_method=True)
         self.GetBooks = channel.unary_unary(
                 '/gateway.bookcatalog.BookCatalogGrpc/GetBooks',
                 request_serializer=book__catalog__pb2.GetBooksRequest.SerializeToString,
@@ -70,14 +64,9 @@ class BookCatalogGrpcStub(object):
 class BookCatalogGrpcServicer(object):
     """Missing associated documentation comment in .proto file."""
 
-    def HealthCheck(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
     def GetBooks(self, request, context):
-        """Missing associated documentation comment in .proto file."""
+        """rpc HealthCheck(gateway.common.HealthCheckRequest) returns (gateway.common.HealthCheckResponse);
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
@@ -109,11 +98,6 @@ class BookCatalogGrpcServicer(object):
 
 def add_BookCatalogGrpcServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'HealthCheck': grpc.unary_unary_rpc_method_handler(
-                    servicer.HealthCheck,
-                    request_deserializer=common__pb2.HealthCheckRequest.FromString,
-                    response_serializer=common__pb2.HealthCheckResponse.SerializeToString,
-            ),
             'GetBooks': grpc.unary_unary_rpc_method_handler(
                     servicer.GetBooks,
                     request_deserializer=book__catalog__pb2.GetBooksRequest.FromString,
@@ -149,33 +133,6 @@ def add_BookCatalogGrpcServicer_to_server(servicer, server):
  # This class is part of an EXPERIMENTAL API.
 class BookCatalogGrpc(object):
     """Missing associated documentation comment in .proto file."""
-
-    @staticmethod
-    def HealthCheck(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/gateway.bookcatalog.BookCatalogGrpc/HealthCheck',
-            common__pb2.HealthCheckRequest.SerializeToString,
-            common__pb2.HealthCheckResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
 
     @staticmethod
     def GetBooks(request,

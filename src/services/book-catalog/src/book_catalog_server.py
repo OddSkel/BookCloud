@@ -97,6 +97,9 @@ class BookCatalogService(generated_protos.book_catalog_pb2_grpc.BookCatalogGrpcS
         self.redis = redis
         self.cache_ttl = cache_ttl
 
+    async def _invalidate_book(self, isbn: int):
+        await self.redis.delete(f"book:{isbn}")
+
     async def HealthCheck(self, request, context):
         return generated_protos.common_pb2.HealthCheckResponse(
             service=self.service_name,

@@ -1,6 +1,14 @@
+import sys
+import os
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 from types import SimpleNamespace
+
+_src = os.path.join(os.path.dirname(__file__), "..", "src")
+_proto = os.path.join(os.path.dirname(__file__), "..", "src", "generated_protos")
+for p in [_src, _proto]:
+    if p not in sys.path:
+        sys.path.insert(0, p)
 
 
 class FakeRating:
@@ -43,11 +51,6 @@ def mock_book_channel():
 
 @pytest.fixture
 def service(mock_pool, mock_rating_channel, mock_book_channel):
-    import sys
-    import os
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src", "generated_protos"))
-
     from genre_analysis_server import GenreAnalysisService
     rating_chan, _ = mock_rating_channel
     book_chan, _ = mock_book_channel

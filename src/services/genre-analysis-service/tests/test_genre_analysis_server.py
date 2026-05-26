@@ -1,8 +1,6 @@
 import pytest
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 from types import SimpleNamespace
-from datetime import datetime
-from collections import defaultdict
 
 from conftest import FakeRating, FakeBook
 
@@ -54,6 +52,7 @@ class TestGetGenres:
 
     async def test_cache_not_ready_falls_back(self, service, mock_pool):
         service.cache_ready = False
+        mock_pool.fetchrow.return_value = {"cnt": 0}
         mock_pool.fetch.side_effect = [
             [{"genre_id": 1, "name": "Sci-Fi"}],
             [{"book_isbn": 111}, {"book_isbn": 222}],
@@ -98,6 +97,7 @@ class TestGetGenre:
     async def test_cache_not_ready_falls_back(self, service, mock_pool):
         service.cache_ready = False
         mock_pool.fetchrow.side_effect = [
+            {"cnt": 0},
             {"genre_id": 1, "name": "Sci-Fi"},
         ]
         mock_pool.fetch.return_value = [{"book_isbn": 111}]
@@ -263,4 +263,3 @@ class TestGetGenrePopularity:
         assert resp.total_num_ratings == 0
 
 
-from unittest.mock import MagicMock
