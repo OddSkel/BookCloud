@@ -1,11 +1,19 @@
+# syntax=docker/dockerfile:1.7
+
 FROM python:3.12-slim
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
-COPY . .
+COPY requirements.txt .
+
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install -r requirements.txt
+
+COPY ./proto ./proto
+COPY ./src ./src
 
 RUN python -m grpc_tools.protoc \
     -I ./proto \

@@ -558,12 +558,10 @@ impl GrpcRegistry {
         Ok(r.authors.into_iter().map(author_to_model).collect())
     }
 
-    pub async fn get_author(&self, author_id: &str) -> Result<AuthorModel, String> {
+    pub async fn get_author(&self, author_id: i64) -> Result<AuthorModel, String> {
         let mut c = author_client(self.endpoint(CatalogService::AuthorCatalog)).await?;
         let r = c
-            .get_author(Request::new(GetAuthorRequest {
-                author_id: author_id.to_string(),
-            }))
+            .get_author(Request::new(GetAuthorRequest { author_id }))
             .await
             .map(|r| r.into_inner())
             .map_err(|e| e.to_string())?;
@@ -601,14 +599,12 @@ impl GrpcRegistry {
         Ok(r.authors.into_iter().map(author_to_model).collect())
     }
 
-    pub async fn delete_author(&self, author_id: &str) -> Result<(), String> {
+    pub async fn delete_author(&self, author_id: i64) -> Result<(), String> {
         let mut c = author_client(self.endpoint(CatalogService::AuthorCatalog)).await?;
-        c.delete_author(Request::new(DeleteAuthorRequest {
-            author_id: author_id.to_string(),
-        }))
-        .await
-        .map(|_| ())
-        .map_err(|e| e.to_string())
+        c.delete_author(Request::new(DeleteAuthorRequest { author_id }))
+            .await
+            .map(|_| ())
+            .map_err(|e| e.to_string())
     }
 
     // Ratings

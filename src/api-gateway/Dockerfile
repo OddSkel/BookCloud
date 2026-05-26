@@ -13,15 +13,15 @@ COPY Cargo.toml Cargo.lock build.rs ./
 COPY proto/ proto/
 
 RUN mkdir src && printf 'fn main() {}\n' > src/main.rs
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/usr/local/cargo/git \
+RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
+    --mount=type=cache,target=/usr/local/cargo/git,sharing=locked \
     cargo build --release
 RUN rm -rf src
 
 COPY src/ src/
 
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/usr/local/cargo/git \
+RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
+    --mount=type=cache,target=/usr/local/cargo/git,sharing=locked \
     touch src/main.rs && cargo build --release
 
 FROM debian:bookworm-slim AS runtime

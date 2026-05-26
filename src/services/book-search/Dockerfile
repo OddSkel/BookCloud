@@ -35,16 +35,22 @@ RUN mkdir -p \
     && printf 'fn main() {}\n' > src/services/book-recommendation/src/main.rs \
     && printf 'fn main() {}\n' > src/services/book-search/src/main.rs \
     && printf 'fn main() {}\n' > src/services/rating-catalog/src/main.rs
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/usr/local/cargo/git \
+
+RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
+    --mount=type=cache,target=/usr/local/cargo/git,sharing=locked \
+    --mount=type=cache,target=/app/target,sharing=locked \
     cargo build --release -p book-search
+
 RUN rm -rf src/services/book-search/src
 
 COPY src/services/book-search/src/ src/services/book-search/src/
 
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/usr/local/cargo/git \
-    touch src/services/book-search/src/main.rs && cargo build --release -p book-search
+RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
+    --mount=type=cache,target=/usr/local/cargo/git,sharing=locked \
+    --mount=type=cache,target=/app/target,sharing=locked \
+    touch src/services/book-search/src/main.rs && \
+    cargo build --release -p book-search && \
+    cp /app/target/release/book-search /tmp/book-search
 
 FROM debian:bookworm-slim AS runtime
 
@@ -55,9 +61,9 @@ RUN apt-get update && apt-get install -y \
     libssl3 \
     && rm -rf /var/lib/apt/lists/*
 
-RUN useradd -ms /bin/bash appuser
+RUN useradd -r -s /bin/false appuser
 
-COPY --from=builder /app/target/release/book-search /usr/local/bin/book-search
+COPY --from=builder /tmp/book-search /usr/local/bin/book-search
 
 RUN chown appuser:appuser /usr/local/bin/book-search
 

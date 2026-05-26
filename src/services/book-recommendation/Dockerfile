@@ -13,16 +13,22 @@ COPY Cargo.toml Cargo.lock build.rs ./
 COPY proto/ proto/
 
 RUN mkdir src && printf 'fn main() {}\n' > src/main.rs
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/usr/local/cargo/git \
+
+RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
+    --mount=type=cache,target=/usr/local/cargo/git,sharing=locked \
+    --mount=type=cache,target=/app/target,sharing=locked \
     cargo build --release
+
 RUN rm -rf src
 
 COPY src/ src/
 
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/usr/local/cargo/git \
-    touch src/main.rs && cargo build --release
+RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
+    --mount=type=cache,target=/usr/local/cargo/git,sharing=locked \
+    --mount=type=cache,target=/app/target,sharing=locked \
+    touch src/main.rs && \
+    cargo build --release && \
+    cp /app/target/release/book-recommendation /tmp/book-recommendation
 
 FROM debian:bookworm-slim AS runtime
 
@@ -33,9 +39,9 @@ RUN apt-get update && apt-get install -y \
     libssl3 \
     && rm -rf /var/lib/apt/lists/*
 
-RUN useradd -ms /bin/bash appuser
+RUN useradd -r -s /bin/false appuser
 
-COPY --from=builder /app/target/release/book-recommendation /usr/local/bin/book-recommendation
+COPY --from=builder /tmp/book-recommendation /usr/local/bin/book-recommendation
 
 RUN chown appuser:appuser /usr/local/bin/book-recommendation
 

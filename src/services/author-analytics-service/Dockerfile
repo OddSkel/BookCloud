@@ -9,22 +9,28 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
-COPY Cargo.toml build.rs ./
+COPY Cargo.toml Cargo.lock build.rs ./
 COPY proto/ proto/
 
-RUN mkdir src && echo "fn main() {}" > src/main.rs
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/usr/local/cargo/git \
+RUN mkdir src && printf 'fn main() {}\n' > src/main.rs
+
+RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
+    --mount=type=cache,target=/usr/local/cargo/git,sharing=locked \
+    --mount=type=cache,target=/app/target,sharing=locked \
     cargo build --release
+
 RUN rm -rf src
 
-COPY src/    src/
+COPY src/ src/
 
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/usr/local/cargo/git \
-    touch src/main.rs && cargo build --release
+RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
+    --mount=type=cache,target=/usr/local/cargo/git,sharing=locked \
+    --mount=type=cache,target=/app/target,sharing=locked \
+    touch src/main.rs && \
+    cargo build --release && \
+    cp /app/target/release/author-analytics-service /tmp/author-analytics-service
 
-FROM debian:bookworm-slim
+FROM debian:bookworm-slim AS runtime
 
 WORKDIR /app
 
@@ -33,12 +39,15 @@ RUN apt-get update && apt-get install -y \
     libssl3 \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /app/target/release/author-analytics-service ./author-analytics-service
-
 RUN useradd -r -s /bin/false appuser
+
+COPY --from=builder /tmp/author-analytics-service /usr/local/bin/author-analytics-service
+
+RUN chown appuser:appuser /usr/local/bin/author-analytics-service
+
 USER appuser
 
 EXPOSE 50056
 EXPOSE 8086
 
-CMD ["./author-analytics-service"]
+CMD ["author-analytics-service"]

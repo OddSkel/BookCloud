@@ -7,24 +7,22 @@ services:
     env_file:
       - .env
     ports:
-      - "${HOST_GRPC_PORT}:50055"
+      - "${HOST_GRPC_PORT}:${GRPC_PORT}"
     networks:
       - bookcloud-network
   genre-db:
     image: postgres:15
     container_name: genre-db
     restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+    env_file:
+      - .env
     ports:
-      - "${POSTGRES_PORT}:5432"
+      - "${HOST_POSTGRES_PORT}:${POSTGRES_PORT}"
     volumes:
       - genre-db-data:/var/lib/postgresql/data
     networks:
       - bookcloud-network
-  
+
 volumes:
   genre-db-data:
 

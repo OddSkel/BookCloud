@@ -5,12 +5,18 @@ on:
     branches:
       - main
 
+env:
+  CARGO_TERM_COLOR: always
+  DOCKER_BUILDKIT: "1"
+  COMPOSE_DOCKER_CLI_BUILD: "1"
+
 jobs:
   rust-unit-tests:
     name: Rust services - build and unit tests
     runs-on: ubuntu-latest
 
     strategy:
+      fail-fast: false
       matrix:
         package:
           - api-gateway
@@ -29,6 +35,13 @@ jobs:
         with:
           components: clippy
 
+      - name: Cache Cargo registry, git and target
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            . -> target
+          key: ${{ matrix.package }}
+
       - name: Lint Rust service with Clippy
         run: cargo clippy -p ${{ matrix.package }} --all-targets -- -D warnings -A dead_code
 
@@ -43,6 +56,7 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
+      fail-fast: false
       matrix:
         service:
           - src/services/book-catalog
@@ -57,6 +71,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: ${{ matrix.service }}/requirements.txt
 
       - name: Install Python dependencies
         working-directory: ${{ matrix.service }}
@@ -96,11 +112,27 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Start containers
+      - name: Create env files from examples
         working-directory: src
         run: |
+          find ./services ./api-gateway -mindepth 1 -maxdepth 2 -type f -name ".env" -delete
+
+          find ./services ./api-gateway -mindepth 1 -maxdepth 2 -type f -name ".example.env" -exec sh -c '
+            for example_file do
+              dir=$(dirname "$example_file")
+              cp "$example_file" "$dir/.env"
+              echo "created $dir/.env from $example_file"
+            done
+          ' sh {} +
+
+      - name: Start containers
+        working-directory: src
+        env:
+          DOCKER_BUILDKIT: "1"
+          COMPOSE_DOCKER_CLI_BUILD: "1"
+        run: |
           chmod +x ./up_containers.sh
-          ./up_containers.sh
+          ./up_containers.sh --build
 
       - name: Wait for services readiness
         working-directory: src
@@ -132,7 +164,7 @@ jobs:
             [ -f "$compose_file" ] || continue
             service_dir=$(dirname "$compose_file")
             echo "Logs for $service_dir"
-            (cd "$service_dir" && docker compose logs)
+            (cd "$service_dir" && docker compose --env-file .env logs)
           done
 
       - name: Stop containers
