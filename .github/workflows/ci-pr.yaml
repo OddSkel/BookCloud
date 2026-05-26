@@ -59,6 +59,8 @@ jobs:
       fail-fast: false
       matrix:
         service:
+          - src/services/book-catalog
+          - src/services/genre-analysis-service
           - src/services/compare-service
 
     steps:

@@ -85,6 +85,11 @@ class GenreAnalysisGrpcStub(object):
                 request_serializer=genre__service__pb2.GenrePopularityRequest.SerializeToString,
                 response_deserializer=genre__service__pb2.GenrePopularityResponse.FromString,
                 _registered_method=True)
+        self.GetBooksByGenre = channel.unary_unary(
+                '/gateway.genreservice.GenreAnalysisGrpc/GetBooksByGenre',
+                request_serializer=genre__service__pb2.GetBooksByGenreRequest.SerializeToString,
+                response_deserializer=genre__service__pb2.GetBooksByGenreResponse.FromString,
+                _registered_method=True)
 
 
 class GenreAnalysisGrpcServicer(object):
@@ -150,6 +155,12 @@ class GenreAnalysisGrpcServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def GetBooksByGenre(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_GenreAnalysisGrpcServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -202,6 +213,11 @@ def add_GenreAnalysisGrpcServicer_to_server(servicer, server):
                     servicer.GetGenrePopularity,
                     request_deserializer=genre__service__pb2.GenrePopularityRequest.FromString,
                     response_serializer=genre__service__pb2.GenrePopularityResponse.SerializeToString,
+            ),
+            'GetBooksByGenre': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetBooksByGenre,
+                    request_deserializer=genre__service__pb2.GetBooksByGenreRequest.FromString,
+                    response_serializer=genre__service__pb2.GetBooksByGenreResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -474,6 +490,33 @@ class GenreAnalysisGrpc(object):
             '/gateway.genreservice.GenreAnalysisGrpc/GetGenrePopularity',
             genre__service__pb2.GenrePopularityRequest.SerializeToString,
             genre__service__pb2.GenrePopularityResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetBooksByGenre(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/gateway.genreservice.GenreAnalysisGrpc/GetBooksByGenre',
+            genre__service__pb2.GetBooksByGenreRequest.SerializeToString,
+            genre__service__pb2.GetBooksByGenreResponse.FromString,
             options,
             channel_credentials,
             insecure,

@@ -59,6 +59,7 @@ class GenreAnalysisService(genre_service_grpc.GenreAnalysisGrpcServicer):
         self.service_name = service_name
         self.rating_catalog_channel = rating_catalog_channel
         self.book_catalog_channel = book_catalog_channel
+        self.cache_ready = False
 
     async def _get_ratings_batch(self, isbns: list, batch_size: int = 200):
         if not isbns or self.rating_catalog_channel is None:
@@ -120,6 +121,15 @@ class GenreAnalysisService(genre_service_grpc.GenreAnalysisGrpcServicer):
 
         return books
 
+    async def _check_cache_ready(self):
+        if self.cache_ready:
+            return True
+        row = await self.pool.fetchrow("SELECT COUNT(*) as cnt FROM genre_stats_cache")
+        if row and row["cnt"] > 0:
+            self.cache_ready = True
+            return True
+        return False
+
     async def GetGenres(self, request, context):
         page_num = request.page_num if request.page_num > 0 else 1
         default_page_size = 20
@@ -127,34 +137,63 @@ class GenreAnalysisService(genre_service_grpc.GenreAnalysisGrpcServicer):
         sort_by_rating = request.sort_by == 0
         ascending = request.ascending
 
-        genres = await self.pool.fetch(
-            """
-            SELECT g.genre_id, g.name, COALESCE(c.avg_rating, 0) as avg_rating, 
-                  COALESCE(c.total_num_ratings, 0) as total_num_ratings
-            FROM genre g
-            LEFT JOIN genre_stats_cache c ON g.genre_id = c.genre_id
-            ORDER BY g.name
-            """
-        )
+        cache_ready = await self._check_cache_ready()
 
-        if not genres:
-            return GetGenresResponse(
-                genres=[],
-                page_num=page_num,
-                page_size=page_size,
-                total_items=0,
-                total_pages=0,
+        if cache_ready:
+            rows = await self.pool.fetch(
+                """
+                SELECT g.genre_id, g.name, COALESCE(c.avg_rating, 0) as avg_rating, 
+                      COALESCE(c.total_num_ratings, 0) as total_num_ratings
+                FROM genre g
+                LEFT JOIN genre_stats_cache c ON g.genre_id = c.genre_id
+                ORDER BY g.name
+                """
             )
+            genre_list = [
+                {
+                    "genre_id": r["genre_id"],
+                    "genre_name": r["name"],
+                    "avg_rating": r["avg_rating"],
+                    "total_num_ratings": r["total_num_ratings"],
+                }
+                for r in rows
+            ]
+        else:
+            rows = await self.pool.fetch(
+                "SELECT genre_id, name FROM genre ORDER BY name"
+            )
+            all_isbns = await self.pool.fetch(
+                "SELECT DISTINCT book_isbn FROM book_genre"
+            )
+            isbns = [str(r["book_isbn"]) for r in all_isbns]
+            ratings = await self._get_ratings_batch(isbns)
+            genre_isbns = await self.pool.fetch(
+                "SELECT genre_id, book_isbn FROM book_genre"
+            )
+            gi = defaultdict(list)
+            for r in genre_isbns:
+                gi[r["genre_id"]].append(str(r["book_isbn"]))
 
-        genre_list = [
-            {
-                "genre_id": g["genre_id"],
-                "genre_name": g["name"],
-                "avg_rating": g["avg_rating"],
-                "total_num_ratings": g["total_num_ratings"]
-            }
-            for g in genres
-        ]
+            genre_list = []
+            for g in rows:
+                gid = g["genre_id"]
+                isbns = gi.get(gid, [])
+                star_sum = 0.0
+                num_ratings_sum = 0
+                rated_count = 0
+                for isbn in isbns:
+                    rating = ratings.get(isbn)
+                    if rating:
+                        star_sum += rating.star_rating
+                        num_ratings_sum += rating.num_ratings
+                        rated_count += 1
+                avg_rating = round(star_sum / rated_count, 2) if rated_count > 0 else 0.0
+                genre_list.append({
+                    "genre_id": gid,
+                    "genre_name": g["name"],
+                    "avg_rating": avg_rating,
+                    "total_num_ratings": num_ratings_sum,
+                })
 
         genre_list.sort(
             key=lambda x: x["avg_rating"] if sort_by_rating else x["total_num_ratings"],
@@ -228,32 +267,59 @@ class GenreAnalysisService(genre_service_grpc.GenreAnalysisGrpcServicer):
         return AddGenreResponse(genre=row_to_genre_pb(row))
 
     async def GetGenre(self, request, context):
-        row = await self.pool.fetchrow(
-            """
-            SELECT g.genre_id, g.name, COALESCE(c.avg_rating, 0) as avg_rating,
-                COALESCE(c.total_num_ratings, 0) as total_num_ratings
-            FROM genre g
-            LEFT JOIN genre_stats_cache c ON g.genre_id = c.genre_id
-            WHERE g.genre_id=$1
-            """,
-            request.genre_id,
-        )
-        if not row:
-            context.set_details("Genre not found")
-            context.set_code(grpc.StatusCode.NOT_FOUND)
-            return GetGenreResponse()
+        cache_ready = await self._check_cache_ready()
 
-        genre_id = row["genre_id"]
-        genre_name = row["name"]
-        avg_rating = row["avg_rating"]
-        total_num_ratings = row["total_num_ratings"]
-
-        return GetGenreResponse(
-            genre_id=genre_id,
-            genre_name=genre_name,
-            avg_rating=avg_rating,
-            total_num_ratings=total_num_ratings,
-        )
+        if cache_ready:
+            row = await self.pool.fetchrow(
+                """
+                SELECT g.genre_id, g.name, COALESCE(c.avg_rating, 0) as avg_rating,
+                    COALESCE(c.total_num_ratings, 0) as total_num_ratings
+                FROM genre g
+                LEFT JOIN genre_stats_cache c ON g.genre_id = c.genre_id
+                WHERE g.genre_id=$1
+                """,
+                request.genre_id,
+            )
+            if not row:
+                context.set_details("Genre not found")
+                context.set_code(grpc.StatusCode.NOT_FOUND)
+                return GetGenreResponse()
+            return GetGenreResponse(
+                genre_id=row["genre_id"],
+                genre_name=row["name"],
+                avg_rating=row["avg_rating"],
+                total_num_ratings=row["total_num_ratings"],
+            )
+        else:
+            row = await self.pool.fetchrow(
+                "SELECT genre_id, name FROM genre WHERE genre_id=$1",
+                request.genre_id,
+            )
+            if not row:
+                context.set_details("Genre not found")
+                context.set_code(grpc.StatusCode.NOT_FOUND)
+                return GetGenreResponse()
+            isbns = await self.pool.fetch(
+                "SELECT book_isbn FROM book_genre WHERE genre_id=$1", request.genre_id
+            )
+            isbns_list = [str(r["book_isbn"]) for r in isbns]
+            ratings = await self._get_ratings_batch(isbns_list)
+            star_sum = 0.0
+            num_ratings_sum = 0
+            rated_count = 0
+            for isbn in isbns_list:
+                rating = ratings.get(isbn)
+                if rating:
+                    star_sum += rating.star_rating
+                    num_ratings_sum += rating.num_ratings
+                    rated_count += 1
+            avg_rating = round(star_sum / rated_count, 2) if rated_count > 0 else 0.0
+            return GetGenreResponse(
+                genre_id=row["genre_id"],
+                genre_name=row["name"],
+                avg_rating=avg_rating,
+                total_num_ratings=num_ratings_sum,
+            )
 
     async def UpdateGenre(self, request, context):
         genre_in = request.genre
@@ -332,22 +398,47 @@ class GenreAnalysisService(genre_service_grpc.GenreAnalysisGrpcServicer):
         year_to = request.year_to if request.year_to > 0 else datetime.now().year
         year_from = request.year_from if request.year_from > 0 else (year_to - 5)
 
-        year_rows = await self.pool.fetch(
-            "SELECT year, avg_rating, total_num_ratings FROM genre_year_stats_cache "
-            "WHERE genre_id=$1 AND year >= $2 AND year <= $3 ORDER BY year",
-            request.genre_id, year_from, year_to,
-        )
-        points = [
-            GenreTrendPoint(year=row["year"], avg_rating=row["avg_rating"])
-            for row in year_rows
-        ]
+        cache_ready = await self._check_cache_ready()
 
-        overall_num_ratings = sum(row["total_num_ratings"] for row in year_rows)
-        overall_avg_rating = 0.0
-        if year_rows:
-            total = sum(row["avg_rating"] * row["total_num_ratings"] for row in year_rows)
-            if overall_num_ratings > 0:
-                overall_avg_rating = round(total / overall_num_ratings, 2)
+        if cache_ready:
+            year_rows = await self.pool.fetch(
+                "SELECT year, avg_rating, total_num_ratings FROM genre_year_stats_cache "
+                "WHERE genre_id=$1 AND year >= $2 AND year <= $3 ORDER BY year",
+                request.genre_id, year_from, year_to,
+            )
+            points = [GenreTrendPoint(year=r["year"], avg_rating=r["avg_rating"]) for r in year_rows]
+            overall_num_ratings = sum(r["total_num_ratings"] for r in year_rows)
+            overall_avg_rating = 0.0
+            if year_rows:
+                total = sum(r["avg_rating"] * r["total_num_ratings"] for r in year_rows)
+                if overall_num_ratings > 0:
+                    overall_avg_rating = round(total / overall_num_ratings, 2)
+        else:
+            isbns = await self.pool.fetch(
+                "SELECT book_isbn FROM book_genre WHERE genre_id=$1", request.genre_id
+            )
+            isbns_list = [str(r["book_isbn"]) for r in isbns]
+            ratings = await self._get_ratings_batch(isbns_list)
+            books = await self._get_books_batch(isbns_list)
+            yearly = defaultdict(lambda: {"star_sum": 0.0, "num_ratings_sum": 0, "count": 0})
+            for isbn in isbns_list:
+                rating = ratings.get(isbn)
+                book = books.get(isbn)
+                if rating and book and book.pub_year and year_from <= book.pub_year <= year_to:
+                    y = book.pub_year
+                    yearly[y]["star_sum"] += rating.star_rating
+                    yearly[y]["num_ratings_sum"] += rating.num_ratings
+                    yearly[y]["count"] += 1
+            points = [
+                GenreTrendPoint(year=y, avg_rating=round(d["star_sum"] / d["count"], 2) if d["count"] > 0 else 0.0)
+                for y, d in sorted(yearly.items()) if d["count"] > 0
+            ]
+            overall_num_ratings = sum(d["num_ratings_sum"] for d in yearly.values())
+            overall_avg_rating = 0.0
+            total_stars = sum(d["star_sum"] for d in yearly.values())
+            total_rated = sum(d["count"] for d in yearly.values())
+            if total_rated > 0:
+                overall_avg_rating = round(total_stars / total_rated, 2)
 
         return GenreGrowthResponse(
             points=points,
@@ -368,17 +459,38 @@ class GenreAnalysisService(genre_service_grpc.GenreAnalysisGrpcServicer):
         year_to = request.year_to if request.year_to > 0 else datetime.now().year
         year_from = request.year_from if request.year_from > 0 else (year_to - 5)
 
-        year_rows = await self.pool.fetch(
-            "SELECT year, total_num_ratings, book_count FROM genre_year_stats_cache "
-            "WHERE genre_id=$1 AND year >= $2 AND year <= $3 ORDER BY year",
-            request.genre_id, year_from, year_to,
-        )
-        points = [
-            GenreTrendPointPopularity(year=row["year"], total_num_ratings=row["total_num_ratings"])
-            for row in year_rows
-        ]
+        cache_ready = await self._check_cache_ready()
 
-        overall_num_ratings = sum(row["total_num_ratings"] for row in year_rows)
+        if cache_ready:
+            year_rows = await self.pool.fetch(
+                "SELECT year, total_num_ratings, book_count FROM genre_year_stats_cache "
+                "WHERE genre_id=$1 AND year >= $2 AND year <= $3 ORDER BY year",
+                request.genre_id, year_from, year_to,
+            )
+            points = [GenreTrendPointPopularity(year=r["year"], total_num_ratings=r["total_num_ratings"]) for r in year_rows]
+            overall_num_ratings = sum(r["total_num_ratings"] for r in year_rows)
+            overall_books = sum(r["book_count"] for r in year_rows)
+        else:
+            isbns = await self.pool.fetch(
+                "SELECT book_isbn FROM book_genre WHERE genre_id=$1", request.genre_id
+            )
+            isbns_list = [str(r["book_isbn"]) for r in isbns]
+            ratings = await self._get_ratings_batch(isbns_list)
+            books = await self._get_books_batch(isbns_list)
+            yearly = defaultdict(lambda: {"num_ratings_sum": 0, "count": 0})
+            for isbn in isbns_list:
+                rating = ratings.get(isbn)
+                book = books.get(isbn)
+                if rating and book and book.pub_year and year_from <= book.pub_year <= year_to:
+                    y = book.pub_year
+                    yearly[y]["num_ratings_sum"] += rating.num_ratings
+                    yearly[y]["count"] += 1
+            points = [
+                GenreTrendPointPopularity(year=y, total_num_ratings=d["num_ratings_sum"])
+                for y, d in sorted(yearly.items()) if d["count"] > 0
+            ]
+            overall_num_ratings = sum(d["num_ratings_sum"] for d in yearly.values())
+            overall_books = sum(d["count"] for d in yearly.values())
         overall_books = sum(row["book_count"] for row in year_rows)
 
         return GenrePopularityResponse(
@@ -526,8 +638,8 @@ async def update_genre_cache(pool, rating_catalog_channel, book_catalog_channel,
         "SELECT COUNT(*) as cnt FROM genre_year_stats_cache"
     )
 
-    use_stats = stats_exists["cnt"] == 0
-    use_year = year_exists["cnt"] == 0
+    use_stats = True
+    use_year = True
 
     if stats_exists["cnt"] > 0:
         stats_cache = await pool.fetchrow(
@@ -539,11 +651,11 @@ async def update_genre_cache(pool, rating_catalog_channel, book_catalog_channel,
                 use_stats = False
                 logging.info(f"genre_stats_cache is fresh ({age_hours:.1f}h old, TTL={cache_ttl_hours}h)")
             else:
-                logging.info(f"genre_stats_cache is stale ({age_hours:.1f}h old, TTL={cache_ttl_hours}h), will rebuild")
                 await pool.execute("DELETE FROM genre_stats_cache")
+                logging.info(f"genre_stats_cache is stale ({age_hours:.1f}h old, TTL={cache_ttl_hours}h), will rebuild")
         else:
-            logging.info("genre_stats_cache has no timestamp, will rebuild")
             await pool.execute("DELETE FROM genre_stats_cache")
+            logging.info("genre_stats_cache has no timestamp, will rebuild")
     else:
         logging.info("genre_stats_cache is empty, will rebuild")
 
@@ -557,22 +669,17 @@ async def update_genre_cache(pool, rating_catalog_channel, book_catalog_channel,
                 use_year = False
                 logging.info(f"genre_year_stats_cache is fresh ({age_hours:.1f}h old, TTL={cache_ttl_hours}h)")
             else:
-                logging.info(f"genre_year_stats_cache is stale ({age_hours:.1f}h old, TTL={cache_ttl_hours}h), will rebuild")
                 await pool.execute("DELETE FROM genre_year_stats_cache")
+                logging.info(f"genre_year_stats_cache is stale ({age_hours:.1f}h old, TTL={cache_ttl_hours}h), will rebuild")
         else:
-            logging.info("genre_year_stats_cache has no timestamp, will rebuild")
             await pool.execute("DELETE FROM genre_year_stats_cache")
+            logging.info("genre_year_stats_cache has no timestamp, will rebuild")
     else:
         logging.info("genre_year_stats_cache is empty, will rebuild")
 
     if not use_stats and not use_year:
         logging.info("All caches are fresh, skipping rebuild")
         return
-
-    if not use_stats:
-        await pool.execute("DELETE FROM genre_stats_cache")
-    if not use_year:
-        await pool.execute("DELETE FROM genre_year_stats_cache")
 
     all_data = await pool.fetch(
         "SELECT bg.book_isbn, bg.genre_id, g.name as genre_name "
@@ -747,16 +854,15 @@ async def serve():
         f"{book_catalog_host}:{book_catalog_port}"
     )
 
-    server = grpc.aio.server()
-    genre_service_grpc.add_GenreAnalysisGrpcServicer_to_server(
-        GenreAnalysisService(
-            pool=pool,
-            service_name=service_name,
-            rating_catalog_channel=rating_catalog_channel,
-            book_catalog_channel=book_catalog_channel,
-        ),
-        server,
+    service = GenreAnalysisService(
+        pool=pool,
+        service_name=service_name,
+        rating_catalog_channel=rating_catalog_channel,
+        book_catalog_channel=book_catalog_channel,
     )
+
+    server = grpc.aio.server()
+    genre_service_grpc.add_GenreAnalysisGrpcServicer_to_server(service, server)
 
     server_addr = f"{grpc_host}:{grpc_port}"
     server.add_insecure_port(server_addr)
@@ -765,9 +871,11 @@ async def serve():
     await server.start()
 
     async def update_cache_in_background():
-        logging.info("Updating genre cache (this may take several minutes)...")
+        logging.info("Updating genre cache in background (this may take several minutes)...")
         try:
             await update_genre_cache(pool, rating_catalog_channel, book_catalog_channel)
+            service.cache_ready = True
+            logging.info("Genre cache ready")
         except Exception as e:
             logging.warning(f"Failed to update cache: {e}")
 

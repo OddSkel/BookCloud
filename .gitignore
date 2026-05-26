@@ -3,6 +3,10 @@
 venv/
 __pycache__
 *.csv
+
+!src/tests/dataset/
+!src/tests/dataset/*.csv
+
 *.pyc
 *.zip
 *.tar.gz
