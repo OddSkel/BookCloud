@@ -36,18 +36,18 @@ RUN mkdir -p \
     && printf 'fn main() {}\n' > src/services/book-search/src/main.rs \
     && printf 'fn main() {}\n' > src/services/rating-catalog/src/main.rs
 
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/usr/local/cargo/git \
-    --mount=type=cache,target=/app/target \
+RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
+    --mount=type=cache,target=/usr/local/cargo/git,sharing=locked \
+    --mount=type=cache,target=/app/target,sharing=locked \
     cargo build --release -p book-search
 
 RUN rm -rf src/services/book-search/src
 
 COPY src/services/book-search/src/ src/services/book-search/src/
 
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/usr/local/cargo/git \
-    --mount=type=cache,target=/app/target \
+RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
+    --mount=type=cache,target=/usr/local/cargo/git,sharing=locked \
+    --mount=type=cache,target=/app/target,sharing=locked \
     touch src/services/book-search/src/main.rs && \
     cargo build --release -p book-search && \
     cp /app/target/release/book-search /tmp/book-search

@@ -116,7 +116,7 @@ jobs:
           find ./services ./api-gateway -mindepth 1 -maxdepth 2 -type f -name ".env" -delete
 
           find ./services ./api-gateway -mindepth 1 -maxdepth 2 -type f -name ".example.env" -exec sh -c '
-            for example_file do
+            for example_file dom
               dir=$(dirname "$example_file")
               cp "$example_file" "$dir/.env"
               echo "created $dir/.env from $example_file"
