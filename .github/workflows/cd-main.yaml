@@ -67,7 +67,7 @@ jobs:
           done
 
           if (( ${#missing[@]} > 0 )); then
-            printf 'Missing required GitHub Secrets/Variables:\n' >&2
+            printf 'Missing required GitHub Variables:\n' >&2
             printf ' - %s\n' "${missing[@]}" >&2
             exit 1
           fi
@@ -329,7 +329,7 @@ jobs:
           done
 
           if (( ${#missing[@]} > 0 )); then
-            printf 'Missing required GitHub Secrets/Variables:\n' >&2
+            printf 'Missing required GitHub Variables:\n' >&2
             printf ' - %s\n' "${missing[@]}" >&2
             exit 1
           fi
@@ -462,7 +462,10 @@ jobs:
 
           ROLLOUT_TIMEOUT="${ROLLOUT_TIMEOUT:-600s}"
 
-          services=(
+          deployments=(
+            keycloak-db
+            keycloak
+            kong
             api-gateway
             author-analytics-service
             author-catalog
@@ -474,8 +477,8 @@ jobs:
             rating-catalog
           )
 
-          for service in "${services[@]}"; do
-            kubectl -n "$K8S_NAMESPACE" rollout status "deployment/${service}" --timeout="$ROLLOUT_TIMEOUT"
+          for deployment in "${deployments[@]}"; do
+            kubectl -n "$K8S_NAMESPACE" rollout status "deployment/${deployment}" --timeout="$ROLLOUT_TIMEOUT"
           done
 
           kubectl -n "$K8S_NAMESPACE" get pods,svc,hpa -o wide
@@ -532,22 +535,195 @@ jobs:
           kubectl -n "$K8S_NAMESPACE" get svc -o wide || true
           exit 1
 
+      - name: Obtain Keycloak access token
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Reading Keycloak realm from configmap..."
+
+          realm_json="$(kubectl -n "$K8S_NAMESPACE" get configmap keycloak-realm \
+            -o jsonpath='{.data.bookcloud-realm\.json}' 2>/dev/null || true)"
+
+          if [[ -z "$realm_json" ]]; then
+            echo "Could not read bookcloud-realm.json from configmap keycloak-realm." >&2
+            kubectl -n "$K8S_NAMESPACE" get configmap keycloak-realm -o yaml || true
+            exit 1
+          fi
+
+          echo "$realm_json" > /tmp/bookcloud-realm.json
+
+          realm="$(jq -r '.realm // empty' /tmp/bookcloud-realm.json)"
+
+          client_id="$(jq -r '
+            [
+              .clients[]?
+              | select((.directAccessGrantsEnabled == true) and (.clientId != "account"))
+              | .clientId
+            ][0] // empty
+          ' /tmp/bookcloud-realm.json)"
+
+          client_secret="$(jq -r --arg client_id "$client_id" '
+            .clients[]?
+            | select(.clientId == $client_id)
+            | .secret // empty
+          ' /tmp/bookcloud-realm.json)"
+
+          username="$(jq -r '
+            [
+              .users[]?
+              | select(.enabled != false)
+              | .username
+            ][0] // empty
+          ' /tmp/bookcloud-realm.json)"
+
+          password="$(jq -r '
+            [
+              .users[]?.credentials[]?
+              | select(.type == "password")
+              | .value
+            ][0] // empty
+          ' /tmp/bookcloud-realm.json)"
+
+          if [[ -z "$realm" || -z "$client_id" || -z "$username" || -z "$password" ]]; then
+            echo "Could not infer realm/client/user/password from keycloak-realm configmap." >&2
+            echo "realm=$realm"
+            echo "client_id=$client_id"
+            echo "username=$username"
+            echo "password_present=$([[ -n "$password" ]] && echo yes || echo no)"
+            exit 1
+          fi
+
+          echo "Realm: $realm"
+          echo "Client ID: $client_id"
+          echo "Username: $username"
+
+          echo "Starting port-forward to Keycloak..."
+
+          kubectl -n "$K8S_NAMESPACE" port-forward service/keycloak 18080:8080 >/tmp/keycloak-port-forward.log 2>&1 &
+          pf_pid="$!"
+
+          cleanup() {
+            kill "$pf_pid" >/dev/null 2>&1 || true
+          }
+
+          trap cleanup EXIT
+
+          echo "Waiting for Keycloak to respond through port-forward..."
+
+          for i in {1..60}; do
+            if curl -fsS "http://127.0.0.1:18080/realms/${realm}/.well-known/openid-configuration" >/dev/null 2>&1; then
+              echo "Keycloak is reachable."
+              break
+            fi
+
+            echo "Keycloak not reachable yet. Retrying..."
+            cat /tmp/keycloak-port-forward.log || true
+            sleep 5
+
+            if [[ "$i" == "60" ]]; then
+              echo "Keycloak did not become reachable in time." >&2
+              cat /tmp/keycloak-port-forward.log || true
+              exit 1
+            fi
+          done
+
+          token_args=(
+            -sS
+            -X POST
+            "http://127.0.0.1:18080/realms/${realm}/protocol/openid-connect/token"
+            -H "Content-Type: application/x-www-form-urlencoded"
+            -d "grant_type=password"
+            -d "client_id=${client_id}"
+            -d "username=${username}"
+            -d "password=${password}"
+          )
+
+          if [[ -n "$client_secret" ]]; then
+            token_args+=(-d "client_secret=${client_secret}")
+          fi
+
+          token_response="$(curl "${token_args[@]}")"
+
+          access_token="$(echo "$token_response" | jq -r '.access_token // empty')"
+
+          if [[ -z "$access_token" || "$access_token" == "null" ]]; then
+            echo "Failed to obtain Keycloak access token." >&2
+            echo "$token_response" | jq . || echo "$token_response"
+            exit 1
+          fi
+
+          echo "KEYCLOAK_ACCESS_TOKEN=${access_token}" >> "$GITHUB_ENV"
+
+          echo "Keycloak access token obtained successfully."
+
       - name: Wait for public staging endpoint
         working-directory: src
         env:
           BASE_URL: ${{ env.STAGING_BASE_URL }}
+          KEYCLOAK_ACCESS_TOKEN: ${{ env.KEYCLOAK_ACCESS_TOKEN }}
           TIMEOUT_SECONDS: 300
           INTERVAL_SECONDS: 10
         shell: bash
         run: |
           set -euo pipefail
-          chmod +x ./tests/wait_for_services.sh
-          ./tests/wait_for_services.sh
+
+          API_BASE_URL="${BASE_URL}/api"
+          HEALTH_URL="${API_BASE_URL}/health"
+
+          echo "Waiting for authenticated API Gateway health at ${HEALTH_URL}..."
+
+          elapsed=0
+
+          while [ "$elapsed" -lt "$TIMEOUT_SECONDS" ]; do
+            http_code="$(curl \
+              --max-time 20 \
+              --connect-timeout 5 \
+              -sS \
+              -o /tmp/bookcloud-health-response.txt \
+              -w "%{http_code}" \
+              -H "Authorization: Bearer ${KEYCLOAK_ACCESS_TOKEN}" \
+              "$HEALTH_URL" || true)"
+
+            echo "Health check returned HTTP ${http_code}"
+
+            if [ "$http_code" = "200" ]; then
+              echo "Authenticated public staging endpoint is healthy."
+              exit 0
+            fi
+
+            echo "Response body:"
+            cat /tmp/bookcloud-health-response.txt || true
+
+            sleep "$INTERVAL_SECONDS"
+            elapsed=$((elapsed + INTERVAL_SECONDS))
+          done
+
+          echo "Public staging endpoint did not become healthy in time." >&2
+
+          echo "=== Services ==="
+          kubectl -n "$K8S_NAMESPACE" get svc -o wide || true
+
+          echo "=== Pods ==="
+          kubectl -n "$K8S_NAMESPACE" get pods -o wide || true
+
+          echo "=== Kong logs ==="
+          kubectl -n "$K8S_NAMESPACE" logs deployment/kong --tail=200 || true
+
+          echo "=== API Gateway logs ==="
+          kubectl -n "$K8S_NAMESPACE" logs deployment/api-gateway --tail=200 || true
+
+          echo "=== Keycloak logs ==="
+          kubectl -n "$K8S_NAMESPACE" logs deployment/keycloak --tail=200 || true
+
+          exit 1
 
       - name: Run staging integration tests
         working-directory: src
         env:
           BASE_URL: ${{ env.STAGING_BASE_URL }}
+          KEYCLOAK_ACCESS_TOKEN: ${{ env.KEYCLOAK_ACCESS_TOKEN }}
+          AUTHORIZATION_HEADER: Bearer ${{ env.KEYCLOAK_ACCESS_TOKEN }}
         shell: bash
         run: |
           set -euo pipefail
@@ -568,6 +744,9 @@ jobs:
           kubectl -n "$K8S_NAMESPACE" describe pods || true
 
           for deployment in \
+            keycloak-db \
+            keycloak \
+            kong \
             api-gateway \
             author-analytics-service \
             author-catalog \
