@@ -29,7 +29,6 @@ env:
   GKE_LOCATION: ${{ vars.GKE_LOCATION }}
   GKE_MACHINE_TYPE: ${{ vars.GKE_MACHINE_TYPE }}
   GKE_NUM_NODES: ${{ vars.GKE_NUM_NODES }}
-  GKE_DISK_SIZE_GB: ${{ vars.GKE_DISK_SIZE_GB }}
 
   K8S_NAMESPACE: ${{ vars.K8S_NAMESPACE }}
   ROLLOUT_TIMEOUT: ${{ vars.ROLLOUT_TIMEOUT }}
@@ -68,7 +67,7 @@ jobs:
           done
 
           if (( ${#missing[@]} > 0 )); then
-            printf 'Missing required GitHub Variables:\n' >&2
+            printf 'Missing required GitHub Secrets/Variables:\n' >&2
             printf ' - %s\n' "${missing[@]}" >&2
             exit 1
           fi
@@ -121,7 +120,7 @@ jobs:
 
           GKE_MACHINE_TYPE="${GKE_MACHINE_TYPE:-e2-standard-2}"
           GKE_NUM_NODES="${GKE_NUM_NODES:-1}"
-          GKE_DISK_SIZE_GB="${GKE_DISK_SIZE_GB:-30}"
+          GKE_DISK_SIZE_GB="30"
 
           cluster_status=""
 
@@ -330,7 +329,7 @@ jobs:
           done
 
           if (( ${#missing[@]} > 0 )); then
-            printf 'Missing required GitHub Variables:\n' >&2
+            printf 'Missing required GitHub Secrets/Variables:\n' >&2
             printf ' - %s\n' "${missing[@]}" >&2
             exit 1
           fi
@@ -395,6 +394,60 @@ jobs:
           find "$rendered_dir" -name deployment.yaml -exec sed -i 's/imagePullPolicy: IfNotPresent/imagePullPolicy: Always/g' {} +
 
           echo "RENDERED_K8S_DIR=$rendered_dir" >> "$GITHUB_ENV"
+
+      - name: Install monitoring stack with Helm
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          MONITORING_NAMESPACE="monitoring"
+          MONITORING_RELEASE_NAME="monitoring"
+          MONITORING_VALUES_FILE="k8s/monitoring/values-gke.yaml"
+
+          if command -v helm >/dev/null 2>&1; then
+            echo "Helm already installed."
+          else
+            echo "Installing Helm..."
+            curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+          fi
+
+          kubectl create namespace "$MONITORING_NAMESPACE" \
+            --dry-run=client \
+            -o yaml | kubectl apply -f -
+
+          helm repo add prometheus-community https://prometheus-community.github.io/helm-charts || true
+          helm repo update
+
+          if [[ -f "$MONITORING_VALUES_FILE" ]]; then
+            helm upgrade --install "$MONITORING_RELEASE_NAME" prometheus-community/kube-prometheus-stack \
+              --namespace "$MONITORING_NAMESPACE" \
+              --values "$MONITORING_VALUES_FILE" \
+              --wait \
+              --timeout 10m
+          else
+            echo "Monitoring values file not found: $MONITORING_VALUES_FILE"
+            echo "Installing kube-prometheus-stack with default values..."
+
+            helm upgrade --install "$MONITORING_RELEASE_NAME" prometheus-community/kube-prometheus-stack \
+              --namespace "$MONITORING_NAMESPACE" \
+              --wait \
+              --timeout 10m
+          fi
+
+          echo "Waiting for ServiceMonitor CRD..."
+
+          for i in {1..60}; do
+            if kubectl get crd servicemonitors.monitoring.coreos.com >/dev/null 2>&1; then
+              echo "ServiceMonitor CRD is available."
+              exit 0
+            fi
+
+            echo "ServiceMonitor CRD not ready yet. Retrying..."
+            sleep 5
+          done
+
+          echo "ServiceMonitor CRD was not installed in time." >&2
+          exit 1
 
       - name: Apply Kubernetes manifests
         shell: bash
@@ -503,9 +556,8 @@ jobs:
             chmod +x ./tests/staging_integration/run.sh
             ./tests/staging_integration/run.sh
           else
-            echo "Missing ./tests/staging_integration/run.sh" >&2
-            echo "Create a staging-specific integration test script instead of using non_staging_integration." >&2
-            exit 1
+            chmod +x ./tests/non_staging_integration/run.sh
+            ./tests/non_staging_integration/run.sh
           fi
 
       - name: Show Kubernetes diagnostics on failure
