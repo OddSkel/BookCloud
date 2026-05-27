@@ -123,11 +123,33 @@ jobs:
           GKE_NUM_NODES="${GKE_NUM_NODES:-1}"
           GKE_DISK_SIZE_GB="${GKE_DISK_SIZE_GB:-30}"
 
+          cluster_status=""
+
           if gcloud container clusters describe "$GKE_CLUSTER" \
             --location="$GKE_LOCATION" \
             --project="$GCP_PROJECT_ID" >/dev/null 2>&1; then
-            echo "GKE cluster already exists."
-          else
+
+            cluster_status="$(gcloud container clusters describe "$GKE_CLUSTER" \
+              --location="$GKE_LOCATION" \
+              --project="$GCP_PROJECT_ID" \
+              --format="value(status)")"
+
+            echo "GKE cluster exists with status: ${cluster_status}"
+
+            if [[ "$cluster_status" != "RUNNING" ]]; then
+              echo "Cluster exists but is not RUNNING. Deleting it before recreating..."
+
+              gcloud container clusters delete "$GKE_CLUSTER" \
+                --location="$GKE_LOCATION" \
+                --project="$GCP_PROJECT_ID" \
+                --quiet
+            fi
+          fi
+
+          if ! gcloud container clusters describe "$GKE_CLUSTER" \
+            --location="$GKE_LOCATION" \
+            --project="$GCP_PROJECT_ID" >/dev/null 2>&1; then
+
             echo "GKE cluster does not exist. Creating cluster..."
 
             gcloud container clusters create "$GKE_CLUSTER" \
@@ -140,6 +162,27 @@ jobs:
               --project="$GCP_PROJECT_ID"
           fi
 
+          echo "Waiting for GKE cluster to be RUNNING..."
+
+          for i in {1..60}; do
+            cluster_status="$(gcloud container clusters describe "$GKE_CLUSTER" \
+              --location="$GKE_LOCATION" \
+              --project="$GCP_PROJECT_ID" \
+              --format="value(status)")"
+
+            echo "Cluster status: ${cluster_status}"
+
+            if [[ "$cluster_status" == "RUNNING" ]]; then
+              echo "GKE cluster is RUNNING."
+              exit 0
+            fi
+
+            sleep 10
+          done
+
+          echo "GKE cluster did not become RUNNING in time." >&2
+          exit 1
+
       - name: Ensure Kubernetes namespace exists
         shell: bash
         run: |
@@ -149,9 +192,26 @@ jobs:
             --location="$GKE_LOCATION" \
             --project="$GCP_PROJECT_ID"
 
+          echo "Waiting for Kubernetes API to respond..."
+
+          for i in {1..60}; do
+            if kubectl version --request-timeout=10s >/dev/null 2>&1; then
+              echo "Kubernetes API is reachable."
+              break
+            fi
+
+            echo "Kubernetes API not ready yet. Retrying..."
+            sleep 10
+
+            if [[ "$i" == "60" ]]; then
+              echo "Kubernetes API did not become reachable in time." >&2
+              exit 1
+            fi
+          done
+
           kubectl create namespace "$K8S_NAMESPACE" \
             --dry-run=client \
-            -o yaml | kubectl apply -f -
+            -o yaml | kubectl apply --validate=false -f -
 
   build-and-push-images:
     name: Build and push ${{ matrix.service }}
@@ -243,9 +303,6 @@ jobs:
     needs:
       - build-and-push-images
 
-    env:
-      STAGING_BASE_URL: ${{ secrets.STAGING_BASE_URL }}
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -265,8 +322,7 @@ jobs:
             ARTIFACT_REGISTRY_REPOSITORY \
             GKE_CLUSTER \
             GKE_LOCATION \
-            K8S_NAMESPACE \
-            STAGING_BASE_URL
+            K8S_NAMESPACE
           do
             if [[ -z "${!name}" ]]; then
               missing+=("$name")
@@ -274,7 +330,7 @@ jobs:
           done
 
           if (( ${#missing[@]} > 0 )); then
-            printf 'Missing required GitHub Variables/Secrets:\n' >&2
+            printf 'Missing required GitHub Variables:\n' >&2
             printf ' - %s\n' "${missing[@]}" >&2
             exit 1
           fi
@@ -371,6 +427,58 @@ jobs:
 
           kubectl -n "$K8S_NAMESPACE" get pods,svc,hpa -o wide
 
+      - name: Resolve staging base URL from Kubernetes LoadBalancer
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Looking for a LoadBalancer service in namespace ${K8S_NAMESPACE}..."
+
+          load_balancer_service=""
+
+          for i in {1..60}; do
+            load_balancer_service="$(kubectl -n "$K8S_NAMESPACE" get svc \
+              -o jsonpath='{range .items[?(@.spec.type=="LoadBalancer")]}{.metadata.name}{"\n"}{end}' \
+              | head -n 1 || true)"
+
+            if [[ -n "$load_balancer_service" ]]; then
+              echo "Found LoadBalancer service: ${load_balancer_service}"
+
+              external_ip="$(kubectl -n "$K8S_NAMESPACE" get svc "$load_balancer_service" \
+                -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || true)"
+
+              external_hostname="$(kubectl -n "$K8S_NAMESPACE" get svc "$load_balancer_service" \
+                -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || true)"
+
+              if [[ -n "$external_ip" ]]; then
+                staging_base_url="http://${external_ip}"
+                echo "STAGING_BASE_URL=${staging_base_url}" >> "$GITHUB_ENV"
+                echo "Resolved STAGING_BASE_URL=${staging_base_url}"
+                exit 0
+              fi
+
+              if [[ -n "$external_hostname" ]]; then
+                staging_base_url="http://${external_hostname}"
+                echo "STAGING_BASE_URL=${staging_base_url}" >> "$GITHUB_ENV"
+                echo "Resolved STAGING_BASE_URL=${staging_base_url}"
+                exit 0
+              fi
+
+              echo "LoadBalancer service exists, but external endpoint is still pending."
+            else
+              echo "No LoadBalancer service found yet."
+            fi
+
+            echo "Current services:"
+            kubectl -n "$K8S_NAMESPACE" get svc -o wide || true
+
+            sleep 10
+          done
+
+          echo "Could not resolve a public LoadBalancer endpoint in time." >&2
+          kubectl -n "$K8S_NAMESPACE" get svc -o wide || true
+          exit 1
+
       - name: Wait for public staging endpoint
         working-directory: src
         env:
@@ -395,8 +503,9 @@ jobs:
             chmod +x ./tests/staging_integration/run.sh
             ./tests/staging_integration/run.sh
           else
-            chmod +x ./tests/non_staging_integration/run.sh
-            ./tests/non_staging_integration/run.sh
+            echo "Missing ./tests/staging_integration/run.sh" >&2
+            echo "Create a staging-specific integration test script instead of using non_staging_integration." >&2
+            exit 1
           fi
 
       - name: Show Kubernetes diagnostics on failure
