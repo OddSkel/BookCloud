@@ -18,6 +18,9 @@ INSTALL_MONITORING="${INSTALL_MONITORING:-1}"
 MONITORING_NAMESPACE="${MONITORING_NAMESPACE:-monitoring}"
 MONITORING_VALUES_FILE="${MONITORING_VALUES_FILE:-$SCRIPT_DIR/monitoring/values-gke.yaml}"
 ROLLOUT_TIMEOUT="${BOOKCLOUD_ROLLOUT_TIMEOUT:-${ROLLOUT_TIMEOUT:-1200s}}"
+KONG_STATIC_IP_NAME="${KONG_STATIC_IP_NAME:-bookcloud-kong-ip}"
+KONG_STATIC_IP_REGION="${KONG_STATIC_IP_REGION:-}"
+KONG_STATIC_IP=""
 
 RENDER_DIR="$(mktemp -d)"
 
@@ -88,6 +91,35 @@ ensure_artifact_registry() {
     --location="$REGION" \
     --description="BookCloud container images" \
     --project "$PROJECT_ID"
+}
+
+ensure_kong_static_ip() {
+  local region="${KONG_STATIC_IP_REGION:-$REGION}"
+
+  echo "Using Kong static IP name: ${KONG_STATIC_IP_NAME}"
+  echo "Using Kong static IP region: ${region}"
+
+  if gcloud compute addresses describe "$KONG_STATIC_IP_NAME" \
+    --region "$region" \
+    --project "$PROJECT_ID" >/dev/null 2>&1; then
+    echo "Kong static IP already exists."
+  else
+    run gcloud compute addresses create "$KONG_STATIC_IP_NAME" \
+      --region "$region" \
+      --project "$PROJECT_ID"
+  fi
+
+  KONG_STATIC_IP="$(gcloud compute addresses describe "$KONG_STATIC_IP_NAME" \
+    --region "$region" \
+    --project "$PROJECT_ID" \
+    --format="value(address)")"
+
+  if [[ -z "$KONG_STATIC_IP" ]]; then
+    echo "Error: could not resolve reserved Kong static IP." >&2
+    exit 1
+  fi
+
+  echo "Reserved Kong static IP: ${KONG_STATIC_IP}"
 }
 
 ensure_cluster() {
@@ -185,6 +217,14 @@ force_kong_load_balancer() {
 
   sed -i 's/type: ClusterIP/type: LoadBalancer/g' "$service_file"
   sed -i 's/type: NodePort/type: LoadBalancer/g' "$service_file"
+
+  if [[ -n "$KONG_STATIC_IP" ]]; then
+    if grep -q '^[[:space:]]*loadBalancerIP:' "$service_file"; then
+      sed -i "s#^[[:space:]]*loadBalancerIP:.*#  loadBalancerIP: ${KONG_STATIC_IP}#g" "$service_file"
+    else
+      sed -i "/^[[:space:]]*type: LoadBalancer/a\\  loadBalancerIP: ${KONG_STATIC_IP}" "$service_file"
+    fi
+  fi
 }
 
 render_manifests() {
@@ -301,6 +341,7 @@ enable_services
 ensure_artifact_registry
 ensure_cluster
 install_monitoring
+ensure_kong_static_ip
 
 build_and_push api-gateway                "$REPO_ROOT/src/api-gateway"
 build_and_push book-catalog               "$REPO_ROOT/src/services/book-catalog"
@@ -314,7 +355,6 @@ build_and_push author-analytics-service   "$REPO_ROOT/src/services/author-analyt
 
 render_manifests
 run kubectl apply -k "$RENDER_DIR"
-run kubectl -n "$NAMESPACE" rollout restart deployment/keycloak
 wait_for_rollouts
 run kubectl -n "$NAMESPACE" get pods,svc,hpa
 print_kong_access
