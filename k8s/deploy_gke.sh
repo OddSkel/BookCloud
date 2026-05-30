@@ -17,6 +17,7 @@ CREATE_CLUSTER="${GKE_CREATE_CLUSTER:-1}"
 INSTALL_MONITORING="${INSTALL_MONITORING:-1}"
 MONITORING_NAMESPACE="${MONITORING_NAMESPACE:-monitoring}"
 MONITORING_VALUES_FILE="${MONITORING_VALUES_FILE:-$SCRIPT_DIR/monitoring/values-gke.yaml}"
+ROLLOUT_TIMEOUT="${BOOKCLOUD_ROLLOUT_TIMEOUT:-${ROLLOUT_TIMEOUT:-1200s}}"
 
 RENDER_DIR="$(mktemp -d)"
 
@@ -204,6 +205,11 @@ render_manifests() {
 
   find "$RENDER_DIR" -name deployment.yaml -print0 |
     xargs -0 sed -i 's/imagePullPolicy: IfNotPresent/imagePullPolicy: Always/g'
+
+  kubectl create configmap keycloak-realm \
+    --from-file=bookcloud-realm.json="$SCRIPT_DIR/keycloak/bookcloud-realm.json" \
+    --namespace "$NAMESPACE" \
+    --dry-run=client -o yaml > "$RENDER_DIR/keycloak/realm-configmap.yaml"
 }
 
 wait_for_rollouts() {
@@ -213,7 +219,7 @@ wait_for_rollouts() {
   deployments="$(kubectl -n "$NAMESPACE" get deployments -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}')"
 
   for deployment in $deployments; do
-    run kubectl -n "$NAMESPACE" rollout status "deployment/$deployment" --timeout=600s
+    run kubectl -n "$NAMESPACE" rollout status "deployment/$deployment" --timeout="$ROLLOUT_TIMEOUT"
   done
 }
 
@@ -307,16 +313,8 @@ build_and_push book-search                "$REPO_ROOT/src/services/book-search"
 build_and_push author-analytics-service   "$REPO_ROOT/src/services/author-analytics-service"
 
 render_manifests
-
-# Regenerate realm ConfigMap from latest JSON
-echo "Regenerating keycloak realm ConfigMap..."
-kubectl create configmap keycloak-realm \
-  --from-file=bookcloud-realm.json="$SCRIPT_DIR/keycloak/bookcloud-realm.json" \
-  --namespace "$NAMESPACE" \
-  --dry-run=client -o yaml \
-  | kubectl apply -f -
-
 run kubectl apply -k "$RENDER_DIR"
+run kubectl -n "$NAMESPACE" rollout restart deployment/keycloak
 wait_for_rollouts
 run kubectl -n "$NAMESPACE" get pods,svc,hpa
 print_kong_access

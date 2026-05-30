@@ -393,6 +393,12 @@ jobs:
 
           find "$rendered_dir" -name deployment.yaml -exec sed -i 's/imagePullPolicy: IfNotPresent/imagePullPolicy: Always/g' {} +
 
+          kubectl create configmap keycloak-realm \
+            --from-file=bookcloud-realm.json=k8s/keycloak/bookcloud-realm.json \
+            --namespace "$K8S_NAMESPACE" \
+            --dry-run=client \
+            -o yaml > "$rendered_dir/keycloak/realm-configmap.yaml"
+
           echo "RENDERED_K8S_DIR=$rendered_dir" >> "$GITHUB_ENV"
 
       - name: Install monitoring stack with Helm
@@ -454,13 +460,14 @@ jobs:
         run: |
           set -euo pipefail
           kubectl apply -k "$RENDERED_K8S_DIR"
+          kubectl -n "$K8S_NAMESPACE" rollout restart deployment/keycloak
 
       - name: Wait for application rollouts
         shell: bash
         run: |
           set -euo pipefail
 
-          ROLLOUT_TIMEOUT="${ROLLOUT_TIMEOUT:-600s}"
+          ROLLOUT_TIMEOUT="${ROLLOUT_TIMEOUT:-1200s}"
 
           deployments=(
             keycloak-db
@@ -600,7 +607,7 @@ jobs:
 
           echo "Starting port-forward to Keycloak..."
 
-          kubectl -n "$K8S_NAMESPACE" port-forward service/keycloak 18080:8080 >/tmp/keycloak-port-forward.log 2>&1 &
+          kubectl -n "$K8S_NAMESPACE" port-forward service/keycloak 18080:80 >/tmp/keycloak-port-forward.log 2>&1 &
           pf_pid="$!"
 
           cleanup() {
@@ -658,16 +665,15 @@ jobs:
           echo "Keycloak access token obtained successfully."
 
       - name: Wait for public staging endpoint
-        working-directory: src
+        shell: bash
         env:
-          BASE_URL: ${{ env.STAGING_BASE_URL }}
-          KEYCLOAK_ACCESS_TOKEN: ${{ env.KEYCLOAK_ACCESS_TOKEN }}
           TIMEOUT_SECONDS: 300
           INTERVAL_SECONDS: 10
-        shell: bash
         run: |
           set -euo pipefail
 
+          BASE_URL="${STAGING_BASE_URL:?STAGING_BASE_URL is not set}"
+          KEYCLOAK_ACCESS_TOKEN="${KEYCLOAK_ACCESS_TOKEN:?KEYCLOAK_ACCESS_TOKEN is not set}"
           API_BASE_URL="${BASE_URL}/api"
           HEALTH_URL="${API_BASE_URL}/health"
 
@@ -720,13 +726,13 @@ jobs:
 
       - name: Run staging integration tests
         working-directory: src
-        env:
-          BASE_URL: ${{ env.STAGING_BASE_URL }}
-          KEYCLOAK_ACCESS_TOKEN: ${{ env.KEYCLOAK_ACCESS_TOKEN }}
-          AUTHORIZATION_HEADER: Bearer ${{ env.KEYCLOAK_ACCESS_TOKEN }}
         shell: bash
         run: |
           set -euo pipefail
+
+          export BASE_URL="${STAGING_BASE_URL:?STAGING_BASE_URL is not set}"
+          export KEYCLOAK_ACCESS_TOKEN="${KEYCLOAK_ACCESS_TOKEN:?KEYCLOAK_ACCESS_TOKEN is not set}"
+          export AUTHORIZATION_HEADER="Bearer ${KEYCLOAK_ACCESS_TOKEN}"
 
           if [[ -f ./tests/staging_integration/run.sh ]]; then
             chmod +x ./tests/staging_integration/run.sh
