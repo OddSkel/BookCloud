@@ -330,6 +330,12 @@ jobs:
 
           find "$rendered_dir" -name deployment.yaml -exec sed -i 's/imagePullPolicy: IfNotPresent/imagePullPolicy: Always/g' {} +
 
+          kubectl create configmap keycloak-realm \
+            --from-file=bookcloud-realm.json=k8s/keycloak/bookcloud-realm.json \
+            --namespace "$K8S_NAMESPACE" \
+            --dry-run=client \
+            -o yaml > "$rendered_dir/keycloak/realm-configmap.yaml"
+
           echo "RENDERED_K8S_DIR=$rendered_dir" >> "$GITHUB_ENV"
 
       - name: Apply Kubernetes manifests
@@ -337,15 +343,18 @@ jobs:
         run: |
           set -euo pipefail
           kubectl apply -k "$RENDERED_K8S_DIR"
+          kubectl -n "$K8S_NAMESPACE" rollout restart deployment/keycloak
 
       - name: Wait for application rollouts
         shell: bash
         run: |
           set -euo pipefail
 
-          ROLLOUT_TIMEOUT="${ROLLOUT_TIMEOUT:-600s}"
+          ROLLOUT_TIMEOUT="${ROLLOUT_TIMEOUT:-1200s}"
 
           services=(
+            keycloak-db
+            keycloak
             api-gateway
             author-analytics-service
             author-catalog
@@ -399,6 +408,8 @@ jobs:
           kubectl -n "$K8S_NAMESPACE" describe pods || true
 
           for deployment in \
+            keycloak-db \
+            keycloak \
             api-gateway \
             author-analytics-service \
             author-catalog \

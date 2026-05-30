@@ -7,7 +7,10 @@ data:
   KC_DB: postgres
   KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
   KC_DB_USERNAME: bookcloud
+  KC_HEALTH_ENABLED: "true"
+  KC_METRICS_ENABLED: "true"
   KC_HOSTNAME_STRICT: "false"
   KC_HTTP_ENABLED: "true"
+  KC_HTTP_MANAGEMENT_SCHEME: http
   KC_PROXY: edge
   KEYCLOAK_ADMIN: admin

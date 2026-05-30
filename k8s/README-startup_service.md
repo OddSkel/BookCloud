@@ -22,7 +22,7 @@ All parameters can be overridden via environment variables before running the sc
 | `BOOKCLOUD_MINIKUBE_PROFILE` | `bookcloud` | Minikube profile name |
 | `BOOKCLOUD_NAMESPACE` | `bookcloud` | Kubernetes namespace |
 | `BOOKCLOUD_MINIKUBE_NODES` | `1` | Number of Minikube nodes |
-| `BOOKCLOUD_ROLLOUT_TIMEOUT` | `300s` | Max wait time per deployment rollout |
+| `BOOKCLOUD_ROLLOUT_TIMEOUT` | `1200s` | Max wait time per deployment rollout |
 | `BOOKCLOUD_MINIKUBE_MEMORY` | `6144` | Memory allocated to Minikube (MB) |
 | `BOOKCLOUD_MINIKUBE_CPUS` | `4` | CPUs allocated to Minikube |
 
@@ -106,7 +106,7 @@ Check the build log for `ERROR: failed to build` or `error: could not compile`. 
 **Deployment rollout times out:**
 Increase the timeout:
 ```bash
-BOOKCLOUD_ROLLOUT_TIMEOUT=600s ./startup_service.sh
+BOOKCLOUD_ROLLOUT_TIMEOUT=1200s ./startup_service.sh
 ```
 
 **Keycloak user provisioning fails:**
