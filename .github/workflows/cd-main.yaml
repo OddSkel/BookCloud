@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -15,8 +16,8 @@ concurrency:
 
 env:
   GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
-  GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-  GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+  GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+  GCP_SERVICE_ACCOUNT: ${{ vars.GCP_SERVICE_ACCOUNT }}
 
   ARTIFACT_REGISTRY_LOCATION: ${{ vars.ARTIFACT_REGISTRY_LOCATION }}
   ARTIFACT_REGISTRY_REPOSITORY: ${{ vars.ARTIFACT_REGISTRY_REPOSITORY }}
@@ -40,6 +41,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Validate configuration
         shell: bash
         run: |
@@ -63,7 +67,7 @@ jobs:
           done
 
           if (( ${#missing[@]} > 0 )); then
-            printf 'Missing required GitHub Secrets/Variables:\n' >&2
+            printf 'Missing required GitHub Variables:\n' >&2
             printf ' - %s\n' "${missing[@]}" >&2
             exit 1
           fi
@@ -115,22 +119,68 @@ jobs:
           set -euo pipefail
 
           GKE_MACHINE_TYPE="${GKE_MACHINE_TYPE:-e2-standard-2}"
-          GKE_NUM_NODES="${GKE_NUM_NODES:-2}"
+          GKE_NUM_NODES="${GKE_NUM_NODES:-1}"
+          GKE_DISK_SIZE_GB="30"
+
+          cluster_status=""
 
           if gcloud container clusters describe "$GKE_CLUSTER" \
             --location="$GKE_LOCATION" \
             --project="$GCP_PROJECT_ID" >/dev/null 2>&1; then
-            echo "GKE cluster already exists."
-          else
+
+            cluster_status="$(gcloud container clusters describe "$GKE_CLUSTER" \
+              --location="$GKE_LOCATION" \
+              --project="$GCP_PROJECT_ID" \
+              --format="value(status)")"
+
+            echo "GKE cluster exists with status: ${cluster_status}"
+
+            if [[ "$cluster_status" != "RUNNING" ]]; then
+              echo "Cluster exists but is not RUNNING. Deleting it before recreating..."
+
+              gcloud container clusters delete "$GKE_CLUSTER" \
+                --location="$GKE_LOCATION" \
+                --project="$GCP_PROJECT_ID" \
+                --quiet
+            fi
+          fi
+
+          if ! gcloud container clusters describe "$GKE_CLUSTER" \
+            --location="$GKE_LOCATION" \
+            --project="$GCP_PROJECT_ID" >/dev/null 2>&1; then
+
             echo "GKE cluster does not exist. Creating cluster..."
 
             gcloud container clusters create "$GKE_CLUSTER" \
               --location="$GKE_LOCATION" \
               --num-nodes="$GKE_NUM_NODES" \
               --machine-type="$GKE_MACHINE_TYPE" \
+              --disk-type="pd-standard" \
+              --disk-size="$GKE_DISK_SIZE_GB" \
               --enable-ip-alias \
               --project="$GCP_PROJECT_ID"
           fi
+
+          echo "Waiting for GKE cluster to be RUNNING..."
+
+          for i in {1..60}; do
+            cluster_status="$(gcloud container clusters describe "$GKE_CLUSTER" \
+              --location="$GKE_LOCATION" \
+              --project="$GCP_PROJECT_ID" \
+              --format="value(status)")"
+
+            echo "Cluster status: ${cluster_status}"
+
+            if [[ "$cluster_status" == "RUNNING" ]]; then
+              echo "GKE cluster is RUNNING."
+              exit 0
+            fi
+
+            sleep 10
+          done
+
+          echo "GKE cluster did not become RUNNING in time." >&2
+          exit 1
 
       - name: Ensure Kubernetes namespace exists
         shell: bash
@@ -141,9 +191,26 @@ jobs:
             --location="$GKE_LOCATION" \
             --project="$GCP_PROJECT_ID"
 
+          echo "Waiting for Kubernetes API to respond..."
+
+          for i in {1..60}; do
+            if kubectl version --request-timeout=10s >/dev/null 2>&1; then
+              echo "Kubernetes API is reachable."
+              break
+            fi
+
+            echo "Kubernetes API not ready yet. Retrying..."
+            sleep 10
+
+            if [[ "$i" == "60" ]]; then
+              echo "Kubernetes API did not become reachable in time." >&2
+              exit 1
+            fi
+          done
+
           kubectl create namespace "$K8S_NAMESPACE" \
             --dry-run=client \
-            -o yaml | kubectl apply -f -
+            -o yaml | kubectl apply --validate=false -f -
 
   build-and-push-images:
     name: Build and push ${{ matrix.service }}
@@ -235,9 +302,6 @@ jobs:
     needs:
       - build-and-push-images
 
-    env:
-      STAGING_BASE_URL: ${{ secrets.STAGING_BASE_URL }}
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -257,8 +321,7 @@ jobs:
             ARTIFACT_REGISTRY_REPOSITORY \
             GKE_CLUSTER \
             GKE_LOCATION \
-            K8S_NAMESPACE \
-            STAGING_BASE_URL
+            K8S_NAMESPACE
           do
             if [[ -z "${!name}" ]]; then
               missing+=("$name")
@@ -266,7 +329,7 @@ jobs:
           done
 
           if (( ${#missing[@]} > 0 )); then
-            printf 'Missing required GitHub Secrets/Variables:\n' >&2
+            printf 'Missing required GitHub Variables:\n' >&2
             printf ' - %s\n' "${missing[@]}" >&2
             exit 1
           fi
@@ -338,6 +401,60 @@ jobs:
 
           echo "RENDERED_K8S_DIR=$rendered_dir" >> "$GITHUB_ENV"
 
+      - name: Install monitoring stack with Helm
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          MONITORING_NAMESPACE="monitoring"
+          MONITORING_RELEASE_NAME="monitoring"
+          MONITORING_VALUES_FILE="k8s/monitoring/values-gke.yaml"
+
+          if command -v helm >/dev/null 2>&1; then
+            echo "Helm already installed."
+          else
+            echo "Installing Helm..."
+            curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+          fi
+
+          kubectl create namespace "$MONITORING_NAMESPACE" \
+            --dry-run=client \
+            -o yaml | kubectl apply -f -
+
+          helm repo add prometheus-community https://prometheus-community.github.io/helm-charts || true
+          helm repo update
+
+          if [[ -f "$MONITORING_VALUES_FILE" ]]; then
+            helm upgrade --install "$MONITORING_RELEASE_NAME" prometheus-community/kube-prometheus-stack \
+              --namespace "$MONITORING_NAMESPACE" \
+              --values "$MONITORING_VALUES_FILE" \
+              --wait \
+              --timeout 10m
+          else
+            echo "Monitoring values file not found: $MONITORING_VALUES_FILE"
+            echo "Installing kube-prometheus-stack with default values..."
+
+            helm upgrade --install "$MONITORING_RELEASE_NAME" prometheus-community/kube-prometheus-stack \
+              --namespace "$MONITORING_NAMESPACE" \
+              --wait \
+              --timeout 10m
+          fi
+
+          echo "Waiting for ServiceMonitor CRD..."
+
+          for i in {1..60}; do
+            if kubectl get crd servicemonitors.monitoring.coreos.com >/dev/null 2>&1; then
+              echo "ServiceMonitor CRD is available."
+              exit 0
+            fi
+
+            echo "ServiceMonitor CRD not ready yet. Retrying..."
+            sleep 5
+          done
+
+          echo "ServiceMonitor CRD was not installed in time." >&2
+          exit 1
+
       - name: Apply Kubernetes manifests
         shell: bash
         run: |
@@ -352,9 +469,10 @@ jobs:
 
           ROLLOUT_TIMEOUT="${ROLLOUT_TIMEOUT:-1200s}"
 
-          services=(
+          deployments=(
             keycloak-db
             keycloak
+            kong
             api-gateway
             author-analytics-service
             author-catalog
@@ -366,31 +484,255 @@ jobs:
             rating-catalog
           )
 
-          for service in "${services[@]}"; do
-            kubectl -n "$K8S_NAMESPACE" rollout status "deployment/${service}" --timeout="$ROLLOUT_TIMEOUT"
+          for deployment in "${deployments[@]}"; do
+            kubectl -n "$K8S_NAMESPACE" rollout status "deployment/${deployment}" --timeout="$ROLLOUT_TIMEOUT"
           done
 
           kubectl -n "$K8S_NAMESPACE" get pods,svc,hpa -o wide
 
-      - name: Wait for public staging endpoint
-        working-directory: src
-        env:
-          BASE_URL: ${{ env.STAGING_BASE_URL }}
-          TIMEOUT_SECONDS: 300
-          INTERVAL_SECONDS: 10
+      - name: Resolve staging base URL from Kubernetes LoadBalancer
         shell: bash
         run: |
           set -euo pipefail
-          chmod +x ./tests/wait_for_services.sh
-          ./tests/wait_for_services.sh
+
+          echo "Looking for a LoadBalancer service in namespace ${K8S_NAMESPACE}..."
+
+          load_balancer_service=""
+
+          for i in {1..60}; do
+            load_balancer_service="$(kubectl -n "$K8S_NAMESPACE" get svc \
+              -o jsonpath='{range .items[?(@.spec.type=="LoadBalancer")]}{.metadata.name}{"\n"}{end}' \
+              | head -n 1 || true)"
+
+            if [[ -n "$load_balancer_service" ]]; then
+              echo "Found LoadBalancer service: ${load_balancer_service}"
+
+              external_ip="$(kubectl -n "$K8S_NAMESPACE" get svc "$load_balancer_service" \
+                -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || true)"
+
+              external_hostname="$(kubectl -n "$K8S_NAMESPACE" get svc "$load_balancer_service" \
+                -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || true)"
+
+              if [[ -n "$external_ip" ]]; then
+                staging_base_url="http://${external_ip}"
+                echo "STAGING_BASE_URL=${staging_base_url}" >> "$GITHUB_ENV"
+                echo "Resolved STAGING_BASE_URL=${staging_base_url}"
+                exit 0
+              fi
+
+              if [[ -n "$external_hostname" ]]; then
+                staging_base_url="http://${external_hostname}"
+                echo "STAGING_BASE_URL=${staging_base_url}" >> "$GITHUB_ENV"
+                echo "Resolved STAGING_BASE_URL=${staging_base_url}"
+                exit 0
+              fi
+
+              echo "LoadBalancer service exists, but external endpoint is still pending."
+            else
+              echo "No LoadBalancer service found yet."
+            fi
+
+            echo "Current services:"
+            kubectl -n "$K8S_NAMESPACE" get svc -o wide || true
+
+            sleep 10
+          done
+
+          echo "Could not resolve a public LoadBalancer endpoint in time." >&2
+          kubectl -n "$K8S_NAMESPACE" get svc -o wide || true
+          exit 1
+
+      - name: Obtain Keycloak access token
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Reading Keycloak realm from configmap..."
+
+          realm_json="$(kubectl -n "$K8S_NAMESPACE" get configmap keycloak-realm \
+            -o jsonpath='{.data.bookcloud-realm\.json}' 2>/dev/null || true)"
+
+          if [[ -z "$realm_json" ]]; then
+            echo "Could not read bookcloud-realm.json from configmap keycloak-realm." >&2
+            kubectl -n "$K8S_NAMESPACE" get configmap keycloak-realm -o yaml || true
+            exit 1
+          fi
+
+          echo "$realm_json" > /tmp/bookcloud-realm.json
+
+          realm="$(jq -r '.realm // empty' /tmp/bookcloud-realm.json)"
+
+          client_id="$(jq -r '
+            [
+              .clients[]?
+              | select((.directAccessGrantsEnabled == true) and (.clientId != "account"))
+              | .clientId
+            ][0] // empty
+          ' /tmp/bookcloud-realm.json)"
+
+          client_secret="$(jq -r --arg client_id "$client_id" '
+            .clients[]?
+            | select(.clientId == $client_id)
+            | .secret // empty
+          ' /tmp/bookcloud-realm.json)"
+
+          username="$(jq -r '
+            [
+              .users[]?
+              | select(.enabled != false)
+              | .username
+            ][0] // empty
+          ' /tmp/bookcloud-realm.json)"
+
+          password="$(jq -r '
+            [
+              .users[]?.credentials[]?
+              | select(.type == "password")
+              | .value
+            ][0] // empty
+          ' /tmp/bookcloud-realm.json)"
+
+          if [[ -z "$realm" || -z "$client_id" || -z "$username" || -z "$password" ]]; then
+            echo "Could not infer realm/client/user/password from keycloak-realm configmap." >&2
+            echo "realm=$realm"
+            echo "client_id=$client_id"
+            echo "username=$username"
+            echo "password_present=$([[ -n "$password" ]] && echo yes || echo no)"
+            exit 1
+          fi
+
+          echo "Realm: $realm"
+          echo "Client ID: $client_id"
+          echo "Username: $username"
+
+          echo "Starting port-forward to Keycloak..."
+
+          kubectl -n "$K8S_NAMESPACE" port-forward service/keycloak 18080:80 >/tmp/keycloak-port-forward.log 2>&1 &
+          pf_pid="$!"
+
+          cleanup() {
+            kill "$pf_pid" >/dev/null 2>&1 || true
+          }
+
+          trap cleanup EXIT
+
+          echo "Waiting for Keycloak to respond through port-forward..."
+
+          for i in {1..60}; do
+            if curl -fsS "http://127.0.0.1:18080/realms/${realm}/.well-known/openid-configuration" >/dev/null 2>&1; then
+              echo "Keycloak is reachable."
+              break
+            fi
+
+            echo "Keycloak not reachable yet. Retrying..."
+            cat /tmp/keycloak-port-forward.log || true
+            sleep 5
+
+            if [[ "$i" == "60" ]]; then
+              echo "Keycloak did not become reachable in time." >&2
+              cat /tmp/keycloak-port-forward.log || true
+              exit 1
+            fi
+          done
+
+          token_args=(
+            -sS
+            -X POST
+            "http://127.0.0.1:18080/realms/${realm}/protocol/openid-connect/token"
+            -H "Content-Type: application/x-www-form-urlencoded"
+            -d "grant_type=password"
+            -d "client_id=${client_id}"
+            -d "username=${username}"
+            -d "password=${password}"
+          )
+
+          if [[ -n "$client_secret" ]]; then
+            token_args+=(-d "client_secret=${client_secret}")
+          fi
+
+          token_response="$(curl "${token_args[@]}")"
+
+          access_token="$(echo "$token_response" | jq -r '.access_token // empty')"
+
+          if [[ -z "$access_token" || "$access_token" == "null" ]]; then
+            echo "Failed to obtain Keycloak access token." >&2
+            echo "$token_response" | jq . || echo "$token_response"
+            exit 1
+          fi
+
+          echo "KEYCLOAK_ACCESS_TOKEN=${access_token}" >> "$GITHUB_ENV"
+
+          echo "Keycloak access token obtained successfully."
+
+      - name: Wait for public staging endpoint
+        shell: bash
+        env:
+          TIMEOUT_SECONDS: 300
+          INTERVAL_SECONDS: 10
+        run: |
+          set -euo pipefail
+
+          BASE_URL="${STAGING_BASE_URL:?STAGING_BASE_URL is not set}"
+          KEYCLOAK_ACCESS_TOKEN="${KEYCLOAK_ACCESS_TOKEN:?KEYCLOAK_ACCESS_TOKEN is not set}"
+          API_BASE_URL="${BASE_URL}/api"
+          HEALTH_URL="${API_BASE_URL}/health"
+
+          echo "Waiting for authenticated API Gateway health at ${HEALTH_URL}..."
+
+          elapsed=0
+
+          while [ "$elapsed" -lt "$TIMEOUT_SECONDS" ]; do
+            http_code="$(curl \
+              --max-time 20 \
+              --connect-timeout 5 \
+              -sS \
+              -o /tmp/bookcloud-health-response.txt \
+              -w "%{http_code}" \
+              -H "Authorization: Bearer ${KEYCLOAK_ACCESS_TOKEN}" \
+              "$HEALTH_URL" || true)"
+
+            echo "Health check returned HTTP ${http_code}"
+
+            if [ "$http_code" = "200" ]; then
+              echo "Authenticated public staging endpoint is healthy."
+              exit 0
+            fi
+
+            echo "Response body:"
+            cat /tmp/bookcloud-health-response.txt || true
+
+            sleep "$INTERVAL_SECONDS"
+            elapsed=$((elapsed + INTERVAL_SECONDS))
+          done
+
+          echo "Public staging endpoint did not become healthy in time." >&2
+
+          echo "=== Services ==="
+          kubectl -n "$K8S_NAMESPACE" get svc -o wide || true
+
+          echo "=== Pods ==="
+          kubectl -n "$K8S_NAMESPACE" get pods -o wide || true
+
+          echo "=== Kong logs ==="
+          kubectl -n "$K8S_NAMESPACE" logs deployment/kong --tail=200 || true
+
+          echo "=== API Gateway logs ==="
+          kubectl -n "$K8S_NAMESPACE" logs deployment/api-gateway --tail=200 || true
+
+          echo "=== Keycloak logs ==="
+          kubectl -n "$K8S_NAMESPACE" logs deployment/keycloak --tail=200 || true
+
+          exit 1
 
       - name: Run staging integration tests
         working-directory: src
-        env:
-          BASE_URL: ${{ env.STAGING_BASE_URL }}
         shell: bash
         run: |
           set -euo pipefail
+
+          export BASE_URL="${STAGING_BASE_URL:?STAGING_BASE_URL is not set}"
+          export KEYCLOAK_ACCESS_TOKEN="${KEYCLOAK_ACCESS_TOKEN:?KEYCLOAK_ACCESS_TOKEN is not set}"
+          export AUTHORIZATION_HEADER="Bearer ${KEYCLOAK_ACCESS_TOKEN}"
 
           if [[ -f ./tests/staging_integration/run.sh ]]; then
             chmod +x ./tests/staging_integration/run.sh
@@ -410,6 +752,7 @@ jobs:
           for deployment in \
             keycloak-db \
             keycloak \
+            kong \
             api-gateway \
             author-analytics-service \
             author-catalog \

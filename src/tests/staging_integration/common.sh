@@ -8,7 +8,19 @@ API_BASE_URL="${API_BASE_URL%/}"
 COMMON_DIR="$(CDPATH= cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 DATASET_DIR="${DATASET_DIR:-${COMMON_DIR}/../dataset}"
 RESPONSE_FILE="${RESPONSE_FILE:-${TMPDIR:-/tmp}/bookcloud-staging-response.$$}"
-BOOKCLOUD_ACCESS_TOKEN="${BOOKCLOUD_ACCESS_TOKEN:-${AUTH_TOKEN:-}}"
+
+# Token priority:
+# 1. BOOKCLOUD_ACCESS_TOKEN
+# 2. KEYCLOAK_ACCESS_TOKEN
+# 3. AUTH_TOKEN
+BOOKCLOUD_ACCESS_TOKEN="${BOOKCLOUD_ACCESS_TOKEN:-${KEYCLOAK_ACCESS_TOKEN:-${AUTH_TOKEN:-}}}"
+
+# Header priority:
+# 1. AUTHORIZATION_HEADER
+# 2. Bearer BOOKCLOUD_ACCESS_TOKEN
+if [[ -z "${AUTHORIZATION_HEADER:-}" && -n "$BOOKCLOUD_ACCESS_TOKEN" ]]; then
+  AUTHORIZATION_HEADER="Bearer ${BOOKCLOUD_ACCESS_TOKEN}"
+fi
 
 cleanup_response_file() {
   rm -f "$RESPONSE_FILE"
@@ -80,8 +92,8 @@ request_json() {
     -H "Accept: application/json"
   )
 
-  if [[ -n "$BOOKCLOUD_ACCESS_TOKEN" ]]; then
-    curl_args+=(-H "Authorization: Bearer ${BOOKCLOUD_ACCESS_TOKEN}")
+  if [[ -n "${AUTHORIZATION_HEADER:-}" ]]; then
+    curl_args+=(-H "Authorization: ${AUTHORIZATION_HEADER}")
   fi
 
   if [[ -n "$body" ]]; then
@@ -93,8 +105,8 @@ request_json() {
   if [[ " ${expected_statuses} " != *" ${status} "* ]]; then
     printf 'Unexpected status for "%s": got %s, expected one of [%s]\n' "$name" "$status" "$expected_statuses" >&2
 
-    if [[ -z "$BOOKCLOUD_ACCESS_TOKEN" && ( "$status" == "401" || "$status" == "403" ) ]]; then
-      printf 'This staging endpoint requires auth. Set BOOKCLOUD_ACCESS_TOKEN or AUTH_TOKEN before running these tests.\n' >&2
+    if [[ -z "${AUTHORIZATION_HEADER:-}" && ( "$status" == "401" || "$status" == "403" ) ]]; then
+      printf 'This staging endpoint requires auth. Set BOOKCLOUD_ACCESS_TOKEN, KEYCLOAK_ACCESS_TOKEN, AUTH_TOKEN or AUTHORIZATION_HEADER before running these tests.\n' >&2
     fi
 
     printf 'Response body:\n' >&2
