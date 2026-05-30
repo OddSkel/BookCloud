@@ -491,7 +491,6 @@ class GenreAnalysisService(genre_service_grpc.GenreAnalysisGrpcServicer):
             ]
             overall_num_ratings = sum(d["num_ratings_sum"] for d in yearly.values())
             overall_books = sum(d["count"] for d in yearly.values())
-        overall_books = sum(row["book_count"] for row in year_rows)
 
         return GenrePopularityResponse(
             points=points,
@@ -612,6 +611,52 @@ async def create_pool():
         )
         await connection.execute(
             """
+            DO $$
+            BEGIN
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name = 'genre_stats_cache' AND column_name = 'average_rating'
+                ) AND NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name = 'genre_stats_cache' AND column_name = 'avg_rating'
+                ) THEN
+                    ALTER TABLE genre_stats_cache RENAME COLUMN average_rating TO avg_rating;
+                END IF;
+
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name = 'genre_stats_cache' AND column_name = 'total_ratings'
+                ) AND NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name = 'genre_stats_cache' AND column_name = 'total_num_ratings'
+                ) THEN
+                    ALTER TABLE genre_stats_cache RENAME COLUMN total_ratings TO total_num_ratings;
+                END IF;
+
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name = 'genre_stats_cache' AND column_name = 'total_books'
+                ) AND NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name = 'genre_stats_cache' AND column_name = 'book_count'
+                ) THEN
+                    ALTER TABLE genre_stats_cache RENAME COLUMN total_books TO book_count;
+                END IF;
+            END
+            $$;
+            """
+        )
+        await connection.execute(
+            """
+            ALTER TABLE genre_stats_cache
+            ADD COLUMN IF NOT EXISTS avg_rating DOUBLE PRECISION DEFAULT 0,
+            ADD COLUMN IF NOT EXISTS total_num_ratings BIGINT DEFAULT 0,
+            ADD COLUMN IF NOT EXISTS book_count INT DEFAULT 0,
+            ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()
+            """
+        )
+        await connection.execute(
+            """
             CREATE TABLE IF NOT EXISTS genre_year_stats_cache (
                 genre_id INT REFERENCES genre(genre_id) ON DELETE CASCADE,
                 year INT NOT NULL,
@@ -621,6 +666,63 @@ async def create_pool():
                 updated_at TIMESTAMP DEFAULT NOW(),
                 PRIMARY KEY (genre_id, year)
             )
+            """
+        )
+        await connection.execute(
+            """
+            DO $$
+            BEGIN
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name = 'genre_year_stats_cache' AND column_name = 'pub_year'
+                ) AND NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name = 'genre_year_stats_cache' AND column_name = 'year'
+                ) THEN
+                    ALTER TABLE genre_year_stats_cache RENAME COLUMN pub_year TO year;
+                END IF;
+
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name = 'genre_year_stats_cache' AND column_name = 'average_rating'
+                ) AND NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name = 'genre_year_stats_cache' AND column_name = 'avg_rating'
+                ) THEN
+                    ALTER TABLE genre_year_stats_cache RENAME COLUMN average_rating TO avg_rating;
+                END IF;
+
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name = 'genre_year_stats_cache' AND column_name = 'total_ratings'
+                ) AND NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name = 'genre_year_stats_cache' AND column_name = 'total_num_ratings'
+                ) THEN
+                    ALTER TABLE genre_year_stats_cache RENAME COLUMN total_ratings TO total_num_ratings;
+                END IF;
+
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name = 'genre_year_stats_cache' AND column_name = 'total_books'
+                ) AND NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name = 'genre_year_stats_cache' AND column_name = 'book_count'
+                ) THEN
+                    ALTER TABLE genre_year_stats_cache RENAME COLUMN total_books TO book_count;
+                END IF;
+            END
+            $$;
+            """
+        )
+        await connection.execute(
+            """
+            ALTER TABLE genre_year_stats_cache
+            ADD COLUMN IF NOT EXISTS year INT,
+            ADD COLUMN IF NOT EXISTS avg_rating DOUBLE PRECISION DEFAULT 0,
+            ADD COLUMN IF NOT EXISTS total_num_ratings BIGINT DEFAULT 0,
+            ADD COLUMN IF NOT EXISTS book_count INT DEFAULT 0,
+            ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()
             """
         )
 

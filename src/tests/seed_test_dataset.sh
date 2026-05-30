@@ -124,21 +124,108 @@ CREATE TABLE IF NOT EXISTS book_genre (
 
 CREATE TABLE IF NOT EXISTS genre_stats_cache (
   genre_id INTEGER PRIMARY KEY,
-  total_books BIGINT,
-  average_rating DOUBLE PRECISION,
-  total_ratings BIGINT,
+  avg_rating DOUBLE PRECISION DEFAULT 0,
+  total_num_ratings BIGINT DEFAULT 0,
+  book_count INTEGER DEFAULT 0,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS genre_year_stats_cache (
   genre_id INTEGER NOT NULL,
-  pub_year INTEGER NOT NULL,
-  total_books BIGINT,
-  average_rating DOUBLE PRECISION,
-  total_ratings BIGINT,
+  year INTEGER NOT NULL,
+  avg_rating DOUBLE PRECISION DEFAULT 0,
+  total_num_ratings BIGINT DEFAULT 0,
+  book_count INTEGER DEFAULT 0,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (genre_id, pub_year)
+  PRIMARY KEY (genre_id, year)
 );
+
+DO \$\$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'genre_stats_cache' AND column_name = 'average_rating'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'genre_stats_cache' AND column_name = 'avg_rating'
+  ) THEN
+    ALTER TABLE genre_stats_cache RENAME COLUMN average_rating TO avg_rating;
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'genre_stats_cache' AND column_name = 'total_ratings'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'genre_stats_cache' AND column_name = 'total_num_ratings'
+  ) THEN
+    ALTER TABLE genre_stats_cache RENAME COLUMN total_ratings TO total_num_ratings;
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'genre_stats_cache' AND column_name = 'total_books'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'genre_stats_cache' AND column_name = 'book_count'
+  ) THEN
+    ALTER TABLE genre_stats_cache RENAME COLUMN total_books TO book_count;
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'genre_year_stats_cache' AND column_name = 'pub_year'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'genre_year_stats_cache' AND column_name = 'year'
+  ) THEN
+    ALTER TABLE genre_year_stats_cache RENAME COLUMN pub_year TO year;
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'genre_year_stats_cache' AND column_name = 'average_rating'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'genre_year_stats_cache' AND column_name = 'avg_rating'
+  ) THEN
+    ALTER TABLE genre_year_stats_cache RENAME COLUMN average_rating TO avg_rating;
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'genre_year_stats_cache' AND column_name = 'total_ratings'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'genre_year_stats_cache' AND column_name = 'total_num_ratings'
+  ) THEN
+    ALTER TABLE genre_year_stats_cache RENAME COLUMN total_ratings TO total_num_ratings;
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'genre_year_stats_cache' AND column_name = 'total_books'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'genre_year_stats_cache' AND column_name = 'book_count'
+  ) THEN
+    ALTER TABLE genre_year_stats_cache RENAME COLUMN total_books TO book_count;
+  END IF;
+END
+\$\$;
+
+ALTER TABLE genre_stats_cache
+  ADD COLUMN IF NOT EXISTS avg_rating DOUBLE PRECISION DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS total_num_ratings BIGINT DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS book_count INTEGER DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+ALTER TABLE genre_year_stats_cache
+  ADD COLUMN IF NOT EXISTS year INTEGER,
+  ADD COLUMN IF NOT EXISTS avg_rating DOUBLE PRECISION DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS total_num_ratings BIGINT DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS book_count INTEGER DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
 "
 }
 
