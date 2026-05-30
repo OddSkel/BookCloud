@@ -59,6 +59,7 @@ spec:
               port: management
             initialDelaySeconds: 10
             periodSeconds: 10
+            timeoutSeconds: 5
             failureThreshold: 10
           livenessProbe:
             httpGet:
@@ -66,12 +67,15 @@ spec:
               port: management
             initialDelaySeconds: 60
             periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
           startupProbe:
             httpGet:
               path: /health/started
               port: management
-            failureThreshold: 90
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 90
       volumes:
         - name: realm-config
           configMap:
