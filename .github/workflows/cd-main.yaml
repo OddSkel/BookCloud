@@ -460,7 +460,6 @@ jobs:
         run: |
           set -euo pipefail
           kubectl apply -k "$RENDERED_K8S_DIR"
-          kubectl -n "$K8S_NAMESPACE" rollout restart deployment/keycloak
 
       - name: Wait for application rollouts
         shell: bash
@@ -485,7 +484,25 @@ jobs:
           )
 
           for deployment in "${deployments[@]}"; do
-            kubectl -n "$K8S_NAMESPACE" rollout status "deployment/${deployment}" --timeout="$ROLLOUT_TIMEOUT"
+            echo "Waiting for rollout: ${deployment}"
+
+            if ! kubectl -n "$K8S_NAMESPACE" rollout status "deployment/${deployment}" --timeout="$ROLLOUT_TIMEOUT"; then
+              echo "Rollout failed for ${deployment}" >&2
+
+              echo "=== Deployment describe: ${deployment} ==="
+              kubectl -n "$K8S_NAMESPACE" describe deployment "$deployment" || true
+
+              echo "=== Pods ==="
+              kubectl -n "$K8S_NAMESPACE" get pods -o wide || true
+
+              echo "=== Matching pods describe: app=${deployment} ==="
+              kubectl -n "$K8S_NAMESPACE" describe pods -l app="$deployment" || true
+
+              echo "=== Logs: ${deployment} ==="
+              kubectl -n "$K8S_NAMESPACE" logs "deployment/${deployment}" --tail=200 || true
+
+              exit 1
+            fi
           done
 
           kubectl -n "$K8S_NAMESPACE" get pods,svc,hpa -o wide
