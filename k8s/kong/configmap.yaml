@@ -27,8 +27,8 @@ data:
     plugins:
       - name: rate-limiting
         config:
-          minute: 100
-          hour: 1000
+          minute: 1000
+          hour: 10000
           policy: local
       - name: cors
         config:

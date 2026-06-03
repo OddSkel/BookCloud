@@ -11,7 +11,7 @@ from typing import Iterable
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SOURCE_DIR = REPO_ROOT / "data" / "data_clean" / "normalized_out"
 OUTPUT_DIR = REPO_ROOT / "data" / "data_clean" / "normalized_sample"
-DEFAULT_SAMPLE_SIZE = 500_000
+DEFAULT_SAMPLE_SIZE = 400_000
 
 EXPECTED_HEADERS = {
     "book.csv": ["isbn", "name", "url", "summary_clean", "pub_year"],
