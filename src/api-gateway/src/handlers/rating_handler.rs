@@ -1,7 +1,9 @@
-use actix_web::{HttpResponse, Responder, web};
+use actix_web::{HttpRequest, HttpResponse, Responder, web};
 use serde::Deserialize;
+use serde_json::json;
 
 use crate::grpc::{GrpcRegistry, RatingAddPayload};
+use crate::auth::{has_role, ROLE_ADMIN};
 
 #[derive(Deserialize)]
 pub struct GetRatingsQuery {
@@ -35,7 +37,12 @@ pub async fn add_rating(
     registry: web::Data<GrpcRegistry>,
     path: web::Path<String>,
     body: web::Json<RatingAddPayload>,
+    req: HttpRequest,
 ) -> impl Responder {
+    if !has_role(&req, ROLE_ADMIN) {
+        return HttpResponse::Forbidden()
+            .json(json!({"error": "Requires 'admin' role"}));
+    }
     match registry
         .add_rating(&path.into_inner(), body.into_inner())
         .await

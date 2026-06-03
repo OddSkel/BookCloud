@@ -10,6 +10,7 @@ mod grpc;
 mod handlers;
 mod routes;
 mod utils;
+mod auth;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

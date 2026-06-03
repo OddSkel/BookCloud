@@ -1,7 +1,9 @@
-use actix_web::{HttpResponse, Responder, web};
+use actix_web::{HttpRequest, HttpResponse, Responder, web};
 use serde::Deserialize;
+use serde_json::json;
 
 use crate::grpc::{AuthorAddPayload, GrpcRegistry};
+use crate::auth::{has_role, ROLE_ADMIN, ROLE_USER};
 
 #[derive(Deserialize)]
 pub struct UpdateAuthorQuery {
@@ -41,7 +43,12 @@ pub async fn get_author(
 pub async fn add_author(
     registry: web::Data<GrpcRegistry>,
     body: web::Json<AuthorAddPayload>,
+    req: HttpRequest,
 ) -> impl Responder {
+    if !has_role(&req, ROLE_ADMIN) {
+        return HttpResponse::Forbidden()
+            .json(json!({"error": "Requires 'admin' role"}));
+    }
     match registry.add_author(body.into_inner()).await {
         Ok(author) => HttpResponse::Created().json(author),
         Err(e) => crate::utils::map_error(e),
@@ -68,7 +75,12 @@ pub async fn update_author(
 pub async fn delete_author(
     registry: web::Data<GrpcRegistry>,
     path: web::Path<i64>,
+    req: HttpRequest,
 ) -> impl Responder {
+    if !has_role(&req, ROLE_ADMIN) {
+        return HttpResponse::Forbidden()
+            .json(json!({"error": "Requires 'admin' role"}));
+    }
     match registry.delete_author(path.into_inner()).await {
         Ok(_) => HttpResponse::NoContent().finish(),
         Err(e) => crate::utils::map_error(e),
