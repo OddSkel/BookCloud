@@ -6,12 +6,7 @@ metadata:
   labels:
     app: api-gateway
 spec:
-  replicas: 2
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxUnavailable: 0
-      maxSurge: 1
+  replicas: 3
   selector:
     matchLabels:
       app: api-gateway
@@ -33,10 +28,8 @@ spec:
           resources:
             requests:
               cpu: "100m"
-              memory: "128Mi"
             limits:
               cpu: "300m"
-              memory: "256Mi"
           readinessProbe:
             httpGet:
               path: /api/health
