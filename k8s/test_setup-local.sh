@@ -1,76 +1,43 @@
 #!/usr/bin/env bash
-# test_setup.sh — run after startup_service.sh to prepare port-forwards and tokens.
-# Usage: source ./test_setup.sh   <-- MUST be sourced, not executed directly
+# test_setup-local.sh — prepara port-forwards e tokens para testes locais.
+# Usage: source ./k8s/test_setup-local.sh
 
 NAMESPACE="${BOOKCLOUD_NAMESPACE:-bookcloud}"
-KEYCLOAK_URL="http://localhost:8090"
-KONG_URL="http://localhost:9000"
-REALM="bookcloud"
+BASE_LOCAL="http://localhost:9000"
 
-# ── Kill any stale port-forwards on these ports (never fail if none exist) ────
+# ── Limpa port-forwards anteriores ───────────────────────────────────────────
 echo "Cleaning up stale port-forwards..."
-fuser -k 8090/tcp 2>/dev/null || true
 fuser -k 9000/tcp 2>/dev/null || true
 sleep 1
 
-# ── Start port-forwards in background, output suppressed ─────────────────────
-echo "Starting port-forwards..."
-kubectl -n "$NAMESPACE" port-forward svc/keycloak 8090:80 >/dev/null 2>&1 &
-PF_KEYCLOAK=$!
+# ── Inicia port-forward só para o Kong ───────────────────────────────────────
+echo "Starting port-forward..."
 kubectl -n "$NAMESPACE" port-forward svc/kong 9000:80 >/dev/null 2>&1 &
 PF_KONG=$!
+sleep 3
 
-# ── Wait for Keycloak to respond ──────────────────────────────────────────────
-echo "Waiting for Keycloak..."
-attempts=0
-until curl -sf "$KEYCLOAK_URL/realms/master" >/dev/null 2>&1; do
-  sleep 2
-  (( attempts++ )) || true
-  if (( attempts > 20 )); then
-    echo "Erro: Keycloak did not respond in time." >&2
-    return 1
-  fi
-done
-echo "✓ Keycloak ready."
+export BASE="$BASE_LOCAL"
 
-# ── Resolve client secret from Keycloak admin API ────────────────────────────
-KEYCLOAK_ADMIN="${BOOKCLOUD_KEYCLOAK_ADMIN:-admin}"
-KEYCLOAK_ADMIN_PASSWORD="${BOOKCLOUD_KEYCLOAK_PASSWORD:-bookcloud-pass}"
+# ── Obtém tokens via /api/auth/login (Kong → Keycloak) ───────────────────────
+echo "Fetching tokens via /api/auth/login..."
 
-ADMIN_TOKEN=$(curl -s -X POST "$KEYCLOAK_URL/realms/master/protocol/openid-connect/token" \
-  -d "client_id=admin-cli&grant_type=password&username=$KEYCLOAK_ADMIN&password=$KEYCLOAK_ADMIN_PASSWORD" \
-  | jq -r '.access_token')
-
-CLIENT_UUID=$(curl -s "$KEYCLOAK_URL/admin/realms/$REALM/clients?clientId=bookcloud-app" \
-  -H "Authorization: Bearer $ADMIN_TOKEN" | jq -r '.[0].id')
-
-CLIENT_SECRET=$(curl -s "$KEYCLOAK_URL/admin/realms/$REALM/clients/$CLIENT_UUID/client-secret" \
-  -H "Authorization: Bearer $ADMIN_TOKEN" | jq -r '.value')
-
-if [ -z "$CLIENT_SECRET" ] || [ "$CLIENT_SECRET" = "null" ]; then
-  echo "Erro: could not resolve client secret from Keycloak." >&2
-  return 1
-fi
-echo "✓ Client secret resolved."
-
-# ── Fetch tokens ──────────────────────────────────────────────────────────────
 _token() {
-  curl -s -X POST "$KEYCLOAK_URL/realms/$REALM/protocol/openid-connect/token" \
-    -d "grant_type=password&client_id=bookcloud-app&client_secret=$CLIENT_SECRET&username=$1&password=password" \
+  local username="$1" password="${2:-password}"
+  curl -s -X POST "$BASE/api/auth/login" \
+    -H "Content-Type: application/x-www-form-urlencoded" \
+    -d "grant_type=password&client_id=bookcloud-app&username=${username}&password=${password}" \
     | jq -r '.access_token'
 }
 
-export CLIENT_SECRET
 export TOKEN_READONLY; TOKEN_READONLY=$(_token readonlyuser)
 export TOKEN_USER;     TOKEN_USER=$(_token testuser)
 export TOKEN_ADMIN;    TOKEN_ADMIN=$(_token adminuser)
-export BASE="$KONG_URL"
 
-# ── Verify ────────────────────────────────────────────────────────────────────
+# ── Valida tokens ─────────────────────────────────────────────────────────────
 _check() {
   local name="$1" token="$2"
   if [ -z "$token" ] || [ "$token" = "null" ]; then
-    echo "✗ $name token is empty" >&2
+    echo "✗ $name token is empty — Kong /api/auth/login failed?" >&2
     return 1
   fi
   echo "✓ $name: ${token:0:24}..."
@@ -80,12 +47,14 @@ _check "TOKEN_READONLY" "$TOKEN_READONLY"
 _check "TOKEN_USER    " "$TOKEN_USER"
 _check "TOKEN_ADMIN   " "$TOKEN_ADMIN"
 
-cat <<EOF
-
-All tokens and port-forwards ready.
-  BASE=$BASE
-  Keycloak PID=$PF_KEYCLOAK  |  Kong PID=$PF_KONG
-
-To teardown port-forwards:
-  kill $PF_KEYCLOAK $PF_KONG
-EOF
+echo ""
+echo "All tokens and port-forwards ready."
+echo "  BASE=$BASE"
+echo "  Kong PID=$PF_KONG"
+echo ""
+echo "Usage:"
+echo "  http GET  $BASE/api/books   \"Authorization:Bearer \$TOKEN_USER\""
+echo "  http POST $BASE/api/auth/login username=testuser password=password"
+echo ""
+echo "To teardown:"
+echo "  kill $PF_KONG"

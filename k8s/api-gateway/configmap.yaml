@@ -16,3 +16,8 @@ data:
   AUTHOR_ANALYTICS_GRPC_URL:    "http://author-analytics-service:50056"
   BOOK_SEARCH_GRPC_URL:         "http://book-search:50054"
   BOOK_RECOMMENDATION_GRPC_URL: "http://book-recommendation:50055"
+  # ── Keycloak (adicionado para o auth_handler) ──────────────────────────
+  KEYCLOAK_URL: "http://keycloak:80"
+  KEYCLOAK_CLIENT_ID: "bookcloud-app"
+  KEYCLOAK_ADMIN_CLIENT_ID: "bookcloud-app"
+  KEYCLOAK_ADMIN_SECRET: "bookcloud-app-secret"

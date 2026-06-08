@@ -11,7 +11,7 @@ ROLLOUT_TIMEOUT="${BOOKCLOUD_ROLLOUT_TIMEOUT:-600s}"
 MINIKUBE_MEMORY="${BOOKCLOUD_MINIKUBE_MEMORY:-6144}"
 MINIKUBE_CPUS="${BOOKCLOUD_MINIKUBE_CPUS:-4}"
 
-KEYCLOAK_URL="http://localhost:8090"
+KEYCLOAK_URL="http://localhost:8000"
 KEYCLOAK_ADMIN="admin"
 KEYCLOAK_ADMIN_PASSWORD="${BOOKCLOUD_KEYCLOAK_PASSWORD:-bookcloud-pass}"
 REALM="bookcloud"
@@ -21,7 +21,7 @@ PF_KEYCLOAK_WATCHDOG_PID=""
 # ── Cleanup trap ──────────────────────────────────────────────────────────────
 cleanup() {
   [ -n "$PF_KEYCLOAK_WATCHDOG_PID" ] && kill "$PF_KEYCLOAK_WATCHDOG_PID" 2>/dev/null || true
-  fuser -k 8090/tcp 2>/dev/null || true
+  fuser -k 8000/tcp 2>/dev/null || true
   if [ -n "${MINIKUBE_DOCKER_ENV_SET:-}" ]; then
     eval "$(minikube -p "$PROFILE" docker-env --unset)" 2>/dev/null || true
   fi
@@ -43,10 +43,10 @@ run() {
 
 # Watchdog: keeps Keycloak port-forward alive across pod restarts.
 start_keycloak_pf_watchdog() {
-  fuser -k 8090/tcp 2>/dev/null || true
+  fuser -k 8000/tcp 2>/dev/null || true
   (
     while true; do
-      kubectl -n "$NAMESPACE" port-forward svc/keycloak 8090:80 2>/dev/null || true
+      kubectl -n "$NAMESPACE" port-forward svc/keycloak 8000:80 2>/dev/null || true
       sleep 2
     done
   ) &
@@ -159,6 +159,56 @@ wait_for_keycloak() {
   echo "Keycloak is ready."
 }
 
+ensure_service_account_roles() {
+  local TOKEN="$1"
+  local CLIENT_UUID="$2"
+
+  echo "Ensuring bookcloud-app service account roles..."
+
+  local SA_USER_ID
+  SA_USER_ID=$(curl -s "$KEYCLOAK_URL/admin/realms/$REALM/clients/$CLIENT_UUID/service-account-user" \
+    -H "Authorization: Bearer $TOKEN" | jq -r '.id')
+
+  if [ -z "$SA_USER_ID" ] || [ "$SA_USER_ID" = "null" ]; then
+    echo "Erro: could not fetch service account user for bookcloud-app" >&2
+    exit 1
+  fi
+
+  local REALM_MGMT_UUID
+  REALM_MGMT_UUID=$(curl -s "$KEYCLOAK_URL/admin/realms/$REALM/clients?clientId=realm-management" \
+    -H "Authorization: Bearer $TOKEN" | jq -r '.[0].id')
+
+  if [ -z "$REALM_MGMT_UUID" ] || [ "$REALM_MGMT_UUID" = "null" ]; then
+    echo "Erro: realm-management client not found." >&2
+    exit 1
+  fi
+
+  local ROLE_NAME ROLE_JSON HTTP_STATUS
+
+  for ROLE_NAME in manage-users view-users query-users view-realm; do
+    ROLE_JSON=$(curl -s "$KEYCLOAK_URL/admin/realms/$REALM/clients/$REALM_MGMT_UUID/roles/$ROLE_NAME" \
+      -H "Authorization: Bearer $TOKEN")
+
+    if [ -z "$ROLE_JSON" ] || [ "$(echo "$ROLE_JSON" | jq -r '.id // empty')" = "" ]; then
+      echo "Erro: could not fetch realm-management role $ROLE_NAME" >&2
+      exit 1
+    fi
+
+    HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+      -X POST "$KEYCLOAK_URL/admin/realms/$REALM/users/$SA_USER_ID/role-mappings/clients/$REALM_MGMT_UUID" \
+      -H "Authorization: Bearer $TOKEN" \
+      -H "Content-Type: application/json" \
+      -d "[$ROLE_JSON]")
+
+    if [ "$HTTP_STATUS" != "204" ] && [ "$HTTP_STATUS" != "409" ]; then
+      echo "Erro: failed to assign service account role $ROLE_NAME (HTTP $HTTP_STATUS)" >&2
+      exit 1
+    fi
+
+    echo "✓ service account role: $ROLE_NAME"
+  done
+}
+
 setup_keycloak_users() {
   wait_for_keycloak
 
@@ -173,10 +223,25 @@ setup_keycloak_users() {
     exit 1
   fi
 
-  local CLIENT_SECRET
-  CLIENT_SECRET=$(curl -s -X POST "$KEYCLOAK_URL/admin/realms/$REALM/clients/$CLIENT_UUID/client-secret" \
-    -H "Authorization: Bearer $TOKEN" | jq -r '.value')
-  echo "✓ bookcloud-app client secret: $CLIENT_SECRET"
+  local CLIENT_SECRET="bookcloud-app-secret"
+
+  curl -s -X PUT "$KEYCLOAK_URL/admin/realms/$REALM/clients/$CLIENT_UUID" \
+    -H "Authorization: Bearer $TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{
+      \"clientId\": \"bookcloud-app\",
+      \"secret\": \"$CLIENT_SECRET\",
+      \"enabled\": true,
+      \"publicClient\": false,
+      \"serviceAccountsEnabled\": true,
+      \"directAccessGrantsEnabled\": true,
+      \"standardFlowEnabled\": true,
+      \"protocol\": \"openid-connect\"
+    }" >/dev/null
+
+  echo "✓ bookcloud-app client secret fixed: $CLIENT_SECRET"
+
+  ensure_service_account_roles "$TOKEN" "$CLIENT_UUID"
 
   create_user "testuser"     "user"
   create_user "adminuser"    "admin"
@@ -207,7 +272,8 @@ patch_kong_declarative_config() {
     exit 1
   fi
 
-  local ISSUER="$KEYCLOAK_URL/realms/$REALM"
+  local ISSUER
+  ISSUER=$(curl -s "$KEYCLOAK_URL/realms/$REALM" | jq -r '.issuer')
   local KONG_YML="$SCRIPT_DIR/kong/configmap.yaml"
 
   echo "Applying kong ConfigMap with live public key and issuer..."
@@ -363,7 +429,7 @@ patch_kong_declarative_config
 # ── Stop Keycloak port-forward watchdog ──────────────────────────────────────
 kill "$PF_KEYCLOAK_WATCHDOG_PID" 2>/dev/null || true
 PF_KEYCLOAK_WATCHDOG_PID=""
-fuser -k 8090/tcp 2>/dev/null || true
+fuser -k 8000/tcp 2>/dev/null || true
 
 # ── Summary ───────────────────────────────────────────────────────────────────
 run kubectl -n "$NAMESPACE" get pods,svc,hpa

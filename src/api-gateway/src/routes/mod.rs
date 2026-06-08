@@ -5,6 +5,7 @@ use crate::auth::require_any_role;
 use crate::handlers::{author_handler, book_handler, rating_handler};
 
 use self::{
+    auth_routes::auth_routes,
     author_analytics_routes::author_analytics_routes,
     author_catalog_routes::author_routes,
     book_recommendation_route::book_recommendation_routes,
@@ -15,6 +16,7 @@ use self::{
     rating_catalog_routes::rating_routes,
 };
 
+pub mod auth_routes;
 pub mod author_analytics_routes;
 pub mod author_catalog_routes;
 pub mod book_catalog_routes;
@@ -30,6 +32,7 @@ pub fn init_routes(cfg: &mut web::ServiceConfig) {
         web::scope("/api")
             // ── Público ───────────────────────────────────────
             .configure(health_routes)
+            .configure(auth_routes)
             // ── Tudo autenticado num único scope ──────────────
             .service(
                 web::scope("")

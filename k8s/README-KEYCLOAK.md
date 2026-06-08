@@ -289,27 +289,3 @@ print(json.dumps(json.loads(base64.b64decode(payload)), indent=2))
 curl -s http://localhost:8080/admin/realms/bookcloud/users \
   -H "Authorization: Bearer $ADMIN_TOKEN" | python3 -m json.tool
 ```
-
-
-
-
-
-client-secret: XbMHv4gUz8ypvuRFFlwRDEpMMM41d2vR
-
-
-
-
-KC="http://localhost:8090"
-REALM="bookcloud"
-CLIENT_ID="bookcloud-app"
-CLIENT_SECRET="YrCNqYgNPngM4niVC1mff6Y2NpEIJpBT"
-
-get_token() {
-  curl -s -X POST "$KC/realms/$REALM/protocol/openid-connect/token" \
-    -d "grant_type=password&client_id=$CLIENT_ID&client_secret=$CLIENT_SECRET&username=$1&password=password" \
-    | jq -r '.access_token'
-}
-
-TOKEN_READONLY=$(get_token readonlyuser)
-TOKEN_USER=$(get_token testuser)
-TOKEN_ADMIN=$(get_token adminuser)

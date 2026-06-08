@@ -1,62 +1,61 @@
 #!/usr/bin/env bash
-# test_setup_cloud.sh — versão cloud (GKE / IP público)
+# test_setup_cloud.sh — versão cloud (GKE / IP público).
 # Usage: source ./k8s/test_setup_cloud.sh
+#
+# Não requer port-forwards — usa o IP público directamente.
 
 CLOUD_IP="${BOOKCLOUD_CLOUD_IP:-146.148.2.198}"
-KEYCLOAK_URL="http://${CLOUD_IP}/keycloak"   # ajusta o path se necessário
-KONG_URL="http://${CLOUD_IP}"
+export BASE="http://${CLOUD_IP}"
 REALM="bookcloud"
 
-# ── Verificar conectividade ────────────────────────────────────────────────────
-echo "Waiting for Keycloak at $KEYCLOAK_URL ..."
+echo "Using BASE=$BASE"
+
+# ── Aguarda Kong responder ────────────────────────────────────────────────────
+echo "Waiting for Kong at $BASE ..."
 attempts=0
-until curl -sf "$KEYCLOAK_URL/realms/master" >/dev/null 2>&1; do
+until curl -sf "$BASE/api/health" >/dev/null 2>&1; do
   sleep 2
   (( attempts++ )) || true
   if (( attempts > 20 )); then
-    echo "✗ Keycloak did not respond at $KEYCLOAK_URL" >&2
+    echo "✗ Kong did not respond at $BASE/api/health" >&2
     return 1
   fi
 done
-echo "✓ Keycloak ready."
+echo "✓ Kong ready."
 
-# ── Resolve client secret ──────────────────────────────────────────────────────
-KEYCLOAK_ADMIN="${BOOKCLOUD_KEYCLOAK_ADMIN:-admin}"
-KEYCLOAK_ADMIN_PASSWORD="${BOOKCLOUD_KEYCLOAK_PASSWORD:-bookcloud-pass}"
-
-ADMIN_TOKEN=$(curl -s -X POST "$KEYCLOAK_URL/realms/master/protocol/openid-connect/token" \
-  -d "client_id=admin-cli&grant_type=password&username=$KEYCLOAK_ADMIN&password=$KEYCLOAK_ADMIN_PASSWORD" \
-  | jq -r '.access_token')
-
-CLIENT_UUID=$(curl -s "$KEYCLOAK_URL/admin/realms/$REALM/clients?clientId=bookcloud-app" \
-  -H "Authorization: Bearer $ADMIN_TOKEN" | jq -r '.[0].id')
-
-CLIENT_SECRET=$(curl -s "$KEYCLOAK_URL/admin/realms/$REALM/clients/$CLIENT_UUID/client-secret" \
-  -H "Authorization: Bearer $ADMIN_TOKEN" | jq -r '.value')
-
-if [ -z "$CLIENT_SECRET" ] || [ "$CLIENT_SECRET" = "null" ]; then
-  echo "✗ Could not resolve client secret." >&2
-  return 1
-fi
-echo "✓ Client secret resolved."
-
-# ── Fetch tokens ───────────────────────────────────────────────────────────────
+# ── Obtém tokens via /api/auth/login ─────────────────────────────────────────
 _token() {
-  curl -s -X POST "$KEYCLOAK_URL/realms/$REALM/protocol/openid-connect/token" \
-    -d "grant_type=password&client_id=bookcloud-app&client_secret=$CLIENT_SECRET&username=$1&password=password" \
+  local username="$1" password="${2:-password}"
+  curl -s -X POST "$BASE/api/auth/login" \\
+    -H "Content-Type: application/x-www-form-urlencoded" \\
+    -d "grant_type=password&client_id=bookcloud-app&username=${username}&password=${password}" \\
     | jq -r '.access_token'
 }
 
 export TOKEN_READONLY; TOKEN_READONLY=$(_token readonlyuser)
 export TOKEN_USER;     TOKEN_USER=$(_token testuser)
 export TOKEN_ADMIN;    TOKEN_ADMIN=$(_token adminuser)
-export BASE="$KONG_URL"
-export CLIENT_SECRET
 
-echo "✓ TOKEN_READONLY: ${TOKEN_READONLY:0:24}..."
-echo "✓ TOKEN_USER    : ${TOKEN_USER:0:24}..."
-echo "✓ TOKEN_ADMIN   : ${TOKEN_ADMIN:0:24}..."
-echo ""
-echo "All tokens ready."
-echo "  BASE=$BASE"
-echo ""
+# ── Valida tokens ─────────────────────────────────────────────────────────────
+_check() {
+  local name="$1" token="$2"
+  if [ -z "$token" ] || [ "$token" = "null" ]; then
+    echo "✗ $name token is empty" >&2
+    return 1
+  fi
+  echo "✓ $name: ${token:0:24}..."
+}
+
+_check "TOKEN_READONLY" "$TOKEN_READONLY"
+_check "TOKEN_USER    " "$TOKEN_USER"
+_check "TOKEN_ADMIN   " "$TOKEN_ADMIN"
+
+cat <<EOF
+
+All tokens ready.
+  BASE=$BASE
+
+Usage:
+  http GET  \\$BASE/api/books   "Authorization:Bearer \\$TOKEN_USER"
+  http POST \\$BASE/api/auth/login username=testuser password=password
+EOF
