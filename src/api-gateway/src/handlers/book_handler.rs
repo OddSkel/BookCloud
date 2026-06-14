@@ -42,8 +42,9 @@ pub async fn add_book(
     }
 }
 
-pub async fn update_book(
+pub async fn update_book_by_path(
     registry: web::Data<GrpcRegistry>,
+    path: web::Path<String>,
     req: HttpRequest,
     body: web::Bytes,
 ) -> impl Responder {
@@ -51,7 +52,23 @@ pub async fn update_book(
         return HttpResponse::Forbidden().json(json!({"error": "Requires 'user' or 'admin' role"}));
     }
 
-    let payload = match serde_json::from_slice::<BookAddPayload>(&body) {
+    let isbn = path.into_inner();
+
+    let mut value = match serde_json::from_slice::<serde_json::Value>(&body) {
+        Ok(v) => v,
+        Err(e) => {
+            return HttpResponse::BadRequest()
+                .json(json!({"error": format!("Invalid JSON: {}", e)}));
+        }
+    };
+
+    let Some(obj) = value.as_object_mut() else {
+        return HttpResponse::BadRequest().json(json!({"error": "Invalid JSON: expected object"}));
+    };
+
+    obj.insert("isbn".to_string(), serde_json::Value::String(isbn.clone()));
+
+    let payload = match serde_json::from_value::<BookAddPayload>(value) {
         Ok(p) => p,
         Err(e) => {
             return HttpResponse::BadRequest()
@@ -59,13 +76,7 @@ pub async fn update_book(
         }
     };
 
-    let isbn = req
-        .headers()
-        .get("ISBN")
-        .and_then(|v| v.to_str().ok())
-        .map(str::to_string);
-
-    match registry.update_book(isbn, payload).await {
+    match registry.update_book(Some(isbn), payload).await {
         Ok(books) => HttpResponse::Ok().json(books),
         Err(e) => crate::utils::map_error(e),
     }
