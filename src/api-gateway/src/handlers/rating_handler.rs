@@ -2,8 +2,8 @@ use actix_web::{HttpRequest, HttpResponse, Responder, web};
 use serde::Deserialize;
 use serde_json::json;
 
+use crate::auth::{ROLE_ADMIN, has_role};
 use crate::grpc::{GrpcRegistry, RatingAddPayload};
-use crate::auth::{has_role, ROLE_ADMIN};
 
 #[derive(Deserialize)]
 pub struct GetRatingsQuery {
@@ -40,8 +40,7 @@ pub async fn add_rating(
     req: HttpRequest,
 ) -> impl Responder {
     if !has_role(&req, ROLE_ADMIN) {
-        return HttpResponse::Forbidden()
-            .json(json!({"error": "Requires 'admin' role"}));
+        return HttpResponse::Forbidden().json(json!({"error": "Requires 'admin' role"}));
     }
     match registry
         .add_rating(&path.into_inner(), body.into_inner())
@@ -56,7 +55,12 @@ pub async fn update_rating(
     registry: web::Data<GrpcRegistry>,
     path: web::Path<String>,
     body: web::Json<RatingAddPayload>,
+    req: HttpRequest,
 ) -> impl Responder {
+    if !has_role(&req, ROLE_ADMIN) {
+        return HttpResponse::Forbidden().json(json!({"error": "Requires 'admin' role"}));
+    }
+
     let payload = body.into_inner();
 
     match registry
@@ -71,7 +75,12 @@ pub async fn update_rating(
 pub async fn delete_rating(
     registry: web::Data<GrpcRegistry>,
     path: web::Path<String>,
+    req: HttpRequest,
 ) -> impl Responder {
+    if !has_role(&req, ROLE_ADMIN) {
+        return HttpResponse::Forbidden().json(json!({"error": "Requires 'admin' role"}));
+    }
+
     match registry.delete_rating(&path.into_inner()).await {
         Ok(_) => HttpResponse::NoContent().finish(),
         Err(e) => crate::utils::map_error(e),

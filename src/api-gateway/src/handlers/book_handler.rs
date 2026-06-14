@@ -1,8 +1,8 @@
 use actix_web::{HttpRequest, HttpResponse, Responder, web};
 use serde_json::json;
 
+use crate::auth::{ROLE_ADMIN, ROLE_USER, has_role};
 use crate::grpc::{BookAddPayload, GrpcRegistry};
-use crate::auth::{has_role, ROLE_ADMIN, ROLE_USER}; 
 
 pub async fn get_books(registry: web::Data<GrpcRegistry>) -> impl Responder {
     match registry.get_books(None, None).await {
@@ -27,13 +27,14 @@ pub async fn add_book(
     body: web::Bytes,
 ) -> impl Responder {
     if !has_role(&req, ROLE_USER) && !has_role(&req, ROLE_ADMIN) {
-        return HttpResponse::Forbidden()
-            .json(json!({"error": "Requires 'user' or 'admin' role"}));
+        return HttpResponse::Forbidden().json(json!({"error": "Requires 'user' or 'admin' role"}));
     }
     let payload = match serde_json::from_slice::<BookAddPayload>(&body) {
         Ok(p) => p,
-        Err(e) => return HttpResponse::BadRequest()
-            .json(json!({"error": format!("Invalid JSON: {}", e)})),
+        Err(e) => {
+            return HttpResponse::BadRequest()
+                .json(json!({"error": format!("Invalid JSON: {}", e)}));
+        }
     };
     match registry.add_book(payload).await {
         Ok(book) => HttpResponse::Created().json(book),
@@ -44,18 +45,17 @@ pub async fn add_book(
 pub async fn update_book(
     registry: web::Data<GrpcRegistry>,
     req: HttpRequest,
-    body: web::Bytes, 
+    body: web::Bytes,
 ) -> impl Responder {
     if !has_role(&req, ROLE_USER) && !has_role(&req, ROLE_ADMIN) {
-        return HttpResponse::Forbidden()
-            .json(json!({"error": "Requires 'user' or 'admin' role"}));
+        return HttpResponse::Forbidden().json(json!({"error": "Requires 'user' or 'admin' role"}));
     }
 
     let payload = match serde_json::from_slice::<BookAddPayload>(&body) {
         Ok(p) => p,
         Err(e) => {
             return HttpResponse::BadRequest()
-                .json(json!({"error": format!("Invalid JSON: {}", e)}))
+                .json(json!({"error": format!("Invalid JSON: {}", e)}));
         }
     };
 
@@ -77,8 +77,7 @@ pub async fn delete_book(
     req: HttpRequest,
 ) -> impl Responder {
     if !has_role(&req, ROLE_ADMIN) {
-        return HttpResponse::Forbidden()
-            .json(json!({"error": "Requires 'admin' role"}));
+        return HttpResponse::Forbidden().json(json!({"error": "Requires 'admin' role"}));
     }
     match registry.delete_book(&path.into_inner()).await {
         Ok(_) => HttpResponse::NoContent().finish(),

@@ -273,7 +273,10 @@ patch_kong_declarative_config() {
   fi
 
   local ISSUER
-  ISSUER=$(curl -s "$KEYCLOAK_URL/realms/$REALM" | jq -r '.issuer')
+  # O login é feito pelo api-gateway usando o DNS interno do cluster.
+  # Portanto, o claim "iss" dos access tokens é http://keycloak/realms/bookcloud.
+  # A key da credential JWT do Kong tem de bater exatamente com esse claim.
+  ISSUER="http://keycloak/realms/$REALM"
   local KONG_YML="$SCRIPT_DIR/kong/configmap.yaml"
 
   echo "Applying kong ConfigMap with live public key and issuer..."

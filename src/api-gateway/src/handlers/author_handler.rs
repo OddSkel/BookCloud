@@ -2,8 +2,8 @@ use actix_web::{HttpRequest, HttpResponse, Responder, web};
 use serde::Deserialize;
 use serde_json::json;
 
+use crate::auth::{ROLE_ADMIN, ROLE_USER, has_role};
 use crate::grpc::{AuthorAddPayload, GrpcRegistry};
-use crate::auth::{has_role, ROLE_ADMIN, ROLE_USER};
 
 #[derive(Deserialize)]
 pub struct UpdateAuthorQuery {
@@ -30,10 +30,7 @@ pub async fn get_authors(
     }
 }
 
-pub async fn get_author(
-    registry: web::Data<GrpcRegistry>,
-    path: web::Path<i64>,
-) -> impl Responder {
+pub async fn get_author(registry: web::Data<GrpcRegistry>, path: web::Path<i64>) -> impl Responder {
     match registry.get_author(path.into_inner()).await {
         Ok(author) => HttpResponse::Ok().json(author),
         Err(e) => crate::utils::map_error(e),
@@ -46,8 +43,7 @@ pub async fn add_author(
     req: HttpRequest,
 ) -> impl Responder {
     if !has_role(&req, ROLE_ADMIN) {
-        return HttpResponse::Forbidden()
-            .json(json!({"error": "Requires 'admin' role"}));
+        return HttpResponse::Forbidden().json(json!({"error": "Requires 'admin' role"}));
     }
     match registry.add_author(body.into_inner()).await {
         Ok(author) => HttpResponse::Created().json(author),
@@ -58,7 +54,12 @@ pub async fn add_author(
 pub async fn update_author(
     registry: web::Data<GrpcRegistry>,
     query: web::Query<UpdateAuthorQuery>,
+    req: HttpRequest,
 ) -> impl Responder {
+    if !has_role(&req, ROLE_ADMIN) {
+        return HttpResponse::Forbidden().json(json!({"error": "Requires 'admin' role"}));
+    }
+
     let q = query.into_inner();
 
     if q.name.is_none() {
@@ -78,8 +79,7 @@ pub async fn delete_author(
     req: HttpRequest,
 ) -> impl Responder {
     if !has_role(&req, ROLE_ADMIN) {
-        return HttpResponse::Forbidden()
-            .json(json!({"error": "Requires 'admin' role"}));
+        return HttpResponse::Forbidden().json(json!({"error": "Requires 'admin' role"}));
     }
     match registry.delete_author(path.into_inner()).await {
         Ok(_) => HttpResponse::NoContent().finish(),

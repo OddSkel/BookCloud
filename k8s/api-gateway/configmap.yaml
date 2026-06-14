@@ -19,5 +19,6 @@ data:
   # ── Keycloak (adicionado para o auth_handler) ──────────────────────────
   KEYCLOAK_URL: "http://keycloak:80"
   KEYCLOAK_CLIENT_ID: "bookcloud-app"
+  KEYCLOAK_CLIENT_SECRET: "bookcloud-app-secret"
   KEYCLOAK_ADMIN_CLIENT_ID: "bookcloud-app"
   KEYCLOAK_ADMIN_SECRET: "bookcloud-app-secret"

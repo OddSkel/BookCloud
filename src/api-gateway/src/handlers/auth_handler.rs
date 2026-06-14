@@ -1,4 +1,4 @@
-use actix_web::{web, HttpResponse};
+use actix_web::{HttpResponse, web};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
@@ -18,14 +18,24 @@ fn keycloak_url() -> String {
 }
 
 fn keycloak_client_id() -> String {
-    std::env::var("KEYCLOAK_CLIENT_ID").unwrap_or_else(|_| "bookcloud".to_string())
+    std::env::var("KEYCLOAK_CLIENT_ID").unwrap_or_else(|_| "bookcloud-app".to_string())
+}
+
+fn keycloak_client_secret() -> String {
+    std::env::var("KEYCLOAK_CLIENT_SECRET")
+        .or_else(|_| std::env::var("KEYCLOAK_ADMIN_SECRET"))
+        .unwrap_or_else(|_| "bookcloud-app-secret".to_string())
 }
 
 pub async fn login(body: web::Json<LoginRequest>) -> HttpResponse {
     let client = reqwest::Client::new();
-    let url = format!("{}/realms/bookcloud/protocol/openid-connect/token", keycloak_url());
+    let url = format!(
+        "{}/realms/bookcloud/protocol/openid-connect/token",
+        keycloak_url()
+    );
     let params = [
         ("client_id", keycloak_client_id()),
+        ("client_secret", keycloak_client_secret()),
         ("grant_type", "password".to_string()),
         ("username", body.username.clone()),
         ("password", body.password.clone()),
@@ -42,20 +52,28 @@ pub async fn login(body: web::Json<LoginRequest>) -> HttpResponse {
                 }))
             }
         }
-        Err(_) => HttpResponse::ServiceUnavailable().json(json!({ "error": "keycloak_unreachable" })),
+        Err(_) => {
+            HttpResponse::ServiceUnavailable().json(json!({ "error": "keycloak_unreachable" }))
+        }
     }
 }
 
 pub async fn logout(body: web::Json<LogoutRequest>) -> HttpResponse {
     let client = reqwest::Client::new();
-    let url = format!("{}/realms/bookcloud/protocol/openid-connect/logout", keycloak_url());
+    let url = format!(
+        "{}/realms/bookcloud/protocol/openid-connect/logout",
+        keycloak_url()
+    );
     let params = [
         ("client_id", keycloak_client_id()),
+        ("client_secret", keycloak_client_secret()),
         ("refresh_token", body.refresh_token.clone()),
     ];
     match client.post(&url).form(&params).send().await {
         Ok(_) => HttpResponse::NoContent().finish(),
-        Err(_) => HttpResponse::ServiceUnavailable().json(json!({ "error": "keycloak_unreachable" })),
+        Err(_) => {
+            HttpResponse::ServiceUnavailable().json(json!({ "error": "keycloak_unreachable" }))
+        }
     }
 }
 
@@ -67,10 +85,9 @@ pub async fn register(body: web::Json<serde_json::Value>) -> HttpResponse {
         "{}/realms/bookcloud/protocol/openid-connect/token",
         keycloak_url()
     );
-    let admin_client_id = std::env::var("KEYCLOAK_ADMIN_CLIENT_ID")
-        .unwrap_or_else(|_| "bookcloud-app".to_string());
-    let admin_secret = std::env::var("KEYCLOAK_ADMIN_SECRET")
-        .unwrap_or_default();
+    let admin_client_id =
+        std::env::var("KEYCLOAK_ADMIN_CLIENT_ID").unwrap_or_else(|_| "bookcloud-app".to_string());
+    let admin_secret = std::env::var("KEYCLOAK_ADMIN_SECRET").unwrap_or_default();
 
     let token_params = [
         ("client_id", admin_client_id),
@@ -86,14 +103,18 @@ pub async fn register(body: web::Json<serde_json::Value>) -> HttpResponse {
         .and_then(|r| Ok(r))
     {
         Ok(res) => res.json().await.unwrap_or_default(),
-        Err(_) => return HttpResponse::ServiceUnavailable()
-            .json(json!({ "error": "keycloak_unreachable" })),
+        Err(_) => {
+            return HttpResponse::ServiceUnavailable()
+                .json(json!({ "error": "keycloak_unreachable" }));
+        }
     };
 
     let access_token = match admin_token["access_token"].as_str() {
         Some(t) => t.to_string(),
-        None => return HttpResponse::InternalServerError()
-            .json(json!({ "error": "admin_token_failed" })),
+        None => {
+            return HttpResponse::InternalServerError()
+                .json(json!({ "error": "admin_token_failed" }));
+        }
     };
 
     // Passo 2: criar utilizador no realm bookcloud
@@ -232,7 +253,8 @@ pub async fn register(body: web::Json<serde_json::Value>) -> HttpResponse {
                     .json(body)
             }
         }
-        Err(_) => HttpResponse::ServiceUnavailable()
-            .json(json!({ "error": "keycloak_unreachable" })),
+        Err(_) => {
+            HttpResponse::ServiceUnavailable().json(json!({ "error": "keycloak_unreachable" }))
+        }
     }
 }

@@ -1,8 +1,8 @@
 use actix_web::{
+    Error, HttpRequest, HttpResponse,
     body::MessageBody,
     dev::{ServiceRequest, ServiceResponse},
     middleware::Next,
-    Error, HttpResponse, HttpRequest
 };
 use serde::Deserialize;
 use serde_json::json;
@@ -21,8 +21,8 @@ struct Claims {
 
 // ── Role constants ────────────────────────────────────────────────────────────
 
-pub const ROLE_ADMIN:    &str = "admin";
-pub const ROLE_USER:     &str = "user";
+pub const ROLE_ADMIN: &str = "admin";
+pub const ROLE_USER: &str = "user";
 pub const ROLE_READONLY: &str = "readonly";
 
 // ── Token extraction + decoding ───────────────────────────────────────────────
