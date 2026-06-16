@@ -286,10 +286,13 @@ patch_kong_declarative_config() {
   local INDENTED_PEM
   INDENTED_PEM=$(echo "$PUBKEY_PEM" | sed "s/^/${INDENT}/")
 
+  export AWK_PEM="$INDENTED_PEM"
+  export AWK_ISSUER="$ISSUER"
+
   # Replace placeholders in-memory and pipe directly to kubectl — file is never modified
-  awk -v pem="$INDENTED_PEM" -v issuer="$ISSUER" '
-    /KONG_JWT_PUBLIC_KEY_PLACEHOLDER/ { print pem; next }
-    /KONG_JWT_ISSUER_PLACEHOLDER/     { sub(/KONG_JWT_ISSUER_PLACEHOLDER/, issuer) }
+  awk '
+    /KONG_JWT_PUBLIC_KEY_PLACEHOLDER/ { print ENVIRON["AWK_PEM"]; next }
+    /KONG_JWT_ISSUER_PLACEHOLDER/     { sub(/KONG_JWT_ISSUER_PLACEHOLDER/, ENVIRON["AWK_ISSUER"]) }
     { print }
   ' "$KONG_YML" | kubectl apply -f -
 
