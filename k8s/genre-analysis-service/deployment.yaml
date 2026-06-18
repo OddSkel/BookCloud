@@ -6,12 +6,7 @@ metadata:
   labels:
     app: genre-analysis-service
 spec:
-  replicas: 1
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxUnavailable: 0
-      maxSurge: 1
+  replicas: 2
   selector:
     matchLabels:
       app: genre-analysis-service
@@ -35,10 +30,10 @@ spec:
           resources:
             requests:
               cpu: "100m"
-              memory: "128Mi"
+              memory: "512Mi"
             limits:
               cpu: "400m"
-              memory: "512Mi"
+              memory: "2Gi"
           readinessProbe:
             tcpSocket:
               port: grpc

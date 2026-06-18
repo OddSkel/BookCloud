@@ -6,22 +6,74 @@
         "version": "1.0.0"
     },
     "paths": {
-        "/books": {
+        "/api/books": {
             "get": {
                 "tags": [
                     "Books"
                 ],
                 "summary": "Get Books",
                 "operationId": "books_get",
+                "parameters": [
+                    {
+                        "name": "page_num",
+                        "in": "query",
+                        "required": false,
+                        "description": "Page number for paginated results.",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "page_size",
+                        "in": "query",
+                        "required": false,
+                        "description": "Number of books per page.",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 10
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Successful Response",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "array",
-                                    "items": {
-                                        "$ref": "#/components/schemas/Book"
+                                    "type": "object",
+                                    "required": [
+                                        "books",
+                                        "page_num",
+                                        "page_size",
+                                        "total_items",
+                                        "total_pages"
+                                    ],
+                                    "properties": {
+                                        "books": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Book"
+                                            }
+                                        },
+                                        "page_num": {
+                                            "type": "integer",
+                                            "example": 1
+                                        },
+                                        "page_size": {
+                                            "type": "integer",
+                                            "example": 10
+                                        },
+                                        "total_items": {
+                                            "type": "integer",
+                                            "example": 123
+                                        },
+                                        "total_pages": {
+                                            "type": "integer",
+                                            "example": 13
+                                        }
                                     }
                                 }
                             }
@@ -30,7 +82,7 @@
                 }
             }
         },
-        "/book": {
+        "/api/book": {
             "post": {
                 "tags": [
                     "Books"
@@ -160,7 +212,7 @@
                 }
             }
         },
-        "/book/{book_id}": {
+        "/api/book/{book_id}": {
             "get": {
                 "tags": [
                     "Books"
@@ -235,7 +287,7 @@
                 }
             }
         },
-        "/authors": {
+        "/api/authors": {
             "get": {
                 "tags": [
                     "Authors"
@@ -260,7 +312,7 @@
                 }
             }
         },
-        "/author": {
+        "/api/author": {
             "post": {
                 "tags": [
                     "Authors"
@@ -354,7 +406,7 @@
                 }
             }
         },
-        "/author/{author_id}": {
+        "/api/author/{author_id}": {
             "get": {
                 "tags": [
                     "Authors"
@@ -429,7 +481,7 @@
                 }
             }
         },
-        "/ratings": {
+        "/api/ratings": {
             "get": {
                 "tags": [
                     "Ratings"
@@ -478,7 +530,7 @@
                 }
             }
         },
-        "/rating/{book_isbn}": {
+        "/api/rating/{book_isbn}": {
             "post": {
                 "tags": [
                     "Ratings"
@@ -659,7 +711,7 @@
                 }
             }
         },
-        "/genres": {
+        "/api/genres": {
             "get": {
                 "tags": [
                     "Genres Service"
@@ -728,7 +780,7 @@
                 }
             }
         },
-        "/genres/{genre_id}": {
+        "/api/genres/{genre_id}": {
             "get": {
                 "tags": [
                     "Genres Service"
@@ -820,7 +872,7 @@
                 }
             }
         },
-        "/genres/{genre_id}/growth": {
+        "/api/genres/{genre_id}/growth": {
             "get": {
                 "tags": [
                     "Genres Service"
@@ -857,7 +909,7 @@
                 }
             }
         },
-        "/genres/{genre_id}/popularity": {
+        "/api/genres/{genre_id}/popularity": {
             "get": {
                 "tags": [
                     "Genres Service"
@@ -894,7 +946,7 @@
                 }
             }
         },
-        "/popular-low-rated": {
+        "/api/compare-service/popular-low-rated": {
             "get": {
                 "tags": [
                     "Popularity Service"
@@ -962,7 +1014,7 @@
                 }
             }
         },
-        "/hidden-gems": {
+        "/api/compare-service/hidden-gems": {
             "get": {
                 "tags": [
                     "Popularity Service"
@@ -1030,7 +1082,7 @@
                 }
             }
         },
-        "/correlation": {
+        "/api/compare-service/correlation": {
             "get": {
                 "tags": [
                     "Popularity Service"
@@ -1084,7 +1136,7 @@
                 }
             }
         },
-        "/publishing-growth": {
+        "/api/compare-service/publishing-growth": {
             "get": {
                 "tags": [
                     "Popularity Service"
@@ -1129,7 +1181,7 @@
                 }
             }
         },
-        "/eras": {
+        "/api/compare-service/eras": {
             "get": {
                 "tags": [
                     "Popularity Service"
@@ -1174,7 +1226,7 @@
                 }
             }
         },
-        "/searchBook": {
+        "/api/book-search": {
             "get": {
                 "tags": [
                     "Search and Recommendation Service"
@@ -1255,7 +1307,7 @@
                 }
             }
         },
-        "/recommendation": {
+        "/api/book-recommendation": {
             "get": {
                 "tags": [
                     "Search and Recommendation Service"
@@ -1336,7 +1388,7 @@
                 }
             }
         },
-        "/rank-author": {
+        "/api/rank-author": {
             "get": {
                 "tags": [
                     "Author Performance Analytics Service"
@@ -1399,7 +1451,7 @@
                 }
             }
         },
-        "/author-performance-time": {
+        "/api/author-performance-time": {
             "get": {
                 "tags": [
                     "Author Performance Analytics Service"
@@ -1445,7 +1497,7 @@
                 }
             }
         },
-        "/authors-consistency": {
+        "/api/authors-consistency": {
             "get": {
                 "tags": [
                     "Author Performance Analytics Service"
@@ -1478,7 +1530,7 @@
                 }
             }
         },
-        "/authors-growth": {
+        "/api/authors-growth": {
             "get": {
                 "tags": [
                     "Author Performance Analytics Service"
@@ -1543,60 +1595,28 @@
                             "ISBN-999-111-222-876-4"
                         ]
                     },
-                    "author": {
-                        "type": "string",
-                        "title": "Author",
-                        "examples": [
-                            "George Orwell"
-                        ]
-                    },
-                    "year_published": {
+                    "pub_year": {
                         "type": "integer",
                         "title": "Year Published",
                         "examples": [
                             "1949"
                         ]
                     },
-                    "editor": {
+                    "url": {
                         "type": "string",
-                        "title": "Editor of Book",
-                        "examples": [
-                            "Secker & Warburg"
-                        ]
+                        "title": "URL of Book"
                     },
-                    "edition_number": {
-                        "type": "integer",
-                        "title": "Edition number",
-                        "examples": [
-                            "1"
-                        ]
-                    },
-                    "id": {
-                        "type": "string",
-                        "title": "Id"
-                    },
-                    "summary": {
+                    "summary_clean": {
                         "type": "string",
                         "title": "Summary of the book"
-                    },
-                    "genre": {
-                        "type": "string",
-                        "title": "Genre of the book",
-                        "examples": [
-                            "novel"
-                        ]
                     }
                 },
                 "type": "object",
                 "required": [
                     "name",
-                    "author",
                     "isbn",
-                    "year_published",
-                    "editor",
-                    "edition_number",
-                    "genre",
-                    "id"
+                    "pub_year",
+                    "url"
                 ],
                 "title": "Book"
             },
@@ -1609,40 +1629,7 @@
                             "George Orwell"
                         ]
                     },
-                    "gender": {
-                        "type": "string",
-                        "enum": [
-                            "M",
-                            "F"
-                        ],
-                        "title": "Gender"
-                    },
-                    "year_born": {
-                        "type": "integer",
-                        "title": "Year_born",
-                        "examples": [
-                            "1903"
-                        ]
-                    },
-                    "year_death": {
-                        "type": "integer",
-                        "title": "Year_death",
-                        "examples": [
-                            "1950"
-                        ]
-                    },
-                    "books_published": {
-                        "items": {
-                            "type": "string"
-                        },
-                        "type": "array",
-                        "title": "books_published",
-                        "examples": [
-                            "1984",
-                            "Animal Farm"
-                        ]
-                    },
-                    "id": {
+                    "author_id": {
                         "type": "string",
                         "title": "Id"
                     }
@@ -1650,9 +1637,6 @@
                 "type": "object",
                 "required": [
                     "name",
-                    "gender",
-                    "year_born",
-                    "books_published",
                     "id"
                 ],
                 "title": "Author"
@@ -1709,59 +1693,28 @@
                             "ISBN-999-111-222-876-4"
                         ]
                     },
-                    "author": {
-                        "type": "string",
-                        "title": "Author",
-                        "examples": [
-                            "George Orwell"
-                        ]
-                    },
-                    "year_published": {
+                    "pub_year": {
                         "type": "integer",
                         "title": "Year Published",
                         "examples": [
                             "1949"
                         ]
                     },
-                    "editor": {
+                    "url": {
                         "type": "string",
-                        "title": "Editor of Book",
-                        "examples": [
-                            "Secker & Warburg"
-                        ]
+                        "title": "URL of Book"
                     },
-                    "edition_number": {
-                        "type": "integer",
-                        "title": "Edition number",
-                        "examples": [
-                            "1"
-                        ]
-                    },
-                    "id": {
-                        "type": "string",
-                        "title": "Id"
-                    },
-                    "summary": {
+                    "summary_clean": {
                         "type": "string",
                         "title": "Summary of the book"
-                    },
-                    "genre": {
-                        "type": "string",
-                        "title": "Genre of the book",
-                        "examples": [
-                            "novel"
-                        ]
                     }
                 },
                 "type": "object",
                 "required": [
                     "name",
-                    "author",
                     "isbn",
-                    "year_published",
-                    "editor",
-                    "genre",
-                    "edition_number"
+                    "pub_year",
+                    "url"
                 ],
                 "title": "BookAdd"
             },
@@ -1774,43 +1727,7 @@
                             "George Orwell"
                         ]
                     },
-                    "gender": {
-                        "type": "string",
-                        "enum": [
-                            "M",
-                            "F"
-                        ],
-                        "title": "Gender",
-                        "examples": [
-                            "M"
-                        ]
-                    },
-                    "year_born": {
-                        "type": "integer",
-                        "title": "Year_born",
-                        "examples": [
-                            "1903"
-                        ]
-                    },
-                    "year_death": {
-                        "type": "integer",
-                        "title": "Year_death",
-                        "examples": [
-                            "1950"
-                        ]
-                    },
-                    "books_published": {
-                        "items": {
-                            "type": "string"
-                        },
-                        "type": "array",
-                        "title": "books_published",
-                        "examples": [
-                            "1984",
-                            "Animal Farm"
-                        ]
-                    },
-                    "id": {
+                    "author_id": {
                         "type": "string",
                         "title": "Id"
                     }
@@ -1818,9 +1735,7 @@
                 "type": "object",
                 "required": [
                     "name",
-                    "gender",
-                    "year_born",
-                    "books_published"
+                    "id"
                 ],
                 "title": "AuthorAdd"
             },
@@ -2074,78 +1989,82 @@
                 "type": "object",
                 "description": "Book Search based on the parameters that client requested",
                 "properties": {
-                    "title": {
-                        "type": [
-                            "string",
-                            "null"
-                        ],
-                        "example": "1984",
-                        "description": "title query requested."
+                    "name": {
+                        "type": "string",
+                        "title": "Name",
+                        "examples": [
+                            "1984"
+                        ]
                     },
-                    "author": {
-                        "type": [
-                            "string",
-                            "null"
-                        ],
-                        "example": "George Orwell",
-                        "description": "author query requested."
+                    "isbn": {
+                        "type": "string",
+                        "title": "ISBN",
+                        "examples": [
+                            "ISBN-999-111-222-876-4"
+                        ]
                     },
-                    "keywords": {
-                        "type": [
-                            "string",
-                            "null"
-                        ],
-                        "description": "keyword query requested"
+                    "pub_year": {
+                        "type": "integer",
+                        "title": "Year Published",
+                        "examples": [
+                            "1949"
+                        ]
+                    },
+                    "url": {
+                        "type": "string",
+                        "title": "URL of Book"
+                    },
+                    "summary_clean": {
+                        "type": "string",
+                        "title": "Summary of the book"
                     }
-                }
+                },
+                "required": [
+                    "name",
+                    "isbn",
+                    "pub_year",
+                    "url"
+                ]
             },
             "RecommendationBookResponse": {
                 "type": "object",
                 "description": "Book Recommendation based on the parameters that client requested",
                 "properties": {
-                    "genre": {
-                        "type": [
-                            "string",
-                            "null"
-                        ],
-                        "example": "Romance",
-                        "description": "genre query requested."
+                    "name": {
+                        "type": "string",
+                        "title": "Name",
+                        "examples": [
+                            "1984"
+                        ]
                     },
-                    "rating": {
-                        "type": [
-                            "integer",
-                            "null"
-                        ],
-                        "format": "double",
-                        "example": 4.89,
-                        "description": "rating query requested."
+                    "isbn": {
+                        "type": "string",
+                        "title": "ISBN",
+                        "examples": [
+                            "ISBN-999-111-222-876-4"
+                        ]
                     },
-                    "popularity": {
-                        "type": [
-                            "integer",
-                            "null"
-                        ],
-                        "format": "int64",
-                        "example": 10000,
-                        "description": "keyword query requested"
+                    "pub_year": {
+                        "type": "integer",
+                        "title": "Year Published",
+                        "examples": [
+                            "1949"
+                        ]
+                    },
+                    "url": {
+                        "type": "string",
+                        "title": "URL of Book"
+                    },
+                    "summary_clean": {
+                        "type": "string",
+                        "title": "Summary of the book"
                     }
                 },
-                "anyOf": [
-                    {
-                        "required": [
-                            "genre"
-                        ]
-                    },
-                    {
-                        "required": [
-                            "rating"
-                        ]
-                    },
-                    {
-                        "required": [
-                            "popularity"
-                        ]
-                    }
+                "required": [
+                    "name",
+                    "isbn",
+                    "pub_year",
+                    "url"
                 ]
             },
             "CorrelationResponse": {

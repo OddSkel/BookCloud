@@ -11,17 +11,13 @@ use crate::grpc::contracts::book_search::{Book as ProtoBook, BookSearchResponse,
 const MAX_SEARCH_RESULTS: usize = 50;
 
 pub async fn book_search(
-    book_catalog_grpc_url: &str,
-    author_catalog_grpc_url: &str,
+    book_catalog_client: &mut BookCatalogGrpcClient<tonic::transport::Channel>,
+    author_catalog_client: &mut AuthorCatalogGrpcClient<tonic::transport::Channel>,
     search_page_size: i32,
     search_max_pages: i32,
     params: Query,
 ) -> Result<BookSearchResponse, String> {
-    let author_id = get_author_id(author_catalog_grpc_url, params.author.as_deref()).await?;
-
-    let mut book_client = BookCatalogGrpcClient::connect(book_catalog_grpc_url.to_string())
-        .await
-        .map_err(|e| e.to_string())?;
+    let author_id = get_author_id(author_catalog_client, params.author.as_deref()).await?;
 
     let page_size = search_page_size.max(1);
     let max_pages = search_max_pages.max(1);
@@ -35,7 +31,7 @@ pub async fn book_search(
             author_id,
         };
 
-        let response = book_client
+        let response = book_catalog_client  // ← was book_client
             .get_books(Request::new(request))
             .await
             .map(|r| r.into_inner())
@@ -58,9 +54,8 @@ pub async fn book_search(
 
     Ok(BookSearchResponse { books })
 }
-
 async fn get_author_id(
-    author_catalog_grpc_url: &str,
+    author_client: &mut AuthorCatalogGrpcClient<tonic::transport::Channel>,
     author_name: Option<&str>,
 ) -> Result<Option<i64>, String> {
     let Some(author_name) = author_name else {
@@ -72,15 +67,6 @@ async fn get_author_id(
     if author_name.is_empty() {
         return Ok(None);
     }
-
-    let channel = tonic::transport::Channel::from_shared(author_catalog_grpc_url.to_string())
-        .map_err(|e| e.to_string())?
-        .connect()
-        .await
-        .map_err(|e| e.to_string())?;
-
-    let mut author_client =
-        AuthorCatalogGrpcClient::new(channel).max_decoding_message_size(usize::MAX);
 
     let response = author_client
         .get_authors_by_name(Request::new(GetAuthorsByNameRequest {

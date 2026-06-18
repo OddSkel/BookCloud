@@ -1,4 +1,7 @@
 use tonic::{Request, Response, Status};
+use crate::grpc::contracts::book_catalog::book_catalog_grpc_client::BookCatalogGrpcClient;
+use crate::grpc::contracts::genre_service::genre_analysis_grpc_client::GenreAnalysisGrpcClient;
+use crate::grpc::contracts::rating_catalog::rating_catalog_grpc_client::RatingCatalogGrpcClient;
 
 use crate::grpc::contracts::book_recommendation::book_recommendation_grpc_server::BookRecommendationGrpc;
 use crate::{
@@ -41,16 +44,31 @@ impl BookRecommendationGrpc for BookRecommendationService {
     }
 
     async fn book_recommendation(
-        &self,
-        _request: Request<Query>,
+    &self,
+    _request: Request<Query>,
     ) -> Result<Response<BookRecommendationResponse>, Status> {
         let params = _request.into_inner();
 
+        let mut genre_client =
+            GenreAnalysisGrpcClient::connect(self.genre_analysis_grpc_url.clone())
+                .await
+                .map_err(|e| Status::internal(e.to_string()))?;
+
+        let mut book_catalog_client =
+            BookCatalogGrpcClient::connect(self.book_catalog_grpc_url.clone())
+                .await
+                .map_err(|e| Status::internal(e.to_string()))?;
+
+        let mut rating_catalog_client =
+            RatingCatalogGrpcClient::connect(self.rating_catalog_grpc_url.clone())
+                .await
+                .map_err(|e| Status::internal(e.to_string()))?;
+
         let response = book_recommendation_handler::book_recommendation(
             params,
-            &self.genre_analysis_grpc_url,
-            &self.book_catalog_grpc_url,
-            &self.rating_catalog_grpc_url,
+            &mut genre_client,
+            &mut book_catalog_client,
+            &mut rating_catalog_client,
         )
         .await
         .map_err(Status::internal)?;

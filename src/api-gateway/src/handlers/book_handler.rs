@@ -1,9 +1,23 @@
 use actix_web::{HttpRequest, HttpResponse, Responder, web};
+use serde::Deserialize;
+use serde_json::json;
 
+use crate::auth::{ROLE_ADMIN, ROLE_USER, has_role};
 use crate::grpc::{BookAddPayload, GrpcRegistry};
 
-pub async fn get_books(registry: web::Data<GrpcRegistry>) -> impl Responder {
-    match registry.get_books(None, None).await {
+#[derive(Deserialize)]
+pub struct GetBooksQuery {
+    pub page_num: Option<i32>,
+    pub page_size: Option<i32>,
+}
+
+pub async fn get_books(
+    registry: web::Data<GrpcRegistry>,
+    query: web::Query<GetBooksQuery>,
+) -> impl Responder {
+    let q = query.into_inner();
+
+    match registry.get_books(q.page_num, q.page_size).await {
         Ok(books) => HttpResponse::Ok().json(books),
         Err(e) => crate::utils::map_error(e),
     }
@@ -21,26 +35,60 @@ pub async fn get_book(
 
 pub async fn add_book(
     registry: web::Data<GrpcRegistry>,
-    body: web::Json<BookAddPayload>,
+    req: HttpRequest,
+    body: web::Bytes,
 ) -> impl Responder {
-    match registry.add_book(body.into_inner()).await {
+    if !has_role(&req, ROLE_USER) && !has_role(&req, ROLE_ADMIN) {
+        return HttpResponse::Forbidden().json(json!({"error": "Requires 'user' or 'admin' role"}));
+    }
+    let payload = match serde_json::from_slice::<BookAddPayload>(&body) {
+        Ok(p) => p,
+        Err(e) => {
+            return HttpResponse::BadRequest()
+                .json(json!({"error": format!("Invalid JSON: {}", e)}));
+        }
+    };
+    match registry.add_book(payload).await {
         Ok(book) => HttpResponse::Created().json(book),
         Err(e) => crate::utils::map_error(e),
     }
 }
 
-pub async fn update_book(
+pub async fn update_book_by_path(
     registry: web::Data<GrpcRegistry>,
+    path: web::Path<String>,
     req: HttpRequest,
-    body: web::Json<BookAddPayload>,
+    body: web::Bytes,
 ) -> impl Responder {
-    let isbn = req
-        .headers()
-        .get("ISBN")
-        .and_then(|v| v.to_str().ok())
-        .map(str::to_string);
+    if !has_role(&req, ROLE_USER) && !has_role(&req, ROLE_ADMIN) {
+        return HttpResponse::Forbidden().json(json!({"error": "Requires 'user' or 'admin' role"}));
+    }
 
-    match registry.update_book(isbn, body.into_inner()).await {
+    let isbn = path.into_inner();
+
+    let mut value = match serde_json::from_slice::<serde_json::Value>(&body) {
+        Ok(v) => v,
+        Err(e) => {
+            return HttpResponse::BadRequest()
+                .json(json!({"error": format!("Invalid JSON: {}", e)}));
+        }
+    };
+
+    let Some(obj) = value.as_object_mut() else {
+        return HttpResponse::BadRequest().json(json!({"error": "Invalid JSON: expected object"}));
+    };
+
+    obj.insert("isbn".to_string(), serde_json::Value::String(isbn.clone()));
+
+    let payload = match serde_json::from_value::<BookAddPayload>(value) {
+        Ok(p) => p,
+        Err(e) => {
+            return HttpResponse::BadRequest()
+                .json(json!({"error": format!("Invalid JSON: {}", e)}));
+        }
+    };
+
+    match registry.update_book(Some(isbn), payload).await {
         Ok(books) => HttpResponse::Ok().json(books),
         Err(e) => crate::utils::map_error(e),
     }
@@ -49,7 +97,11 @@ pub async fn update_book(
 pub async fn delete_book(
     registry: web::Data<GrpcRegistry>,
     path: web::Path<String>,
+    req: HttpRequest,
 ) -> impl Responder {
+    if !has_role(&req, ROLE_ADMIN) {
+        return HttpResponse::Forbidden().json(json!({"error": "Requires 'admin' role"}));
+    }
     match registry.delete_book(&path.into_inner()).await {
         Ok(_) => HttpResponse::NoContent().finish(),
         Err(e) => crate::utils::map_error(e),

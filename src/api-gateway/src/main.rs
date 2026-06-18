@@ -5,6 +5,7 @@ use grpc::GrpcRegistry;
 use routes::init_routes;
 use serde_json::json;
 
+mod auth;
 mod config;
 mod grpc;
 mod handlers;

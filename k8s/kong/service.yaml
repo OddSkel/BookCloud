@@ -11,6 +11,3 @@ spec:
     - name: proxy
       port: 80
       targetPort: proxy
-    - name: admin
-      port: 8001
-      targetPort: admin
