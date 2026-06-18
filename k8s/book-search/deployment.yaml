@@ -27,9 +27,11 @@ spec:
                 name: book-search-config
           resources:
             requests:
-              cpu: "100m"
+              cpu: "750m"
+              memory: "512Mi"
             limits:
-              cpu: "400m"
+              cpu: "750m"
+              memory: "512Mi"
           readinessProbe:
             tcpSocket:
               port: grpc

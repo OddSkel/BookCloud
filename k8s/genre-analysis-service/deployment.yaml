@@ -29,11 +29,11 @@ spec:
                 name: postgres-credentials
           resources:
             requests:
-              cpu: "100m"
-              memory: "512Mi"
+              cpu: "1000m"
+              memory: "1Gi"
             limits:
-              cpu: "400m"
-              memory: "2Gi"
+              cpu: "1000m"
+              memory: "1Gi"
           readinessProbe:
             tcpSocket:
               port: grpc

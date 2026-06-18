@@ -52,6 +52,13 @@ spec:
               port: admin
             initialDelaySeconds: 20
             periodSeconds: 20
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "768Mi"
+            limits:
+              cpu: "500m"
+              memory: "768Mi"
       volumes:
         - name: kong-config
           configMap:

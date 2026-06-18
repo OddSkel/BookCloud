@@ -27,9 +27,11 @@ spec:
                 name: book-recommendation-config
           resources:
             requests:
-              cpu: "100m"
+              cpu: "300m"
+              memory: "256Mi"
             limits:
-              cpu: "400m"
+              cpu: "300m"
+              memory: "256Mi"
           readinessProbe:
             tcpSocket:
               port: grpc
