@@ -67,7 +67,9 @@ check_endpoint() {
   url="$2"
 
   printf 'Testing %-34s %s\n' "$name" "$url"
-  curl -fsS "$url" >/tmp/bookcloud-integration-response.json
+  curl -fsS "$url" \
+    -H "Authorization: Bearer $TOKEN" \
+    >/tmp/bookcloud-integration-response.json
 }
 
 check_endpoint_contains() {
@@ -102,6 +104,8 @@ if [ -z "$BOOK_ISBN" ] || [ -z "$AUTHOR_ID" ] || [ -z "$GENRE_ID" ] || [ -z "$RA
 fi
 
 trap 'rm -f /tmp/bookcloud-integration-response.json' EXIT INT TERM
+
+TOKEN="eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJyZWFsbV9hY2Nlc3MiOnsicm9sZXMiOlsidXNlciJdfX0."
 
 printf 'Running local integration tests against %s...\n' "$API_BASE_URL"
 printf 'Using dataset from %s\n' "$DATASET_DIR"
