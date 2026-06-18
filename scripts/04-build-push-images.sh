@@ -35,20 +35,24 @@ cloud_build_image() {
     dockerfile_for_cloudbuild="Dockerfile"
   fi
 
-  cat > "$config_file" <<EOF
+cat > "$config_file" <<EOF
 steps:
   - name: gcr.io/cloud-builders/docker
+    entrypoint: bash
     env:
       - DOCKER_BUILDKIT=1
     args:
-      - build
-      - -f
-      - ${dockerfile_for_cloudbuild}
-      - -t
-      - ${image}:${IMAGE_TAG}
-      - -t
-      - ${image}:main
-      - .
+      - -c
+      - |
+        docker pull ${image}:main || true
+
+        docker build \\
+          --cache-from ${image}:main \\
+          --build-arg BUILDKIT_INLINE_CACHE=1 \\
+          -f ${dockerfile_for_cloudbuild} \\
+          -t ${image}:${IMAGE_TAG} \\
+          -t ${image}:main \\
+          .
 
 images:
   - ${image}:${IMAGE_TAG}
@@ -63,6 +67,9 @@ EOF
   echo "Dockerfile: ${dockerfile_for_cloudbuild}"
   echo "Image:      ${image}:${IMAGE_TAG}"
   echo "Image main: ${image}:main"
+
+  echo "Cloud Build config gerado:"
+  cat "$config_file"
 
   gcloud builds submit "$context" \
     --config "$config_file" \

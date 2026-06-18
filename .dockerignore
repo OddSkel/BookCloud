@@ -1,20 +1,50 @@
+# Git / IDE
 .git
 .gitignore
+.github
+.vscode
+.idea
 
-**/target
+# Local env
 **/.env
 **/.env.*
 
+# Rust
+**/target
+
+# Python
 **/__pycache__
 **/*.pyc
 **/.pytest_cache
 **/.venv
 **/venv
 
+# Node
 **/node_modules
 **/dist
 **/build
 
+# Docs / tests / local assets
 docs
 tests
 *.md
+
+# Cloud / deploy / infra
+k8s
+scripts
+
+# Data / generated / heavy files
+data
+**/data
+*.csv
+*.xlsx
+*.xls
+*.parquet
+*.zip
+*.tar
+*.tar.gz
+
+# OS / logs
+.DS_Store
+*.log
+*.tmp
