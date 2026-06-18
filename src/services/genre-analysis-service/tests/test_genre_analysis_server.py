@@ -115,10 +115,14 @@ class TestGetGenre:
 
 class TestAddGenre:
     async def test_adds_genre_successfully(self, service, mock_pool):
+        mock_pool.execute.return_value = "SELECT 1"
         mock_pool.fetchrow.return_value = {"genre_id": 5, "name": "New Genre"}
+
         from generated_protos.genre_service_pb2 import AddGenreRequest, Genre
+
         req = AddGenreRequest(genre=Genre(name="New Genre"))
         resp = await service.AddGenre(req, SimpleNamespace())
+
         assert resp.genre.genre_id == 5
         assert resp.genre.name == "New Genre"
 
