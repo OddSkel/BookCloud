@@ -13,15 +13,67 @@
                 ],
                 "summary": "Get Books",
                 "operationId": "books_get",
+                "parameters": [
+                    {
+                        "name": "page_num",
+                        "in": "query",
+                        "required": false,
+                        "description": "Page number for paginated results.",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "page_size",
+                        "in": "query",
+                        "required": false,
+                        "description": "Number of books per page.",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 10
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Successful Response",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "array",
-                                    "items": {
-                                        "$ref": "#/components/schemas/Book"
+                                    "type": "object",
+                                    "required": [
+                                        "books",
+                                        "page_num",
+                                        "page_size",
+                                        "total_items",
+                                        "total_pages"
+                                    ],
+                                    "properties": {
+                                        "books": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Book"
+                                            }
+                                        },
+                                        "page_num": {
+                                            "type": "integer",
+                                            "example": 1
+                                        },
+                                        "page_size": {
+                                            "type": "integer",
+                                            "example": 10
+                                        },
+                                        "total_items": {
+                                            "type": "integer",
+                                            "example": 123
+                                        },
+                                        "total_pages": {
+                                            "type": "integer",
+                                            "example": 13
+                                        }
                                     }
                                 }
                             }

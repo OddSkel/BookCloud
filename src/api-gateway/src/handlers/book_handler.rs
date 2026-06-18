@@ -1,11 +1,23 @@
 use actix_web::{HttpRequest, HttpResponse, Responder, web};
+use serde::Deserialize;
 use serde_json::json;
 
 use crate::auth::{ROLE_ADMIN, ROLE_USER, has_role};
 use crate::grpc::{BookAddPayload, GrpcRegistry};
 
-pub async fn get_books(registry: web::Data<GrpcRegistry>) -> impl Responder {
-    match registry.get_books(None, None).await {
+#[derive(Deserialize)]
+pub struct GetBooksQuery {
+    pub page_num: Option<i32>,
+    pub page_size: Option<i32>,
+}
+
+pub async fn get_books(
+    registry: web::Data<GrpcRegistry>,
+    query: web::Query<GetBooksQuery>,
+) -> impl Responder {
+    let q = query.into_inner();
+
+    match registry.get_books(q.page_num, q.page_size).await {
         Ok(books) => HttpResponse::Ok().json(books),
         Err(e) => crate::utils::map_error(e),
     }

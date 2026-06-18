@@ -47,7 +47,7 @@ request_json "api-gateway health" GET "${API_BASE_URL}/health" 200
 json_assert "api-gateway health status" 'data.get("status") == "ok" and data.get("service") == "api-gateway"'
 
 request_json "book-catalog list first page" GET "${API_BASE_URL}/books?page_num=1&page_size=5" 200
-json_assert "books list shape" 'isinstance(data, list) and len(data) > 0 and all("isbn" in item and "name" in item for item in data)'
+json_assert "books paginated list shape" 'isinstance(data, dict) and isinstance(data.get("books"), list) and len(data["books"]) > 0 and len(data["books"]) <= 5 and data.get("page_num") == 1 and data.get("page_size") == 5 and isinstance(data.get("total_items"), int) and isinstance(data.get("total_pages"), int) and all("isbn" in item and "name" in item for item in data["books"])'
 
 request_json "book-catalog known book detail" GET "${API_BASE_URL}/book/${BOOK_ISBN}" 200
 json_assert "known book detail" "data.get('isbn') == '${BOOK_ISBN}' and data.get('name') == '${BOOK_NAME}' and int(data.get('pub_year')) == ${BOOK_YEAR}"

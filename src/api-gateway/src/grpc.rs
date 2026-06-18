@@ -89,6 +89,15 @@ pub struct BookModel {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+pub struct PaginatedBooksModel {
+    pub books: Vec<BookModel>,
+    pub page_num: i32,
+    pub page_size: i32,
+    pub total_items: i32,
+    pub total_pages: i32,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
 pub struct BookAddPayload {
     pub name: String,
     pub isbn: String,
@@ -441,7 +450,7 @@ impl GrpcRegistry {
         &self,
         page_num: Option<i32>,
         page_size: Option<i32>,
-    ) -> Result<Vec<BookModel>, String> {
+    ) -> Result<PaginatedBooksModel, String> {
         let mut c = book_client(self.endpoint(CatalogService::BookCatalog)).await?;
         let page_num = page_num.unwrap_or(1).max(1);
         let page_size = page_size.unwrap_or(10).max(1);
@@ -455,7 +464,13 @@ impl GrpcRegistry {
             .await
             .map(|r| r.into_inner())
             .map_err(|e| e.to_string())?;
-        Ok(r.books.into_iter().map(book_to_model).collect())
+        Ok(PaginatedBooksModel {
+            books: r.books.into_iter().map(book_to_model).collect(),
+            page_num: r.page_num,
+            page_size: r.page_size,
+            total_items: r.total_items,
+            total_pages: r.total_pages,
+        })
     }
 
     pub async fn get_book(&self, book_isbn: &str) -> Result<BookModel, String> {
