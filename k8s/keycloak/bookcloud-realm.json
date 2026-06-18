@@ -493,9 +493,10 @@
       "serviceAccountClientId": "bookcloud-app",
       "disableableCredentialTypes": [],
       "requiredActions": [],
-      "realmRoles": [
-        "default-roles-bookcloud"
-      ],
+      "realmRoles": ["default-roles-bookcloud"],
+      "clientRoles": {
+        "realm-management": ["manage-users", "view-users", "query-users"]
+      },
       "notBefore": 0,
       "groups": []
     }
@@ -669,7 +670,7 @@
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
-      "secret": "**********",
+      "secret": "bookcloud-app-secret",
       "redirectUris": [
         "/*"
       ],
@@ -689,7 +690,6 @@
       "attributes": {
         "oidc.ciba.grant.enabled": "false",
         "oauth2.device.authorization.grant.enabled": "false",
-        "client.secret.creation.time": "1779294656",
         "backchannel.logout.session.required": "true",
         "backchannel.logout.revoke.offline.tokens": "false"
       },

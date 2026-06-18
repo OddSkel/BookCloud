@@ -118,3 +118,8 @@ Delete the profile and restart:
 minikube delete -p bookcloud
 ./startup_service.sh
 ```
+
+
+
+
+

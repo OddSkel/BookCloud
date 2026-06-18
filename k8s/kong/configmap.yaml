@@ -8,6 +8,14 @@ data:
     _format_version: "3.0"
     _transform: true
 
+    consumers:
+      - username: keycloak-users
+        jwt_secrets:
+        - key: "KONG_JWT_ISSUER_PLACEHOLDER"
+          algorithm: RS256
+          rsa_public_key: |
+            KONG_JWT_PUBLIC_KEY_PLACEHOLDER
+
     services:
       - name: bookcloud-api-gateway
         url: http://api-gateway:80
@@ -17,11 +25,13 @@ data:
         routes:
           - name: public-routes
             paths:
-              - /health
+              - /api/health
+              - /api/auth/login
+              - /api/auth/register
             strip_path: false
           - name: protected-routes
             paths:
-              - /
+              - /api
             strip_path: false
 
     plugins:

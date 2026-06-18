@@ -1,6 +1,8 @@
-use actix_web::{HttpResponse, Responder, web};
+use actix_web::{HttpRequest, HttpResponse, Responder, web};
 use serde::Deserialize;
+use serde_json::json;
 
+use crate::auth::{ROLE_ADMIN, has_role};
 use crate::grpc::{GenreAddPayload, GrpcRegistry};
 
 #[derive(Deserialize)]
@@ -35,7 +37,12 @@ pub async fn get_genres(
 pub async fn add_genre(
     registry: web::Data<GrpcRegistry>,
     body: web::Json<GenreAddPayload>,
+    req: HttpRequest,
 ) -> impl Responder {
+    if !has_role(&req, ROLE_ADMIN) {
+        return HttpResponse::Forbidden().json(json!({"error": "Requires 'admin' role"}));
+    }
+
     match registry.add_genre(body.into_inner()).await {
         Ok(genre) => HttpResponse::Ok().json(genre),
         Err(error) => crate::utils::map_genre_error(error),
@@ -53,7 +60,12 @@ pub async fn update_genre(
     registry: web::Data<GrpcRegistry>,
     path: web::Path<i64>,
     body: web::Json<GenreAddPayload>,
+    req: HttpRequest,
 ) -> impl Responder {
+    if !has_role(&req, ROLE_ADMIN) {
+        return HttpResponse::Forbidden().json(json!({"error": "Requires 'admin' role"}));
+    }
+
     match registry
         .update_genre(path.into_inner(), body.into_inner())
         .await
@@ -66,7 +78,12 @@ pub async fn update_genre(
 pub async fn delete_genre(
     registry: web::Data<GrpcRegistry>,
     path: web::Path<i64>,
+    req: HttpRequest,
 ) -> impl Responder {
+    if !has_role(&req, ROLE_ADMIN) {
+        return HttpResponse::Forbidden().json(json!({"error": "Requires 'admin' role"}));
+    }
+
     match registry.delete_genre(path.into_inner()).await {
         Ok(_) => HttpResponse::NoContent().finish(),
         Err(error) => crate::utils::map_genre_error(error),

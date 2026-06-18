@@ -2,35 +2,80 @@
 
 set -euo pipefail
 
-source "$(dirname "$0")/00-env.sh"
-
 # ============================================================
-# BookCloud - Drop All
+# BookCloud - Drop All (non-interactive)
+# ============================================================
+# This script intentionally has no read prompts.
+# Defaults are set for the current GCP project: southern-engine-364716.
+# Override any value by exporting it before running the script.
 # ============================================================
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Load shared helpers/variables if available.
+if [[ -f "${SCRIPT_DIR}/00-env.sh" ]]; then
+  # shellcheck source=/dev/null
+  source "${SCRIPT_DIR}/00-env.sh"
+fi
+
+# Force the current project default unless explicitly overridden.
+export GCP_PROJECT_ID="${DROP_GCP_PROJECT_ID:-southern-engine-364716}"
+
+export ARTIFACT_REGISTRY_LOCATION="${ARTIFACT_REGISTRY_LOCATION:-europe-west1}"
+export ARTIFACT_REGISTRY_REPOSITORY="${ARTIFACT_REGISTRY_REPOSITORY:-bookcloud}"
+
+export GKE_CLUSTER="${GKE_CLUSTER:-bookcloud-gke}"
+export GKE_LOCATION="${GKE_LOCATION:-europe-west1}"
+
+export PROD_NAMESPACE="${PROD_NAMESPACE:-bookcloud}"
+export TEST_NAMESPACE="${TEST_NAMESPACE:-bookcloud-test}"
+export K8S_NAMESPACE="${K8S_NAMESPACE:-${TEST_NAMESPACE}}"
 export MONITORING_NAMESPACE="${MONITORING_NAMESPACE:-monitoring}"
 
+export PROD_KONG_STATIC_IP_NAME="${PROD_KONG_STATIC_IP_NAME:-bookcloud-kong-ip}"
+export TEST_KONG_STATIC_IP_NAME="${TEST_KONG_STATIC_IP_NAME:-bookcloud-kong-test-ip}"
+export KONG_STATIC_IP_REGION="${KONG_STATIC_IP_REGION:-europe-west1}"
+
+export DATASET_BUCKET="${DATASET_BUCKET:-bookcloud-dataset}"
+
+# Destructive toggles.
 export DELETE_NAMESPACES="${DELETE_NAMESPACES:-true}"
 export DELETE_MONITORING="${DELETE_MONITORING:-true}"
 export DELETE_STATIC_IPS="${DELETE_STATIC_IPS:-true}"
 export DELETE_GKE_CLUSTER="${DELETE_GKE_CLUSTER:-true}"
 
+# Kept by default to avoid deleting reusable artifacts/data accidentally.
 export DELETE_ARTIFACT_REGISTRY="${DELETE_ARTIFACT_REGISTRY:-false}"
 export DELETE_DATASET_BUCKET="${DELETE_DATASET_BUCKET:-false}"
 
-confirm_or_exit() {
+log() {
   echo ""
-  echo "ATENÇÃO: Isto pode apagar recursos reais no Google Cloud."
-  echo ""
+  echo "============================================================"
+  echo "$1"
+  echo "============================================================"
+}
+
+require_command() {
+  if ! command -v "$1" >/dev/null 2>&1; then
+    echo "Comando obrigatório não encontrado: $1" >&2
+    exit 1
+  fi
+}
+
+print_drop_config() {
+  log "Configuração do drop não interativo"
+
   echo "Projeto GCP:              ${GCP_PROJECT_ID}"
   echo "Cluster GKE:              ${GKE_CLUSTER}"
   echo "Localização GKE:          ${GKE_LOCATION}"
+  echo "Namespace atual:          ${K8S_NAMESPACE}"
   echo "Namespace produção:       ${PROD_NAMESPACE}"
   echo "Namespace teste:          ${TEST_NAMESPACE}"
   echo "Namespace monitoring:     ${MONITORING_NAMESPACE}"
   echo "IP produção Kong:         ${PROD_KONG_STATIC_IP_NAME}"
   echo "IP teste Kong:            ${TEST_KONG_STATIC_IP_NAME}"
-  echo "Artifact Registry:        ${ARTIFACT_REGISTRY_REPOSITORY}"
+  echo "Região IP Kong:           ${KONG_STATIC_IP_REGION}"
+  echo "Artifact Registry:        ${ARTIFACT_REGISTRY_LOCATION}/${ARTIFACT_REGISTRY_REPOSITORY}"
   echo "Dataset bucket:           gs://${DATASET_BUCKET}"
   echo ""
   echo "DELETE_NAMESPACES:        ${DELETE_NAMESPACES}"
@@ -39,27 +84,12 @@ confirm_or_exit() {
   echo "DELETE_GKE_CLUSTER:       ${DELETE_GKE_CLUSTER}"
   echo "DELETE_ARTIFACT_REGISTRY: ${DELETE_ARTIFACT_REGISTRY}"
   echo "DELETE_DATASET_BUCKET:    ${DELETE_DATASET_BUCKET}"
-  echo ""
-
-  read -r -p "Para continuar, escreve DROP: " confirmation
-
-  if [[ "$confirmation" != "DROP" ]]; then
-    echo "Operação cancelada."
-    exit 0
-  fi
-
-  read -r -p "Confirma novamente escrevendo o nome do projeto (${GCP_PROJECT_ID}): " project_confirmation
-
-  if [[ "$project_confirmation" != "$GCP_PROJECT_ID" ]]; then
-    echo "Projeto não confirmado corretamente. Operação cancelada."
-    exit 0
-  fi
 }
 
 configure_gcp() {
   log "Configurar projeto GCP"
 
-  gcloud config set project "$GCP_PROJECT_ID"
+  gcloud config set project "$GCP_PROJECT_ID" --quiet
 
   local current_account
   current_account="$(gcloud auth list --filter=status:ACTIVE --format='value(account)' | head -n 1 || true)"
@@ -73,13 +103,16 @@ configure_gcp() {
   echo "Conta gcloud ativa: ${current_account}"
 }
 
+cluster_exists() {
+  gcloud container clusters describe "$GKE_CLUSTER" \
+    --location="$GKE_LOCATION" \
+    --project="$GCP_PROJECT_ID" >/dev/null 2>&1
+}
+
 get_gke_credentials_if_cluster_exists() {
   log "Obter credenciais do GKE, se o cluster existir"
 
-  if gcloud container clusters describe "$GKE_CLUSTER" \
-    --location="$GKE_LOCATION" \
-    --project="$GCP_PROJECT_ID" >/dev/null 2>&1; then
-
+  if cluster_exists; then
     gcloud container clusters get-credentials "$GKE_CLUSTER" \
       --location="$GKE_LOCATION" \
       --project="$GCP_PROJECT_ID"
@@ -127,10 +160,7 @@ delete_kubernetes_namespaces() {
 
   log "Apagar namespaces da aplicação"
 
-  if ! gcloud container clusters describe "$GKE_CLUSTER" \
-    --location="$GKE_LOCATION" \
-    --project="$GCP_PROJECT_ID" >/dev/null 2>&1; then
-
+  if ! cluster_exists; then
     echo "Cluster não existe. A saltar namespaces."
     return 0
   fi
@@ -150,10 +180,7 @@ delete_monitoring_namespace() {
 
   log "Apagar namespace de monitoring"
 
-  if ! gcloud container clusters describe "$GKE_CLUSTER" \
-    --location="$GKE_LOCATION" \
-    --project="$GCP_PROJECT_ID" >/dev/null 2>&1; then
-
+  if ! cluster_exists; then
     echo "Cluster não existe. A saltar monitoring."
     return 0
   fi
@@ -170,10 +197,7 @@ delete_gke_cluster() {
 
   log "Apagar cluster GKE"
 
-  if gcloud container clusters describe "$GKE_CLUSTER" \
-    --location="$GKE_LOCATION" \
-    --project="$GCP_PROJECT_ID" >/dev/null 2>&1; then
-
+  if cluster_exists; then
     gcloud container clusters delete "$GKE_CLUSTER" \
       --location="$GKE_LOCATION" \
       --project="$GCP_PROJECT_ID" \
@@ -190,14 +214,14 @@ delete_static_ip_if_exists() {
   local ip_region="$2"
 
   if gcloud compute addresses describe "$ip_name" \
-    --region "$ip_region" \
-    --project "$GCP_PROJECT_ID" >/dev/null 2>&1; then
+    --region="$ip_region" \
+    --project="$GCP_PROJECT_ID" >/dev/null 2>&1; then
 
     echo "A apagar IP fixo: ${ip_name}"
 
     gcloud compute addresses delete "$ip_name" \
-      --region "$ip_region" \
-      --project "$GCP_PROJECT_ID" \
+      --region="$ip_region" \
+      --project="$GCP_PROJECT_ID" \
       --quiet
 
     echo "IP apagado: ${ip_name}"
@@ -294,15 +318,17 @@ show_remaining_resources() {
 require_command gcloud
 require_command kubectl
 
+print_drop_config
 configure_gcp
-confirm_or_exit
-
 get_gke_credentials_if_cluster_exists
 
 delete_kubernetes_namespaces
 delete_monitoring_namespace
-delete_gke_cluster
+
+# Delete IPs before deleting the cluster resources are fully gone only after namespace/LB cleanup.
 delete_static_ips
+
+delete_gke_cluster
 delete_artifact_registry
 delete_dataset_bucket
 

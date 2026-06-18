@@ -1,5 +1,7 @@
 use tonic::{Request, Response, Status};
 
+use crate::grpc::contracts::author_catalog::author_catalog_grpc_client::AuthorCatalogGrpcClient;
+use crate::grpc::contracts::book_catalog::book_catalog_grpc_client::BookCatalogGrpcClient;
 use crate::grpc::contracts::book_search::book_search_grpc_server::BookSearchGrpc;
 use crate::{
     grpc::contracts::{
@@ -42,14 +44,24 @@ impl BookSearchGrpc for BookSearchService {
         Ok(Response::new(response))
     }
     async fn book_search(
-        &self,
-        _request: tonic::Request<Query>,
+    &self,
+    _request: tonic::Request<Query>,
     ) -> Result<Response<BookSearchResponse>, Status> {
         let params = _request.into_inner();
 
+        let mut book_catalog_client =
+            BookCatalogGrpcClient::connect(self.book_catalog_grpc_url.clone())
+                .await
+                .map_err(|e| Status::internal(e.to_string()))?;
+
+        let mut author_catalog_client =
+            AuthorCatalogGrpcClient::connect(self.author_catalog_grpc_url.clone())
+                .await
+                .map_err(|e| Status::internal(e.to_string()))?;
+
         let response = book_search_handler::book_search(
-            &self.book_catalog_grpc_url,
-            &self.author_catalog_grpc_url,
+            &mut book_catalog_client,
+            &mut author_catalog_client,
             self.search_page_size,
             self.search_max_pages,
             params,
