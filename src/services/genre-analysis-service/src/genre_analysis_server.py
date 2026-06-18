@@ -39,6 +39,7 @@ import generated_protos.rating_catalog_pb2_grpc as rating_catalog_grpc
 import generated_protos.book_catalog_pb2 as book_catalog_pb2
 import generated_protos.book_catalog_pb2_grpc as book_catalog_grpc
 
+PARALLEL_WORKERS = 6
 
 def row_to_genre_pb(row) -> Genre:
     return Genre(
@@ -742,7 +743,7 @@ async def create_pool():
 async def update_genre_cache(pool, rating_catalog_channel, book_catalog_channel, cache_ttl_hours=24):
     if not rating_catalog_channel:
         logging.info("No rating catalog channel, skipping cache update")
-        return
+        return False
 
     stats_exists = await pool.fetchrow(
         "SELECT COUNT(*) as cnt FROM genre_stats_cache"
@@ -792,7 +793,7 @@ async def update_genre_cache(pool, rating_catalog_channel, book_catalog_channel,
 
     if not use_stats and not use_year:
         logging.info("All caches are fresh, skipping rebuild")
-        return
+        return True
 
     all_data = await pool.fetch(
         "SELECT bg.book_isbn, bg.genre_id, g.name as genre_name "
@@ -801,7 +802,7 @@ async def update_genre_cache(pool, rating_catalog_channel, book_catalog_channel,
     
     if not all_data:
         logging.info("No books in database, skipping cache update")
-        return
+        return False
 
     genre_isbns = {}
     all_isbns = []
@@ -819,7 +820,7 @@ async def update_genre_cache(pool, rating_catalog_channel, book_catalog_channel,
     logging.info(f"Found {total_genres} genres with {total_books} total book-genre entries")
 
     rating_stub = rating_catalog_grpc.RatingCatalogGrpcStub(rating_catalog_channel)
-    batch_size = 300
+    batch_size = 500
     logging.info(f"Fetching ratings in batches of {batch_size}...")
 
     unique_isbns = list(set(all_isbns))
@@ -835,17 +836,31 @@ async def update_genre_cache(pool, rating_catalog_channel, book_catalog_channel,
         except:
             return isbn, None
 
-    for i in range(0, len(unique_isbns), batch_size):
-        batch = unique_isbns[i:i+batch_size]
-        tasks = [fetch_rating(isbn) for isbn in batch]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        for isbn, rating in results:
-            if rating and not isinstance(rating, Exception):
-                ratings[isbn] = rating
-        if i % 3000 == 0:
-            logging.info(f"Progress: {i}/{len(unique_isbns)} unique books processed...")
+    def split_into_chunks(lst, n):
+        """Split lst into n chunks."""
+        k, m = divmod(len(lst), n)
+        return [lst[i * k + min(i, m):(i + 1) * k + min(i + 1, m)] for i in range(n)]
 
-    logging.info(f"Got {len(ratings)} ratings")
+    async def process_ratings_chunk(chunk, worker_id):
+        local_ratings = {}
+        for i in range(0, len(chunk), batch_size):
+            batch = chunk[i:i+batch_size]
+            tasks = [fetch_rating(isbn) for isbn in batch]
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            for isbn, rating in results:
+                if rating and not isinstance(rating, Exception):
+                    local_ratings[isbn] = rating
+        logging.info(f"Worker {worker_id} finished processing {len(chunk)} books, got {len(local_ratings)} ratings")
+        return local_ratings
+
+    chunks = split_into_chunks(unique_isbns, PARALLEL_WORKERS)
+    tasks = [process_ratings_chunk(chunks[i], i) for i in range(PARALLEL_WORKERS)]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    for r in results:
+        if isinstance(r, dict):
+            ratings.update(r)
+
+    logging.info(f"Got {len(ratings)} ratings after parallel processing")
 
     if book_catalog_channel:
         from generated_protos import book_catalog_pb2
@@ -865,17 +880,26 @@ async def update_genre_cache(pool, rating_catalog_channel, book_catalog_channel,
                 logging.warning(f"Failed to get book {isbn}: {e}")
                 return isbn, None
 
-        for i in range(0, len(unique_isbns), batch_size):
-            batch = unique_isbns[i:i+batch_size]
-            tasks = [fetch_book(isbn) for isbn in batch]
-            results = await asyncio.gather(*tasks, return_exceptions=True)
-            for isbn, book in results:
-                if book and not isinstance(book, Exception):
-                    books[isbn] = book
-            if i % 3000 == 0:
-                logging.info(f"Progress: {i}/{len(unique_isbns)} books processed...")
+        async def process_books_chunk(chunk, worker_id):
+            local_books = {}
+            for i in range(0, len(chunk), batch_size):
+                batch = chunk[i:i+batch_size]
+                tasks = [fetch_book(isbn) for isbn in batch]
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+                for isbn, book in results:
+                    if book and not isinstance(book, Exception):
+                        local_books[isbn] = book
+            logging.info(f"Worker {worker_id} finished processing {len(chunk)} books, got {len(local_books)} books")
+            return local_books
 
-        logging.info(f"Got {len(books)} books")
+        chunks = split_into_chunks(unique_isbns, PARALLEL_WORKERS)
+        tasks = [process_books_chunk(chunks[i], i) for i in range(PARALLEL_WORKERS)]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        for r in results:
+            if isinstance(r, dict):
+                books.update(r)
+
+        logging.info(f"Got {len(books)} books after parallel processing")
 
     logging.info("Computing genre stats...")
 
@@ -945,6 +969,7 @@ async def update_genre_cache(pool, rating_catalog_channel, book_catalog_channel,
                 )
 
     logging.info("Genre cache updated successfully")
+    return True
 
 
 async def serve():
@@ -985,12 +1010,19 @@ async def serve():
 
     async def update_cache_in_background():
         logging.info("Updating genre cache in background (this may take several minutes)...")
-        try:
-            await update_genre_cache(pool, rating_catalog_channel, book_catalog_channel)
-            service.cache_ready = True
-            logging.info("Genre cache ready")
-        except Exception as e:
-            logging.warning(f"Failed to update cache: {e}")
+        while True:
+            try:
+                result = await update_genre_cache(pool, rating_catalog_channel, book_catalog_channel)
+                if result:
+                    service.cache_ready = True
+                    logging.info("Genre cache ready")
+                    return
+                else:
+                    logging.warning("Cache update returned False (no books or no channel), retrying in 30s...")
+                    await asyncio.sleep(30)
+            except Exception as e:
+                logging.warning(f"Failed to update cache: {e}, retrying in 30s...")
+                await asyncio.sleep(30)
 
     asyncio.create_task(update_cache_in_background())
     await server.wait_for_termination()
