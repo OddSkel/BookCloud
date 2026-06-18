@@ -2,7 +2,7 @@ use actix_web::{HttpRequest, HttpResponse, Responder, web};
 use serde::Deserialize;
 use serde_json::json;
 
-use crate::auth::{ROLE_ADMIN, ROLE_USER, has_role};
+use crate::auth::{has_role, ROLE_ADMIN};
 use crate::grpc::{AuthorAddPayload, GrpcRegistry};
 
 #[derive(Deserialize)]

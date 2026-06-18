@@ -2,7 +2,6 @@ use actix_web::middleware::from_fn;
 use actix_web::web;
 
 use crate::auth::require_any_role;
-use crate::handlers::{author_handler, book_handler, rating_handler};
 
 use self::{
     auth_routes::auth_routes, author_analytics_routes::author_analytics_routes,

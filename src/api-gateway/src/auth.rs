@@ -120,7 +120,7 @@ pub fn roles_from_request(req: &HttpRequest) -> Vec<String> {
         .get("Authorization")
         .and_then(|v| v.to_str().ok())
         .and_then(|v| v.strip_prefix("Bearer "))
-        .and_then(|t| decode_claims(t))
+        .and_then(decode_claims)
         .and_then(|c| c.realm_access)
         .map(|ra| ra.roles)
         .unwrap_or_default()
