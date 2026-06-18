@@ -21,11 +21,11 @@ spec:
               containerPort: 6379
           resources:
             requests:
-              cpu: "100m"
-              memory: "128Mi"
+              cpu: "75m"
+              memory: "96Mi"
             limits:
-              cpu: "100m"
-              memory: "128Mi"
+              cpu: "200m"
+              memory: "192Mi"
           readinessProbe:
             tcpSocket:
               port: 6379

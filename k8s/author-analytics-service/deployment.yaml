@@ -38,11 +38,11 @@ spec:
               value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@author-db:5432/author_catalog"
           resources:
             requests:
-              cpu: "100m"
-              memory: "128Mi"
+              cpu: "150m"
+              memory: "96Mi"
             limits:
-              cpu: "100m"
-              memory: "128Mi"
+              cpu: "300m"
+              memory: "192Mi"
           readinessProbe:
             tcpSocket:
               port: grpc

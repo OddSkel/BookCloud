@@ -54,11 +54,11 @@ spec:
             periodSeconds: 20
           resources:
             requests:
-              cpu: "500m"
-              memory: "768Mi"
+              cpu: "150m"
+              memory: "384Mi"
             limits:
-              cpu: "500m"
-              memory: "768Mi"
+              cpu: "700m"
+              memory: "1Gi"
       volumes:
         - name: kong-config
           configMap:
