@@ -336,7 +336,6 @@ deploy_environment() {
   log "Esperar rollouts principais"
 
   deployments_to_wait=(
-    "kong"
     "api-gateway"
     "author-analytics-service"
     "author-catalog"
