@@ -254,29 +254,26 @@ class GenreAnalysisService(genre_service_grpc.GenreAnalysisGrpcServicer):
 
     async def AddGenre(self, request, context):
         genre_in = request.genre
+
         if not genre_in.name:
             context.set_details("Genre name is required")
             context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
             return AddGenreResponse()
 
-        async with self.pool.acquire() as conn:
-            async with conn.transaction():
-                # Imported data may contain explicit genre_id values, leaving the
-                # SERIAL sequence behind MAX(genre_id). Align it before inserting.
-                await conn.execute(
-                    """
-                    SELECT setval(
-                        pg_get_serial_sequence('genre', 'genre_id'),
-                        COALESCE((SELECT MAX(genre_id) FROM genre), 0),
-                        true
-                    )
-                    """
-                )
+        await self.pool.execute(
+            """
+            SELECT setval(
+                pg_get_serial_sequence('genre', 'genre_id'),
+                COALESCE((SELECT MAX(genre_id) FROM genre), 0),
+                true
+            )
+            """
+        )
 
-                row = await conn.fetchrow(
-                    "INSERT INTO genre (name) VALUES ($1) RETURNING genre_id,name",
-                    genre_in.name,
-                )
+        row = await self.pool.fetchrow(
+            "INSERT INTO genre (name) VALUES ($1) RETURNING genre_id,name",
+            genre_in.name,
+        )
 
         return AddGenreResponse(genre=row_to_genre_pb(row))
 

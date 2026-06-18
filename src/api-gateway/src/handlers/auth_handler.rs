@@ -1,5 +1,5 @@
 use actix_web::{HttpResponse, web};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use serde_json::json;
 
 #[derive(Deserialize)]
@@ -100,7 +100,6 @@ pub async fn register(body: web::Json<serde_json::Value>) -> HttpResponse {
         .form(&token_params)
         .send()
         .await
-        .and_then(|r| Ok(r))
     {
         Ok(res) => res.json().await.unwrap_or_default(),
         Err(_) => {
