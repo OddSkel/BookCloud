@@ -9,7 +9,7 @@ set -euo pipefail
 export ARTIFACT_REGISTRY_LOCATION="${ARTIFACT_REGISTRY_LOCATION:-europe-west1}"
 export ARTIFACT_REGISTRY_REPOSITORY="${ARTIFACT_REGISTRY_REPOSITORY:-bookcloud}"
 
-export GCP_PROJECT_ID="${GCP_PROJECT_ID:-cloud-computing-2526}"
+export GCP_PROJECT_ID="${GCP_PROJECT_ID:-animated-bay-488516-u1}"
 
 export GKE_CLUSTER="${GKE_CLUSTER:-bookcloud-gke}"
 export GKE_LOCATION="${GKE_LOCATION:-europe-west1}"
@@ -41,7 +41,7 @@ export ROLLOUT_TIMEOUT="${ROLLOUT_TIMEOUT:-600s}"
 export IMAGE_PREFIX="${ARTIFACT_REGISTRY_LOCATION}-docker.pkg.dev/${GCP_PROJECT_ID}/${ARTIFACT_REGISTRY_REPOSITORY}"
 export IMAGE_TAG="${IMAGE_TAG:-manual-$(git rev-parse --short HEAD 2>/dev/null || date +%s)}"
 
-export DATASET_BUCKET="${DATASET_BUCKET:-bookcloud_dataset}"
+export DATASET_BUCKET="${DATASET_BUCKET:-mango_bookcloud}"
 export DATASET_GCS_URI="${DATASET_GCS_URI:-gs://${DATASET_BUCKET}/normalized_out}"
 export DATASET_DIR="${DATASET_DIR:-data/data_clean/normalized_out}"
 

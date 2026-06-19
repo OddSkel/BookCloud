@@ -19,7 +19,7 @@ if [[ -f "${SCRIPT_DIR}/00-env.sh" ]]; then
 fi
 
 # Force the current project default unless explicitly overridden.
-export GCP_PROJECT_ID="${DROP_GCP_PROJECT_ID:-southern-engine-364716}"
+export GCP_PROJECT_ID="${DROP_GCP_PROJECT_ID:-animated-bay-488516-u1}"
 
 export ARTIFACT_REGISTRY_LOCATION="${ARTIFACT_REGISTRY_LOCATION:-europe-west1}"
 export ARTIFACT_REGISTRY_REPOSITORY="${ARTIFACT_REGISTRY_REPOSITORY:-bookcloud}"
@@ -36,7 +36,7 @@ export PROD_KONG_STATIC_IP_NAME="${PROD_KONG_STATIC_IP_NAME:-bookcloud-kong-ip}"
 export TEST_KONG_STATIC_IP_NAME="${TEST_KONG_STATIC_IP_NAME:-bookcloud-kong-test-ip}"
 export KONG_STATIC_IP_REGION="${KONG_STATIC_IP_REGION:-europe-west1}"
 
-export DATASET_BUCKET="${DATASET_BUCKET:-bookcloud-dataset}"
+export DATASET_BUCKET="${DATASET_BUCKET:-mango_bookcloud}"
 
 # Destructive toggles.
 export DELETE_NAMESPACES="${DELETE_NAMESPACES:-true}"
