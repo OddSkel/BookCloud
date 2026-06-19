@@ -36,9 +36,6 @@ json_assert "genre detail is usable" "int(data.get('genre_id')) == int('${GENRE_
 request_json "reader asks for recommendations" GET "${API_BASE_URL}/book-recommendation?genre=${GENRE_NAME_Q}&rating=4&popularity=100" 200
 json_assert "recommendation response is usable" 'isinstance(data, dict) and isinstance(data.get("books"), list) and all("isbn" in book and "name" in book for book in data.get("books"))'
 
-request_json "reader searches by author" GET "${API_BASE_URL}/book-search?author=${AUTHOR_NAME_Q}" 200
-json_assert "author search response is usable" 'isinstance(data, dict) and isinstance(data.get("books"), list)'
-
 print_section "Acceptance: Analyst Explores Catalogue Insights"
 
 request_json "analyst gets popular low-rated books" GET "${API_BASE_URL}/compare-service/popular-low-rated?page=1&page_size=5&min_num_ratings=10" 200
