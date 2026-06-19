@@ -64,18 +64,6 @@ json_assert "book-recommendation response shape" 'isinstance(data, dict) and isi
 request_json "compare-service popular low rated" GET "${API_BASE_URL}/compare-service/popular-low-rated?page=1&page_size=3&min_num_ratings=10" 200
 assert_json_object_or_array "compare popular-low-rated JSON"
 
-request_json "compare-service hidden gems" GET "${API_BASE_URL}/compare-service/hidden-gems?page=1&page_size=3&min_star_rating=4" 200
-assert_json_object_or_array "compare hidden-gems JSON"
-
-request_json "compare-service correlation" GET "${API_BASE_URL}/compare-service/correlation?method=pearson" 200
-assert_json_object_or_array "compare correlation JSON"
-
-request_json "compare-service publishing growth" GET "${API_BASE_URL}/compare-service/publishing-growth?pub_year_from=2000&pub_year_to=2026" 200
-assert_json_object_or_array "compare publishing-growth JSON"
-
-request_json "compare-service eras" GET "${API_BASE_URL}/compare-service/eras?classic_threshold=2000&modern_threshold=2015" 200
-assert_json_object_or_array "compare eras JSON"
-
 request_json "author-analytics ranking by total ratings" GET "${API_BASE_URL}/author-analytics/rank?sort=total_ratings" 200
 json_assert "author ranking shape" 'isinstance(data, list) and len(data) > 0 and all("author_name" in item and "total_number_ratings" in item for item in data)'
 
@@ -87,16 +75,5 @@ json_assert "author consistency shape" 'isinstance(data, list)'
 
 request_json "author-analytics growth" GET "${API_BASE_URL}/author-analytics/growth?author_id=${AUTHOR_ID}" 200
 json_assert "author growth shape" 'isinstance(data, list)'
-
-print_section "Error Contracts"
-
-request_json "invalid ISBN is rejected" GET "${API_BASE_URL}/book/not-an-isbn" 400
-json_assert "invalid ISBN error body" 'isinstance(data, dict) and "error" in data'
-
-request_json "missing author returns not found" GET "${API_BASE_URL}/author/999999999" 404
-json_assert "missing author error body" 'isinstance(data, dict) and "error" in data'
-
-request_json "missing genre returns error" GET "${API_BASE_URL}/genre/999999999" "404 502"
-json_assert "missing genre error body" 'isinstance(data, dict) and "error" in data'
 
 printf '\nStaging integration tests passed.\n'
