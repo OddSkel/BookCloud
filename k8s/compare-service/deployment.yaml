@@ -28,11 +28,11 @@ spec:
                 name: compare-service-config
           resources:
             requests:
-              cpu: "300m"
-              memory: "512Mi"
+              cpu: "250m"
+              memory: "768Mi"
             limits:
-              cpu: "750m"
-              memory: "1Gi"
+              cpu: "1000m"
+              memory: "1536Mi"
           startupProbe:
             tcpSocket:
               port: grpc

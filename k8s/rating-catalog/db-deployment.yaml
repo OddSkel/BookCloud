@@ -34,11 +34,11 @@ spec:
               mountPath: /var/lib/postgresql/data
           resources:
             requests:
-              cpu: "150m"
-              memory: "384Mi"
+              cpu: "100m"
+              memory: "256Mi"
             limits:
-              cpu: "400m"
-              memory: "768Mi"
+              cpu: "300m"
+              memory: "512Mi"
           readinessProbe:
             tcpSocket:
               port: postgres

@@ -27,11 +27,9 @@ spec:
                 name: api-gateway-config
           resources:
             requests:
-              cpu: "150m"
-              memory: "192Mi"
+              cpu: "100m"
             limits:
-              cpu: "500m"
-              memory: "512Mi"
+              cpu: "300m"
           readinessProbe:
             httpGet:
               path: /api/health

@@ -33,13 +33,6 @@ spec:
           volumeMounts:
             - name: keycloak-db-storage
               mountPath: /var/lib/postgresql/data
-          resources:
-            requests:
-              cpu: "150m"
-              memory: "384Mi"
-            limits:
-              cpu: "400m"
-              memory: "768Mi"
       volumes:
         - name: keycloak-db-storage
           persistentVolumeClaim:
