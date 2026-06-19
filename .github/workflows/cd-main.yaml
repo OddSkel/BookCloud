@@ -249,7 +249,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          for deployment in keycloak-db keycloak kong; do
+          for deployment in keycloak-db keycloak; do
             kubectl -n "$K8S_NAMESPACE" rollout status "deployment/${deployment}" --timeout="${ROLLOUT_TIMEOUT:-600s}"
           done
 
@@ -442,7 +442,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          for deployment in keycloak-db keycloak kong; do
+          for deployment in keycloak-db keycloak; do
             kubectl -n "$K8S_NAMESPACE" rollout status "deployment/${deployment}" --timeout="${ROLLOUT_TIMEOUT:-600s}"
           done
 

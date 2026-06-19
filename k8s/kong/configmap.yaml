@@ -11,10 +11,10 @@ data:
     consumers:
       - username: keycloak-users
         jwt_secrets:
-        - key: "KONG_JWT_ISSUER_PLACEHOLDER"
-          algorithm: RS256
-          rsa_public_key: |
-            KONG_JWT_PUBLIC_KEY_PLACEHOLDER
+          - key: "KONG_JWT_ISSUER_PLACEHOLDER"
+            algorithm: RS256
+            rsa_public_key: |
+              KONG_JWT_PUBLIC_KEY_PLACEHOLDER
 
     services:
       - name: bookcloud-api-gateway
