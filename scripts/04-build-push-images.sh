@@ -10,14 +10,14 @@ source "$(dirname "$0")/00-env.sh"
 
 services=(
   "api-gateway|src/api-gateway|src/api-gateway/Dockerfile"
-  "author-analytics-service|src/services/author-analytics-service|src/services/author-analytics-service/Dockerfile"
   "author-catalog|src/services/author-catalog|src/services/author-catalog/Dockerfile"
   "book-catalog|src/services/book-catalog|src/services/book-catalog/Dockerfile"
+  "rating-catalog|src/services/rating-catalog|src/services/rating-catalog/Dockerfile"
+  "genre-analysis-service|src/services/genre-analysis-service|src/services/genre-analysis-service/Dockerfile"
+  "author-analytics-service|src/services/author-analytics-service|src/services/author-analytics-service/Dockerfile"
   "book-recommendation|src/services/book-recommendation|src/services/book-recommendation/Dockerfile"
   "book-search|.|src/services/book-search/Dockerfile"
   "compare-service|src/services/compare-service|src/services/compare-service/Dockerfile"
-  "genre-analysis-service|src/services/genre-analysis-service|src/services/genre-analysis-service/Dockerfile"
-  "rating-catalog|src/services/rating-catalog|src/services/rating-catalog/Dockerfile"
 )
 
 cloud_build_image() {
@@ -99,4 +99,4 @@ validate_local_environment
 
 build_and_push_images
 
-log "Build e push das imagens concluídos com sucesso"
+log "Build e push das imagens concluÃ­dos com sucesso"

@@ -151,8 +151,50 @@ start_keycloak_port_forward() {
   exit 1
 }
 
+resolve_keycloak_admin_password_from_k8s() {
+  local secret_name=""
+  local secret_key=""
+  local secret_value=""
+
+  secret_name="$(kubectl -n "$NAMESPACE" get deployment keycloak \
+    -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="KEYCLOAK_ADMIN_PASSWORD")].valueFrom.secretKeyRef.name}' \
+    2>/dev/null || true)"
+
+  secret_key="$(kubectl -n "$NAMESPACE" get deployment keycloak \
+    -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="KEYCLOAK_ADMIN_PASSWORD")].valueFrom.secretKeyRef.key}' \
+    2>/dev/null || true)"
+
+  if [[ -z "$secret_name" || -z "$secret_key" ]]; then
+    echo "Aviso: não encontrei secretKeyRef de KEYCLOAK_ADMIN_PASSWORD no deployment/keycloak."
+    echo "A usar KEYCLOAK_ADMIN_PASSWORD recebido por variável de ambiente/default."
+    return 0
+  fi
+
+  if ! kubectl -n "$NAMESPACE" get secret "$secret_name" >/dev/null 2>&1; then
+    echo "Aviso: Kubernetes secret não encontrado: ${secret_name}."
+    echo "A usar KEYCLOAK_ADMIN_PASSWORD recebido por variável de ambiente/default."
+    return 0
+  fi
+
+  secret_value="$(kubectl -n "$NAMESPACE" get secret "$secret_name" \
+    -o jsonpath="{.data.${secret_key}}" 2>/dev/null | base64 -d 2>/dev/null || true)"
+
+  if [[ -z "$secret_value" ]]; then
+    echo "Aviso: não consegui ler ${secret_name}/${secret_key}."
+    echo "A usar KEYCLOAK_ADMIN_PASSWORD recebido por variável de ambiente/default."
+    return 0
+  fi
+
+  KEYCLOAK_ADMIN_PASSWORD="$secret_value"
+  export KEYCLOAK_ADMIN_PASSWORD
+
+  echo "KEYCLOAK_ADMIN_PASSWORD resolvida a partir do Kubernetes secret: ${secret_name}/${secret_key}"
+}
+
 kcadm_login() {
   log "Autenticar Keycloak Admin CLI"
+
+  resolve_keycloak_admin_password_from_k8s
 
   kubectl -n "$NAMESPACE" exec "$KEYCLOAK_POD" -- /opt/keycloak/bin/kcadm.sh config credentials \
     --server http://localhost:8080 \

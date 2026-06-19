@@ -9,25 +9,29 @@ source "$(dirname "$0")/00-env.sh"
 # ============================================================
 # - cria namespace
 # - reserva/obtém IP fixo do Kong
+# - valida se as imagens :main existem no Artifact Registry
 # - renderiza manifests numa pasta temporária
 # - ajusta namespace
-# - troca imagens Docker
+# - troca imagens Docker para :main
+# - garante imagePullPolicy: Always
 # - injeta IP fixo no Service do Kong
 # - aplica manifests
 # - espera deployments subirem
 # - mostra URL pública
 # ============================================================
 
+DEPLOY_IMAGE_TAG="main"
+
 services=(
   "api-gateway"
-  "author-analytics-service"
   "author-catalog"
   "book-catalog"
+  "rating-catalog"
+  "genre-analysis-service"
+  "author-analytics-service"
   "book-recommendation"
   "book-search"
   "compare-service"
-  "genre-analysis-service"
-  "rating-catalog"
 )
 
 # ------------------------------------------------------------
@@ -69,6 +73,68 @@ reserve_static_ip() {
 }
 
 # ------------------------------------------------------------
+# Valida se as imagens :main existem no Artifact Registry
+# ------------------------------------------------------------
+
+image_tag_exists() {
+  local service="$1"
+  local tag="$2"
+  local image="${IMAGE_PREFIX}/${service}"
+
+  gcloud artifacts docker images list "$image" \
+    --include-tags \
+    --project "$GCP_PROJECT_ID" \
+    --format='value(tags)' \
+  | tr ',' '\n' \
+  | tr ';' '\n' \
+  | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' \
+  | grep -Fx "$tag" >/dev/null 2>&1
+}
+
+validate_images_exist() {
+  log "Validar se as imagens :${DEPLOY_IMAGE_TAG} existem no Artifact Registry"
+
+  local missing=0
+
+  echo "Image prefix: ${IMAGE_PREFIX}"
+  echo "Deploy tag:   ${DEPLOY_IMAGE_TAG}"
+  echo ""
+
+  for service in "${services[@]}"; do
+    local image="${IMAGE_PREFIX}/${service}:${DEPLOY_IMAGE_TAG}"
+
+    echo "A validar: ${image}"
+
+    if image_tag_exists "$service" "$DEPLOY_IMAGE_TAG"; then
+      echo "OK: ${image}"
+    else
+      echo "ERRO: imagem/tag não existe: ${image}" >&2
+      missing=1
+    fi
+  done
+
+  if [[ "$missing" -ne 0 ]]; then
+    echo "" >&2
+    echo "Uma ou mais imagens :${DEPLOY_IMAGE_TAG} não existem no Artifact Registry." >&2
+    echo "Corre primeiro o 04-build-push-images.sh." >&2
+    echo "" >&2
+    echo "Tags disponíveis por serviço:" >&2
+
+    for service in "${services[@]}"; do
+      echo "" >&2
+      echo "### ${service}" >&2
+
+      gcloud artifacts docker images list "${IMAGE_PREFIX}/${service}" \
+        --include-tags \
+        --project "$GCP_PROJECT_ID" \
+        --format='table(image.basename(), tags, updateTime)' >&2 || true
+    done
+
+    exit 1
+  fi
+}
+
+# ------------------------------------------------------------
 # Ajusta os YAMLs para o namespace correto
 # ------------------------------------------------------------
 
@@ -97,16 +163,10 @@ for path in yaml_files:
     for line in lines:
         stripped = line.strip()
 
-        # Ajusta kustomization.yaml:
-        # namespace: bookcloud
-        # namespace: bookcloud-test
         if path.name == "kustomization.yaml" and stripped.startswith("namespace:"):
             out.append(f"namespace: {namespace}")
             continue
 
-        # Ajusta namespace.yaml:
-        # metadata:
-        #   name: bookcloud
         if is_namespace_file:
             if stripped == "metadata:":
                 in_metadata = True
@@ -119,12 +179,6 @@ for path in yaml_files:
                 in_metadata = False
                 continue
 
-        # Ajusta apenas linhas exatamente iguais a:
-        # namespace: bookcloud
-        #
-        # Importante:
-        # Não altera namespace: bookcloud-test,
-        # evitando gerar bookcloud-test-test.
         if stripped == "namespace: bookcloud":
             indent = line[:len(line) - len(line.lstrip())]
             out.append(f"{indent}namespace: {namespace}")
@@ -135,12 +189,84 @@ for path in yaml_files:
     path.write_text("\n".join(out) + "\n")
 PY
 
-  # Se o kustomization.yaml existir mas não tiver namespace, adiciona.
   if [[ -f "$rendered_dir/kustomization.yaml" ]]; then
     if ! grep -qE '^namespace:' "$rendered_dir/kustomization.yaml"; then
       printf '\nnamespace: %s\n' "$namespace" >> "$rendered_dir/kustomization.yaml"
     fi
   fi
+}
+
+# ------------------------------------------------------------
+# Garante imagePullPolicy: Always nos containers com imagem BookCloud
+# ------------------------------------------------------------
+
+force_image_pull_policy_always() {
+  local rendered_dir="$1"
+
+  log "Garantir imagePullPolicy: Always nos deployments renderizados"
+
+  python3 - "$rendered_dir" "$IMAGE_PREFIX" <<'PY'
+import sys
+from pathlib import Path
+
+rendered_dir = Path(sys.argv[1])
+image_prefix = sys.argv[2]
+
+deployment_files = list(rendered_dir.rglob("deployment.yaml")) + list(rendered_dir.rglob("deployment.yml"))
+
+for path in deployment_files:
+    lines = path.read_text().splitlines()
+    out = []
+
+    i = 0
+    changed = False
+
+    while i < len(lines):
+        line = lines[i]
+        stripped = line.strip()
+
+        out.append(line)
+
+        if stripped.startswith("image: ") and image_prefix in stripped:
+            image_indent = len(line) - len(line.lstrip())
+            policy_indent = " " * image_indent
+
+            j = i + 1
+            found_policy = False
+
+            # Procura imagePullPolicy logo nas linhas seguintes do mesmo bloco do container
+            while j < len(lines):
+                next_line = lines[j]
+                next_stripped = next_line.strip()
+
+                if not next_stripped:
+                    break
+
+                next_indent = len(next_line) - len(next_line.lstrip())
+
+                # Sai se chegou a outro campo de nível igual/menor que image
+                if next_indent <= image_indent and not next_stripped.startswith("imagePullPolicy:"):
+                    break
+
+                if next_stripped.startswith("imagePullPolicy:"):
+                    out.append(f"{policy_indent}imagePullPolicy: Always")
+                    found_policy = True
+                    changed = True
+                    i = j
+                    break
+
+                j += 1
+
+            if not found_policy:
+                out.append(f"{policy_indent}imagePullPolicy: Always")
+                changed = True
+
+        i += 1
+
+    if changed:
+        path.write_text("\n".join(out) + "\n")
+        print(f"Atualizado imagePullPolicy: {path}")
+PY
 }
 
 # ------------------------------------------------------------
@@ -169,7 +295,7 @@ render_manifests_for_namespace() {
 
   for service in "${services[@]}"; do
     local deployment_file="${RENDERED_K8S_DIR}/${service}/deployment.yaml"
-    local image="${IMAGE_PREFIX}/${service}:${IMAGE_TAG}"
+    local image="${IMAGE_PREFIX}/${service}:${DEPLOY_IMAGE_TAG}"
 
     if [[ ! -f "$deployment_file" ]]; then
       echo "Deployment file não encontrado: ${deployment_file}" >&2
@@ -185,8 +311,7 @@ render_manifests_for_namespace() {
     fi
   done
 
-  find "$RENDERED_K8S_DIR" -name deployment.yaml \
-    -exec sed -i 's/imagePullPolicy: IfNotPresent/imagePullPolicy: Always/g' {} +
+  force_image_pull_policy_always "$RENDERED_K8S_DIR"
 
   log "Injetar IP fixo no Service do Kong"
 
@@ -313,7 +438,7 @@ deploy_environment() {
   echo "Namespace:    ${namespace}"
   echo "Kong IP name: ${kong_ip_name}"
   echo "Image prefix: ${IMAGE_PREFIX}"
-  echo "Image tag:    ${IMAGE_TAG}"
+  echo "Image tag:    ${DEPLOY_IMAGE_TAG}"
 
   log "Criar namespace, se não existir"
 
@@ -322,6 +447,8 @@ deploy_environment() {
     -o yaml | kubectl apply --validate=false -f -
 
   reserve_static_ip "$kong_ip_name" "$KONG_STATIC_IP_REGION"
+
+  validate_images_exist
 
   render_manifests_for_namespace "$namespace" "$RESERVED_KONG_STATIC_IP"
 
@@ -337,14 +464,14 @@ deploy_environment() {
 
   deployments_to_wait=(
     "api-gateway"
-    "author-analytics-service"
     "author-catalog"
     "book-catalog"
+    "rating-catalog"
+    "genre-analysis-service"
+    "author-analytics-service"
     "book-recommendation"
     "book-search"
     "compare-service"
-    "genre-analysis-service"
-    "rating-catalog"
   )
 
   for deployment in "${deployments_to_wait[@]}"; do
@@ -364,7 +491,7 @@ deploy_environment() {
   echo "NAMESPACE=${namespace}"
   echo "KONG_STATIC_IP=${RESERVED_KONG_STATIC_IP}"
   echo "PUBLIC_BASE_URL=${PUBLIC_BASE_URL}"
-  echo "IMAGE_TAG=${IMAGE_TAG}"
+  echo "IMAGE_TAG=${DEPLOY_IMAGE_TAG}"
 }
 
 # ============================================================
@@ -377,6 +504,8 @@ print_cd_config
 echo ""
 echo "Este script vai aplicar manifests Kubernetes no namespace:"
 echo "${K8S_NAMESPACE}"
+echo ""
+echo "Deploy image tag: ${DEPLOY_IMAGE_TAG}"
 echo ""
 
 read -r -p "Continuar com o deploy? Escreve YES: " confirmation
