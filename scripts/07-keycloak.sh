@@ -446,9 +446,10 @@ patch_kong_declarative_config() {
     }
 
     /KONG_JWT_PUBLIC_KEY_PLACEHOLDER/ {
+      indent = substr($0, 1, match($0, /[^ ]/) - 1)
       n = split(ENVIRON["AWK_PEM"], lines, "\n")
       for (i = 1; i <= n; i++) {
-        if (lines[i] != "") print "            " lines[i]
+        if (lines[i] != "") print indent lines[i]
       }
       next
     }
