@@ -38,7 +38,7 @@ spec:
               value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@author-db:5432/author_catalog"
           resources:
             requests:
-              cpu: "150m"
+              cpu: "100m"
               memory: "96Mi"
             limits:
               cpu: "300m"
