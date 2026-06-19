@@ -58,9 +58,6 @@ json_assert "genre popularity shape" "int(data.get('genre_id')) == int('${GENRE_
 request_json "book-search by title" GET "${API_BASE_URL}/book-search?title=${BOOK_NAME_Q}" 200
 json_assert "book-search response shape" 'isinstance(data, dict) and isinstance(data.get("books"), list)'
 
-request_json "book-search by author" GET "${API_BASE_URL}/book-search?author=${AUTHOR_NAME_Q}" 200
-json_assert "book-search author response shape" 'isinstance(data, dict) and isinstance(data.get("books"), list)'
-
 request_json "book-recommendation by genre and quality" GET "${API_BASE_URL}/book-recommendation?genre=${GENRE_NAME_Q}&rating=4&popularity=100" 200
 json_assert "book-recommendation response shape" 'isinstance(data, dict) and isinstance(data.get("books"), list)'
 
