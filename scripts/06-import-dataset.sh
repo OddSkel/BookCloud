@@ -65,6 +65,40 @@ download_dataset_from_gcs() {
   find "$DATASET_DIR" -maxdepth 2 -type f | sort
 }
 
+
+ensure_python_import_dependencies() {
+  if [[ "$IMPORT_DATASET" != "true" ]]; then
+    echo "IMPORT_DATASET=false. A saltar validação das dependências Python."
+    return 0
+  fi
+
+  log "Garantir dependências Python para importação"
+
+  if python3 - <<'PY_CHECK' >/dev/null 2>&1
+import psycopg2  # noqa: F401
+PY_CHECK
+  then
+    echo "Dependência Python OK: psycopg2"
+    return 0
+  fi
+
+  echo "psycopg2 não encontrado. A instalar psycopg2-binary..."
+
+  if ! python3 -m pip --version >/dev/null 2>&1; then
+    echo "Erro: python3 -m pip não está disponível no runner." >&2
+    echo "Instala pip ou adiciona setup-python no workflow antes de correr este script." >&2
+    exit 1
+  fi
+
+  python3 -m pip install --user --upgrade pip
+  python3 -m pip install --user psycopg2-binary
+
+  python3 - <<'PY_CHECK'
+import psycopg2
+print("Dependência Python OK após instalação: psycopg2")
+PY_CHECK
+}
+
 import_dataset() {
   if [[ "$IMPORT_DATASET" != "true" ]]; then
     echo "IMPORT_DATASET=false. A saltar importação do dataset."
@@ -95,6 +129,7 @@ validate_local_environment
 
 resolve_public_url "$K8S_NAMESPACE"
 download_dataset_from_gcs
+ensure_python_import_dependencies
 import_dataset
 
 log "Dataset importado com sucesso"
