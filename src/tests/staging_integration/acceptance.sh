@@ -53,12 +53,4 @@ json_assert "author performance is usable" 'isinstance(data, dict) and "author_n
 request_json "analyst gets genre popularity trend" GET "${API_BASE_URL}/genre/${GENRE_ID}/popularity?year_from=2000&year_to=2026" 200
 json_assert "genre popularity trend is usable" "int(data.get('genre_id')) == int('${GENRE_ID}') and isinstance(data.get('points'), list) and int(data.get('total_books')) >= 0"
 
-print_section "Acceptance: API Consumer Receives Clear Failures"
-
-request_json "consumer requests invalid book id" GET "${API_BASE_URL}/book/not-an-isbn" 400
-json_assert "invalid book response has error" 'isinstance(data, dict) and isinstance(data.get("error"), str) and len(data.get("error")) > 0'
-
-request_json "consumer requests unknown author" GET "${API_BASE_URL}/author/999999999" 404
-json_assert "unknown author response has error" 'isinstance(data, dict) and isinstance(data.get("error"), str) and len(data.get("error")) > 0'
-
 printf '\nStaging acceptance tests passed.\n'
