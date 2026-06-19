@@ -440,18 +440,15 @@ patch_kong_declarative_config() {
       print "  namespace: " ENVIRON["AWK_NAMESPACE"]
       next
     }
-
-    /KONG_JWT_ISSUER_PLACEHOLDER/ {
-      sub(/KONG_JWT_ISSUER_PLACEHOLDER/, ENVIRON["AWK_ISSUER"])
-    }
-
-    /KONG_JWT_PUBLIC_KEY_PLACEHOLDER/ {
-      n = split(ENVIRON["AWK_PEM"], lines, "\n")
-      for (i = 1; i <= n; i++) {
-        if (lines[i] != "") print "            " lines[i]
-      }
-      next
-    }
+    
+	/KONG_JWT_PUBLIC_KEY_PLACEHOLDER/ {
+	  indent = substr($0, 1, match($0, /[^ ]/) - 1)
+	  n = split(ENVIRON["AWK_PEM"], lines, "\n")
+	  for (i = 1; i <= n; i++) {
+	    if (lines[i] != "") print indent lines[i]
+	  }
+	  next
+	}
 
     { print }
   ' "$KONG_CONFIGMAP_FILE" > "$rendered"
