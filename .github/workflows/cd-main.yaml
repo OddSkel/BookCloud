@@ -327,30 +327,23 @@ jobs:
           echo "KEYCLOAK_ACCESS_TOKEN=${access_token}" >> "$GITHUB_ENV"
           echo "AUTHORIZATION_HEADER=Bearer ${access_token}" >> "$GITHUB_ENV"
 
-      - name: Strong cloud health check
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          curl -fsS -H "Authorization: Bearer ${KEYCLOAK_ACCESS_TOKEN}" "${BASE_URL}/api/health"
-
-      - name: Strong cloud integration/acceptance tests
+      - name: Strong staging integration tests
         working-directory: src
         shell: bash
         run: |
           set -euo pipefail
 
           export BASE_URL="${BASE_URL}"
+          export API_BASE_URL="${BASE_URL%/}/api"
           export KEYCLOAK_ACCESS_TOKEN="${KEYCLOAK_ACCESS_TOKEN}"
           export AUTHORIZATION_HEADER="Bearer ${KEYCLOAK_ACCESS_TOKEN}"
 
-          if [[ -f ./tests/staging_integration/run.sh ]]; then
-            chmod +x ./tests/staging_integration/run.sh
-            ./tests/staging_integration/run.sh
-          else
-            chmod +x ./tests/non_staging_integration/run.sh
-            ./tests/non_staging_integration/run.sh
-          fi
+          echo "Running staging integration tests against ${API_BASE_URL}"
+
+          test -f ./tests/staging_integration/run.sh
+
+          chmod +x ./tests/staging_integration/*.sh
+          ./tests/staging_integration/run.sh
 
       - name: Kubernetes diagnostics on staging failure
         if: failure()

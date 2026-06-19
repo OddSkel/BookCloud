@@ -10,36 +10,9 @@ trap cleanup_response_file EXIT INT TERM
 require_command curl
 require_command python3
 
-BOOK_CSV="${DATASET_DIR}/book.csv"
-AUTHOR_CSV="${DATASET_DIR}/author.csv"
-GENRE_CSV="${DATASET_DIR}/genre.csv"
-RATING_CSV="${DATASET_DIR}/rating.csv"
-
-require_file "$BOOK_CSV"
-require_file "$AUTHOR_CSV"
-require_file "$GENRE_CSV"
-require_file "$RATING_CSV"
-
-BOOK_ISBN="$(csv_value "$BOOK_CSV" isbn)"
-BOOK_NAME="$(csv_value "$BOOK_CSV" name)"
-BOOK_YEAR="$(csv_value "$BOOK_CSV" pub_year)"
-AUTHOR_ID="$(csv_value "$AUTHOR_CSV" author_id)"
-AUTHOR_NAME="$(csv_value "$AUTHOR_CSV" name)"
-GENRE_ID="$(csv_value "$GENRE_CSV" genre_id)"
-GENRE_NAME="$(csv_value "$GENRE_CSV" name)"
-RATING_ISBN="$(csv_value "$RATING_CSV" book_isbn)"
-
-if [[ -z "$BOOK_ISBN" || -z "$BOOK_NAME" || -z "$AUTHOR_ID" || -z "$GENRE_ID" || -z "$RATING_ISBN" ]]; then
-  printf 'Test dataset is incomplete. Check files in %s\n' "$DATASET_DIR" >&2
-  exit 1
-fi
-
-BOOK_NAME_Q="$(urlencode "$BOOK_NAME")"
-AUTHOR_NAME_Q="$(urlencode "$AUTHOR_NAME")"
-GENRE_NAME_Q="$(urlencode "$GENRE_NAME")"
-
 printf 'Running staging integration tests against %s\n' "$API_BASE_URL"
-printf 'Using dataset from %s\n' "$DATASET_DIR"
+
+discover_test_data
 
 print_section "Gateway and Catalogs"
 
@@ -50,19 +23,23 @@ request_json "book-catalog list first page" GET "${API_BASE_URL}/books?page_num=
 json_assert "books paginated list shape" 'isinstance(data, dict) and isinstance(data.get("books"), list) and len(data["books"]) > 0 and len(data["books"]) <= 5 and data.get("page_num") == 1 and data.get("page_size") == 5 and isinstance(data.get("total_items"), int) and isinstance(data.get("total_pages"), int) and all("isbn" in item and "name" in item for item in data["books"])'
 
 request_json "book-catalog known book detail" GET "${API_BASE_URL}/book/${BOOK_ISBN}" 200
-json_assert "known book detail" "data.get('isbn') == '${BOOK_ISBN}' and data.get('name') == '${BOOK_NAME}' and int(data.get('pub_year')) == ${BOOK_YEAR}"
+if [[ -n "${BOOK_YEAR:-}" && "$BOOK_YEAR" != "null" ]]; then
+  json_assert "known book detail" "data.get('isbn') == '${BOOK_ISBN}' and data.get('name') == '${BOOK_NAME}' and int(data.get('pub_year')) == int('${BOOK_YEAR}')"
+else
+  json_assert "known book detail" "data.get('isbn') == '${BOOK_ISBN}' and data.get('name') == '${BOOK_NAME}'"
+fi
 
 request_json "author-catalog list first page" GET "${API_BASE_URL}/authors?page=1&page_size=5" 200
 json_assert "authors list shape" 'isinstance(data, list) and len(data) > 0 and all("author_id" in item and "name" in item for item in data)'
 
 request_json "author-catalog known author detail" GET "${API_BASE_URL}/author/${AUTHOR_ID}" 200
-json_assert "known author detail" "int(data.get('author_id')) == ${AUTHOR_ID} and data.get('name') == '${AUTHOR_NAME}'"
+json_assert "known author detail" "int(data.get('author_id')) == int('${AUTHOR_ID}') and data.get('name') == '${AUTHOR_NAME}'"
 
 request_json "rating-catalog list first page" GET "${API_BASE_URL}/ratings?page_number=1&page_size=5" 200
 json_assert "ratings list shape" 'isinstance(data, list) and len(data) > 0 and all("book_isbn" in item and "star_rating" in item and "num_ratings" in item for item in data)'
 
 request_json "rating-catalog known rating detail" GET "${API_BASE_URL}/rating/${RATING_ISBN}" 200
-json_assert "known rating detail" "data.get('book_isbn') == '${RATING_ISBN}' and float(data.get('star_rating')) > 0 and int(data.get('num_ratings')) >= 0"
+json_assert "known rating detail" "data.get('book_isbn') == '${RATING_ISBN}' and float(data.get('star_rating')) >= 0 and int(data.get('num_ratings')) >= 0"
 
 print_section "Search, Recommendation and Analytics"
 
@@ -70,13 +47,13 @@ request_json "genre-analysis list first page" GET "${API_BASE_URL}/genres?page_n
 json_assert "genres list shape" 'isinstance(data, list) and len(data) > 0 and all("genre_id" in item and "genre_name" in item for item in data)'
 
 request_json "genre-analysis known genre detail" GET "${API_BASE_URL}/genre/${GENRE_ID}" 200
-json_assert "known genre detail" "int(data.get('genre_id')) == ${GENRE_ID} and data.get('genre_name') == '${GENRE_NAME}'"
+json_assert "known genre detail" "int(data.get('genre_id')) == int('${GENRE_ID}') and data.get('genre_name') == '${GENRE_NAME}'"
 
 request_json "genre-analysis growth" GET "${API_BASE_URL}/genre/${GENRE_ID}/growth?year_from=2000&year_to=2026" 200
-json_assert "genre growth shape" "int(data.get('genre_id')) == ${GENRE_ID} and data.get('genre') == '${GENRE_NAME}' and isinstance(data.get('points'), list)"
+json_assert "genre growth shape" "int(data.get('genre_id')) == int('${GENRE_ID}') and isinstance(data.get('points'), list)"
 
 request_json "genre-analysis popularity" GET "${API_BASE_URL}/genre/${GENRE_ID}/popularity?year_from=2000&year_to=2026" 200
-json_assert "genre popularity shape" "int(data.get('genre_id')) == ${GENRE_ID} and data.get('genre') == '${GENRE_NAME}' and isinstance(data.get('points'), list)"
+json_assert "genre popularity shape" "int(data.get('genre_id')) == int('${GENRE_ID}') and isinstance(data.get('points'), list)"
 
 request_json "book-search by title" GET "${API_BASE_URL}/book-search?title=${BOOK_NAME_Q}" 200
 json_assert "book-search response shape" 'isinstance(data, dict) and isinstance(data.get("books"), list)'

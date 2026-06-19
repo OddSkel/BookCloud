@@ -10,28 +10,9 @@ trap cleanup_response_file EXIT INT TERM
 require_command curl
 require_command python3
 
-BOOK_CSV="${DATASET_DIR}/book.csv"
-AUTHOR_CSV="${DATASET_DIR}/author.csv"
-GENRE_CSV="${DATASET_DIR}/genre.csv"
-RATING_CSV="${DATASET_DIR}/rating.csv"
-
-require_file "$BOOK_CSV"
-require_file "$AUTHOR_CSV"
-require_file "$GENRE_CSV"
-require_file "$RATING_CSV"
-
-BOOK_ISBN="$(csv_value "$BOOK_CSV" isbn)"
-BOOK_NAME="$(csv_value "$BOOK_CSV" name)"
-AUTHOR_ID="$(csv_value "$AUTHOR_CSV" author_id)"
-AUTHOR_NAME="$(csv_value "$AUTHOR_CSV" name)"
-GENRE_ID="$(csv_value "$GENRE_CSV" genre_id)"
-GENRE_NAME="$(csv_value "$GENRE_CSV" name)"
-RATING_ISBN="$(csv_value "$RATING_CSV" book_isbn)"
-BOOK_NAME_Q="$(urlencode "$BOOK_NAME")"
-AUTHOR_NAME_Q="$(urlencode "$AUTHOR_NAME")"
-GENRE_NAME_Q="$(urlencode "$GENRE_NAME")"
-
 printf 'Running staging acceptance tests against %s\n' "$API_BASE_URL"
+
+discover_test_data
 
 print_section "Acceptance: Reader Finds a Known Book"
 
@@ -45,12 +26,12 @@ request_json "reader checks rating" GET "${API_BASE_URL}/rating/${RATING_ISBN}" 
 json_assert "rating is visible" "data.get('book_isbn') == '${RATING_ISBN}' and 0 <= float(data.get('star_rating')) <= 5 and int(data.get('num_ratings')) >= 0"
 
 request_json "reader opens author details" GET "${API_BASE_URL}/author/${AUTHOR_ID}" 200
-json_assert "author detail is usable" "int(data.get('author_id')) == ${AUTHOR_ID} and data.get('name') == '${AUTHOR_NAME}'"
+json_assert "author detail is usable" "int(data.get('author_id')) == int('${AUTHOR_ID}') and data.get('name') == '${AUTHOR_NAME}'"
 
 print_section "Acceptance: Reader Discovers Similar Books"
 
 request_json "reader browses genre detail" GET "${API_BASE_URL}/genre/${GENRE_ID}" 200
-json_assert "genre detail is usable" "int(data.get('genre_id')) == ${GENRE_ID} and data.get('genre_name') == '${GENRE_NAME}' and float(data.get('avg_rating')) >= 0"
+json_assert "genre detail is usable" "int(data.get('genre_id')) == int('${GENRE_ID}') and data.get('genre_name') == '${GENRE_NAME}' and float(data.get('avg_rating')) >= 0"
 
 request_json "reader asks for recommendations" GET "${API_BASE_URL}/book-recommendation?genre=${GENRE_NAME_Q}&rating=4&popularity=100" 200
 json_assert "recommendation response is usable" 'isinstance(data, dict) and isinstance(data.get("books"), list) and all("isbn" in book and "name" in book for book in data.get("books"))'
@@ -73,7 +54,7 @@ request_json "analyst gets author performance" GET "${API_BASE_URL}/author-analy
 json_assert "author performance is usable" 'isinstance(data, dict) and "author_name" in data and "sample_size" in data and "evolution" in data'
 
 request_json "analyst gets genre popularity trend" GET "${API_BASE_URL}/genre/${GENRE_ID}/popularity?year_from=2000&year_to=2026" 200
-json_assert "genre popularity trend is usable" "int(data.get('genre_id')) == ${GENRE_ID} and isinstance(data.get('points'), list) and int(data.get('total_books')) >= 0"
+json_assert "genre popularity trend is usable" "int(data.get('genre_id')) == int('${GENRE_ID}') and isinstance(data.get('points'), list) and int(data.get('total_books')) >= 0"
 
 print_section "Acceptance: API Consumer Receives Clear Failures"
 
